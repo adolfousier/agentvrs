@@ -123,7 +123,14 @@ pub fn draw_agent(
     let _ = cr.fill();
 
     // Name label (dark rounded pill above head)
-    draw_name_label(cr, sx, head_y - head_r - 4.0 * zoom, &agent.name, &agent.state, zoom);
+    draw_name_label(
+        cr,
+        sx,
+        head_y - head_r - 4.0 * zoom,
+        &agent.name,
+        &agent.state,
+        zoom,
+    );
 
     // Speech bubble
     if let Some(ref speech) = agent.speech {
@@ -139,11 +146,7 @@ fn draw_name_label(
     state: &AgentState,
     zoom: f64,
 ) {
-    let display = if name.len() > 12 {
-        &name[..12]
-    } else {
-        name
-    };
+    let display = if name.len() > 12 { &name[..12] } else { name };
 
     cr.set_font_size(9.0 * zoom);
     let extents = cr.text_extents(display).unwrap();
@@ -173,7 +176,13 @@ fn draw_name_label(
         AgentState::Error => (1.0, 0.0, 0.0),
         _ => (0.5, 0.5, 0.5),
     };
-    cr.arc(bx + pad_x + dot_r, by + bh / 2.0, dot_r, 0.0, std::f64::consts::TAU);
+    cr.arc(
+        bx + pad_x + dot_r,
+        by + bh / 2.0,
+        dot_r,
+        0.0,
+        std::f64::consts::TAU,
+    );
     cr.set_source_rgb(dr, dg, db);
     let _ = cr.fill();
 

@@ -58,10 +58,10 @@ pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom:
 
 fn draw_floor(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &FloorKind, zoom: f64) {
     let (r, g, b) = match kind {
-        FloorKind::Wood => (0.78, 0.62, 0.42),    // Warm beige/tan
+        FloorKind::Wood => (0.78, 0.62, 0.42),     // Warm beige/tan
         FloorKind::Tile => (0.88, 0.84, 0.78),     // Warm off-white
         FloorKind::Carpet => (0.42, 0.38, 0.50),   // Muted warm purple
-        FloorKind::Concrete => (0.32, 0.30, 0.30),  // Dark charcoal (gym)
+        FloorKind::Concrete => (0.32, 0.30, 0.30), // Dark charcoal (gym)
     };
     draw_floor_diamond(cr, sx, sy, zoom, r, g, b);
 
@@ -127,7 +127,7 @@ fn draw_wall(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &WallKind, zoom:
 
     let (r, g, b) = match kind {
         WallKind::Solid => (0.55, 0.45, 0.35),  // Warm brown
-        WallKind::Window => (0.52, 0.48, 0.42),  // Warm brown-grey
+        WallKind::Window => (0.52, 0.48, 0.42), // Warm brown-grey
     };
 
     // Left face
@@ -311,48 +311,6 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let hw = TILE_W / 2.0 * z * 0.75;
     let hh = TILE_H / 2.0 * z * 0.55;
 
-    // ── Office chair (behind desk, where person sits facing monitor) ──
-    let ch_x = sx + 14.0 * z;
-    let ch_y = sy + 8.0 * z;
-    // Chair base star
-    cr.save().unwrap();
-    cr.translate(ch_x, ch_y);
-    cr.scale(1.0, 0.45);
-    cr.arc(0.0, 0.0, 6.0 * z, 0.0, TAU);
-    cr.restore().unwrap();
-    cr.set_source_rgb(0.20, 0.20, 0.22);
-    let _ = cr.fill();
-    // Wheels
-    for i in 0..5 {
-        let a = i as f64 * TAU / 5.0;
-        let wx = ch_x + a.cos() * 5.5 * z;
-        let wy = ch_y + a.sin() * 5.5 * z * 0.45;
-        cr.arc(wx, wy, 1.0 * z, 0.0, TAU);
-        cr.set_source_rgb(0.12, 0.12, 0.14);
-        let _ = cr.fill();
-    }
-    // Post
-    cr.rectangle(ch_x - 1.0 * z, ch_y - 16.0 * z, 2.0 * z, 16.0 * z);
-    cr.set_source_rgb(0.28, 0.28, 0.30);
-    let _ = cr.fill();
-    // Seat (small thin cushion)
-    iso_block(cr, ch_x, ch_y - 14.0 * z, z, 0.28, 0.28, 3.0, 0.18, 0.18, 0.22);
-    // Back (tall rectangle)
-    let cb_top = ch_y - 36.0 * z;
-    cr.move_to(ch_x - 7.0 * z, cb_top);
-    cr.line_to(ch_x + 7.0 * z, cb_top);
-    cr.line_to(ch_x + 6.0 * z, ch_y - 17.0 * z);
-    cr.line_to(ch_x - 6.0 * z, ch_y - 17.0 * z);
-    cr.close_path();
-    cr.set_source_rgb(0.18, 0.18, 0.22);
-    let _ = cr.fill();
-    // Back curve line
-    cr.set_source_rgba(0.30, 0.30, 0.35, 0.5);
-    cr.set_line_width(0.8 * z);
-    cr.move_to(ch_x - 4.0 * z, ch_y - 26.0 * z);
-    cr.curve_to(ch_x, ch_y - 28.0 * z, ch_x, ch_y - 28.0 * z, ch_x + 4.0 * z, ch_y - 26.0 * z);
-    let _ = cr.stroke();
-
     // ── Desk legs (4 thin metal legs, visible under the thin surface) ──
     cr.set_source_rgb(0.38, 0.38, 0.40);
     let lw = 1.5 * z;
@@ -363,7 +321,12 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.rectangle(sx + hw - 3.5 * z, sy - desk_elev, lw, desk_elev);
     let _ = cr.fill();
     // Front-left
-    cr.rectangle(sx - hw * 0.5 + 1.0 * z, sy + hh * 0.5 - desk_elev, lw, desk_elev);
+    cr.rectangle(
+        sx - hw * 0.5 + 1.0 * z,
+        sy + hh * 0.5 - desk_elev,
+        lw,
+        desk_elev,
+    );
     let _ = cr.fill();
     // Front-right
     cr.rectangle(sx + hw * 0.4, sy + hh * 0.5 - desk_elev, lw, desk_elev);
@@ -412,7 +375,12 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let mon_w = 20.0 * z;
     let mon_h = 13.0 * z;
     let mon_y = dt - 8.0 * z - mon_h;
-    cr.rectangle(sx - mon_w / 2.0 - 0.5 * z, mon_y - 0.5 * z, mon_w + 1.0 * z, mon_h + 1.0 * z);
+    cr.rectangle(
+        sx - mon_w / 2.0 - 0.5 * z,
+        mon_y - 0.5 * z,
+        mon_w + 1.0 * z,
+        mon_h + 1.0 * z,
+    );
     cr.set_source_rgb(0.10, 0.10, 0.12);
     let _ = cr.fill();
     cr.rectangle(sx - mon_w / 2.0, mon_y, mon_w, mon_h);
@@ -452,7 +420,13 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     }
 
     // Power LED
-    cr.arc(sx + mon_w / 2.0 - 2.0 * z, mon_y + mon_h - 1.5 * z, 0.6 * z, 0.0, TAU);
+    cr.arc(
+        sx + mon_w / 2.0 - 2.0 * z,
+        mon_y + mon_h - 1.5 * z,
+        0.6 * z,
+        0.0,
+        TAU,
+    );
     cr.set_source_rgb(0.1, 0.85, 0.3);
     let _ = cr.fill();
 }
@@ -559,7 +533,18 @@ fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let counter_top = counter_sy - 4.0 * z;
 
     // Coffee machine on counter (~18px tall)
-    iso_block(cr, sx - 4.0 * z, counter_top + 2.0 * z, z, 0.30, 0.30, 18.0, 0.22, 0.22, 0.25);
+    iso_block(
+        cr,
+        sx - 4.0 * z,
+        counter_top + 2.0 * z,
+        z,
+        0.30,
+        0.30,
+        18.0,
+        0.22,
+        0.22,
+        0.25,
+    );
 
     let machine_top = counter_top + 2.0 * z - 18.0 * z;
 
