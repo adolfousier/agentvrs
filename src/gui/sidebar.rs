@@ -1,25 +1,26 @@
-use crate::agent::AgentId;
 use crate::avatar::palette::{state_color, state_symbol};
 use crate::gui::app::GuiState;
 use gtk4::prelude::*;
 use gtk4::{
-    Box as GtkBox, Entry, Label, ListBox, Orientation, ScrolledWindow, Separator, TextView,
+    Box as GtkBox, Entry, Label, ListBox, Orientation, Paned, ScrolledWindow, Separator, TextView,
     WrapMode,
 };
 use std::sync::Arc;
 
-pub fn create(state: &Arc<GuiState>) -> GtkBox {
-    let container = GtkBox::new(Orientation::Vertical, 0);
-    container.set_width_request(260);
+pub fn create(state: &Arc<GuiState>) -> Paned {
+    let paned = Paned::new(Orientation::Vertical);
+    paned.set_wide_handle(true);
+    paned.set_width_request(260);
 
-    // Agent list header
+    // --- Top: agent list ---
+    let list_wrapper = GtkBox::new(Orientation::Vertical, 0);
+
     let header = Label::new(Some("Agents"));
     header.set_css_classes(&["heading"]);
     header.set_margin_top(8);
     header.set_margin_bottom(4);
-    container.append(&header);
+    list_wrapper.append(&header);
 
-    // Scrolled agent list
     let list_box = ListBox::new();
     list_box.set_css_classes(&["navigation-sidebar"]);
 
@@ -37,17 +38,17 @@ pub fn create(state: &Arc<GuiState>) -> GtkBox {
     let list_scroll = ScrolledWindow::new();
     list_scroll.set_child(Some(&list_box));
     list_scroll.set_vexpand(true);
-    container.append(&list_scroll);
+    list_wrapper.append(&list_scroll);
 
-    container.append(&Separator::new(Orientation::Horizontal));
+    paned.set_start_child(Some(&list_wrapper));
+    paned.set_shrink_start_child(false);
 
-    // Detail section (shown when agent selected)
+    // --- Bottom: agent detail (resizable) ---
     let detail_box = GtkBox::new(Orientation::Vertical, 4);
     detail_box.set_margin_start(8);
     detail_box.set_margin_end(8);
     detail_box.set_margin_top(8);
     detail_box.set_margin_bottom(8);
-    detail_box.set_widget_name("agent-detail");
 
     let detail_title = Label::new(Some("No agent selected"));
     detail_title.set_css_classes(&["heading"]);
@@ -61,7 +62,6 @@ pub fn create(state: &Arc<GuiState>) -> GtkBox {
 
     detail_box.append(&Separator::new(Orientation::Horizontal));
 
-    // Message input
     let msg_label = Label::new(Some("Send message:"));
     msg_label.set_halign(gtk4::Align::Start);
     msg_label.set_margin_top(4);
@@ -87,7 +87,6 @@ pub fn create(state: &Arc<GuiState>) -> GtkBox {
     });
     detail_box.append(&entry);
 
-    // Activity log
     let activity_label = Label::new(Some("Activity:"));
     activity_label.set_halign(gtk4::Align::Start);
     activity_label.set_margin_top(4);
@@ -99,11 +98,13 @@ pub fn create(state: &Arc<GuiState>) -> GtkBox {
     text_view.set_widget_name("agent-activity");
     let activity_scroll = ScrolledWindow::new();
     activity_scroll.set_child(Some(&text_view));
-    activity_scroll.set_min_content_height(120);
+    activity_scroll.set_min_content_height(100);
     activity_scroll.set_vexpand(true);
     detail_box.append(&activity_scroll);
 
-    container.append(&detail_box);
+    paned.set_end_child(Some(&detail_box));
+    paned.set_shrink_end_child(false);
+    paned.set_position(300);
 
     // Periodic refresh
     let state_poll = Arc::clone(state);
@@ -117,7 +118,7 @@ pub fn create(state: &Arc<GuiState>) -> GtkBox {
         gtk4::glib::ControlFlow::Continue
     });
 
-    container
+    paned
 }
 
 fn populate_list(list_box: &ListBox, state: &GuiState) {
