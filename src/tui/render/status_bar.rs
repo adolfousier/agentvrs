@@ -42,7 +42,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         ));
     } else {
         spans.push(Span::styled(
-            "q:quit  tab:log  ::cmd  j/k:select  enter:detail",
+            "q:quit  hjkl:pan  n/p:agent  c:center  f:fit  tab:log  ::cmd",
             Style::default().fg(Color::DarkGray),
         ));
     }

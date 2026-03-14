@@ -1,5 +1,5 @@
 use crate::agent::{AgentId, AgentRegistry, MessageLog};
-use crate::world::{Grid, WorldEvent};
+use crate::world::{Grid, Position, WorldEvent};
 use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 
@@ -23,6 +23,7 @@ pub struct App {
     pub should_quit: bool,
     pub command_input: String,
     pub status_message: Option<String>,
+    pub camera: Position,
 }
 
 impl App {
@@ -32,6 +33,10 @@ impl App {
         message_log: Arc<RwLock<MessageLog>>,
         event_rx: mpsc::Receiver<WorldEvent>,
     ) -> Self {
+        let camera = {
+            let g = grid.read().unwrap();
+            Position::new(g.width / 2, g.height / 2)
+        };
         Self {
             mode: AppMode::WorldView,
             grid,
@@ -44,20 +49,19 @@ impl App {
             should_quit: false,
             command_input: String::new(),
             status_message: None,
+            camera,
         }
     }
 
     pub fn process_events(&mut self) {
         while let Ok(event) = self.event_rx.try_recv() {
             match event {
-                WorldEvent::Tick { count } => {
-                    self.tick_count = count;
-                }
+                WorldEvent::Tick { count } => self.tick_count = count,
                 WorldEvent::AgentSpawned { agent_id, .. } => {
-                    self.status_message = Some(format!("Agent {} joined the world", agent_id));
+                    self.status_message = Some(format!("Agent {} joined", agent_id));
                 }
                 WorldEvent::AgentRemoved { agent_id } => {
-                    self.status_message = Some(format!("Agent {} left the world", agent_id));
+                    self.status_message = Some(format!("Agent {} left", agent_id));
                     if self.selected_agent == Some(agent_id) {
                         self.selected_agent = None;
                     }

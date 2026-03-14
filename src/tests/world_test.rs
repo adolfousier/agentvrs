@@ -87,13 +87,26 @@ fn test_grid_new() {
 #[test]
 fn test_grid_with_walls() {
     let grid = Grid::with_walls(10, 8);
-    // Corners should be walls
-    assert_eq!(grid.get(Position::new(0, 0)).unwrap().tile, Tile::Wall);
-    assert_eq!(grid.get(Position::new(9, 0)).unwrap().tile, Tile::Wall);
-    assert_eq!(grid.get(Position::new(0, 7)).unwrap().tile, Tile::Wall);
-    assert_eq!(grid.get(Position::new(9, 7)).unwrap().tile, Tile::Wall);
-    // Interior should be floor
-    assert_eq!(grid.get(Position::new(5, 4)).unwrap().tile, Tile::Floor);
+    assert_eq!(
+        grid.get(Position::new(0, 0)).unwrap().tile,
+        Tile::Wall(WallKind::Solid)
+    );
+    assert_eq!(
+        grid.get(Position::new(9, 0)).unwrap().tile,
+        Tile::Wall(WallKind::Solid)
+    );
+    assert_eq!(
+        grid.get(Position::new(0, 7)).unwrap().tile,
+        Tile::Wall(WallKind::Solid)
+    );
+    assert_eq!(
+        grid.get(Position::new(9, 7)).unwrap().tile,
+        Tile::Wall(WallKind::Solid)
+    );
+    assert_eq!(
+        grid.get(Position::new(5, 4)).unwrap().tile,
+        Tile::Floor(FloorKind::Wood)
+    );
 }
 
 #[test]
@@ -188,7 +201,7 @@ fn test_grid_bounds() {
 
 #[test]
 fn test_cell_floor_is_walkable() {
-    let cell = Cell::floor();
+    let cell = Cell::floor(FloorKind::Wood);
     assert!(cell.is_walkable());
 }
 
@@ -200,14 +213,13 @@ fn test_cell_wall_not_walkable() {
 
 #[test]
 fn test_cell_occupied_not_walkable() {
-    let mut cell = Cell::floor();
+    let mut cell = Cell::floor(FloorKind::Wood);
     cell.occupant = Some(AgentId::new());
     assert!(!cell.is_walkable());
 }
 
 #[test]
 fn test_direction_random_is_valid() {
-    // Just make sure it doesn't panic
     for _ in 0..100 {
         let _ = Direction::random();
     }
@@ -216,16 +228,16 @@ fn test_direction_random_is_valid() {
 #[test]
 fn test_set_tile() {
     let mut grid = Grid::new(10, 8);
-    grid.set_tile(Position::new(5, 4), Tile::Wall);
-    assert_eq!(grid.get(Position::new(5, 4)).unwrap().tile, Tile::Wall);
+    grid.set_tile(Position::new(5, 4), Tile::Wall(WallKind::Solid));
+    assert_eq!(
+        grid.get(Position::new(5, 4)).unwrap().tile,
+        Tile::Wall(WallKind::Solid)
+    );
 }
 
 #[test]
-fn test_set_tile_decoration() {
+fn test_set_tile_furniture() {
     let mut grid = Grid::new(10, 8);
-    grid.set_tile(Position::new(3, 3), Tile::Decoration('*'));
-    assert_eq!(
-        grid.get(Position::new(3, 3)).unwrap().tile,
-        Tile::Decoration('*')
-    );
+    grid.set_tile(Position::new(3, 3), Tile::Desk);
+    assert_eq!(grid.get(Position::new(3, 3)).unwrap().tile, Tile::Desk);
 }

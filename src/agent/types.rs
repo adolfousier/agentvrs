@@ -27,9 +27,13 @@ impl std::fmt::Display for AgentId {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AgentState {
     Idle,
+    Walking,
     Thinking,
     Working,
     Messaging,
+    Eating,
+    Exercising,
+    Playing,
     Error,
     Offline,
 }
@@ -38,9 +42,13 @@ impl AgentState {
     pub fn label(&self) -> &'static str {
         match self {
             AgentState::Idle => "idle",
+            AgentState::Walking => "walking",
             AgentState::Thinking => "thinking",
             AgentState::Working => "working",
             AgentState::Messaging => "messaging",
+            AgentState::Eating => "eating",
+            AgentState::Exercising => "exercising",
+            AgentState::Playing => "playing",
             AgentState::Error => "error",
             AgentState::Offline => "offline",
         }
@@ -49,12 +57,57 @@ impl AgentState {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AgentKind {
-    /// Connected via A2A protocol (OpenCrabs or compatible)
     OpenCrabs { endpoint: String },
-    /// Connected via HTTP API
     External { endpoint: String },
-    /// Local demo/test agent
     Local,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Facing {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnimState {
+    pub facing: Facing,
+    pub frame: u8,
+    pub activity_ticks: u32,
+}
+
+impl Default for AnimState {
+    fn default() -> Self {
+        Self {
+            facing: Facing::Right,
+            frame: 0,
+            activity_ticks: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum AgentGoal {
+    GoToDesk(Position),
+    GoToVending(Position),
+    GoToCoffee(Position),
+    GoToPinball(Position),
+    GoToGym(Position),
+    GoToCouch(Position),
+    Wander(Position),
+}
+
+impl AgentGoal {
+    pub fn target(&self) -> Position {
+        match self {
+            AgentGoal::GoToDesk(p)
+            | AgentGoal::GoToVending(p)
+            | AgentGoal::GoToCoffee(p)
+            | AgentGoal::GoToPinball(p)
+            | AgentGoal::GoToGym(p)
+            | AgentGoal::GoToCouch(p)
+            | AgentGoal::Wander(p) => *p,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +121,9 @@ pub struct Agent {
     pub last_activity: Instant,
     pub task_count: u32,
     pub speech: Option<String>,
+    pub anim: AnimState,
+    pub goal: Option<AgentGoal>,
+    pub path: Vec<Position>,
 }
 
 impl Agent {
@@ -78,10 +134,13 @@ impl Agent {
             kind,
             state: AgentState::Idle,
             position,
-            color_index: rand::random::<u8>() % 6,
+            color_index: rand::random::<u8>() % 8,
             last_activity: Instant::now(),
             task_count: 0,
             speech: None,
+            anim: AnimState::default(),
+            goal: None,
+            path: Vec::new(),
         }
     }
 

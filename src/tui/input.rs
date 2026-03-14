@@ -1,16 +1,17 @@
 use super::app::{App, AppMode};
+use crate::world::Position;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub fn handle_key(app: &mut App, key: KeyEvent) {
     match app.mode {
-        AppMode::WorldView => handle_world_view(app, key),
-        AppMode::AgentDetail => handle_agent_detail(app, key),
-        AppMode::MessageLog => handle_message_log(app, key),
-        AppMode::CommandInput => handle_command_input(app, key),
+        AppMode::WorldView => world_view(app, key),
+        AppMode::AgentDetail => agent_detail(app, key),
+        AppMode::MessageLog => message_log(app, key),
+        AppMode::CommandInput => command_input(app, key),
     }
 }
 
-fn handle_world_view(app: &mut App, key: KeyEvent) {
+fn world_view(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -21,20 +22,43 @@ fn handle_world_view(app: &mut App, key: KeyEvent) {
             app.mode = AppMode::CommandInput;
             app.command_input.clear();
         }
+        // Camera pan
+        KeyCode::Left | KeyCode::Char('h') => {
+            app.camera.x = app.camera.x.saturating_sub(1);
+        }
+        KeyCode::Right | KeyCode::Char('l') => {
+            let bounds = app.grid.read().unwrap().bounds();
+            app.camera.x = (app.camera.x + 1).min(bounds.0.saturating_sub(1));
+        }
         KeyCode::Up | KeyCode::Char('k') => {
-            app.selected_index = app.selected_index.saturating_sub(1);
+            app.camera.y = app.camera.y.saturating_sub(1);
         }
         KeyCode::Down | KeyCode::Char('j') => {
-            app.selected_index += 1;
+            let bounds = app.grid.read().unwrap().bounds();
+            app.camera.y = (app.camera.y + 1).min(bounds.1.saturating_sub(1));
         }
-        KeyCode::Enter => {
-            app.mode = AppMode::AgentDetail;
+        // Agent selection
+        KeyCode::Char('n') => app.selected_index += 1,
+        KeyCode::Char('p') => app.selected_index = app.selected_index.saturating_sub(1),
+        KeyCode::Enter => app.mode = AppMode::AgentDetail,
+        // Center on selected agent
+        KeyCode::Char('c') => {
+            let reg = app.registry.read().unwrap();
+            let agents: Vec<_> = reg.agents().collect();
+            if app.selected_index < agents.len() {
+                app.camera = agents[app.selected_index].position;
+            }
+        }
+        // Fit world
+        KeyCode::Char('f') => {
+            let g = app.grid.read().unwrap();
+            app.camera = Position::new(g.width / 2, g.height / 2);
         }
         _ => {}
     }
 }
 
-fn handle_agent_detail(app: &mut App, key: KeyEvent) {
+fn agent_detail(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc | KeyCode::Backspace => {
             app.mode = AppMode::WorldView;
@@ -45,7 +69,7 @@ fn handle_agent_detail(app: &mut App, key: KeyEvent) {
     }
 }
 
-fn handle_message_log(app: &mut App, key: KeyEvent) {
+fn message_log(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc | KeyCode::Tab => app.mode = AppMode::WorldView,
         KeyCode::Char('q') => app.should_quit = true,
@@ -53,24 +77,20 @@ fn handle_message_log(app: &mut App, key: KeyEvent) {
     }
 }
 
-fn handle_command_input(app: &mut App, key: KeyEvent) {
+fn command_input(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
             app.mode = AppMode::WorldView;
             app.command_input.clear();
         }
         KeyCode::Enter => {
-            let _cmd = app.command_input.clone();
             app.command_input.clear();
             app.mode = AppMode::WorldView;
-            // Command processing will be added here
         }
         KeyCode::Backspace => {
             app.command_input.pop();
         }
-        KeyCode::Char(c) => {
-            app.command_input.push(c);
-        }
+        KeyCode::Char(c) => app.command_input.push(c),
         _ => {}
     }
 }

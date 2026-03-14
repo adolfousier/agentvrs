@@ -1,14 +1,12 @@
+mod layout;
+mod tiles;
+
+pub use layout::*;
+pub use tiles::*;
+
 use super::Position;
 use crate::agent::AgentId;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Tile {
-    Floor,
-    Wall,
-    Desk,
-    Decoration(char),
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cell {
@@ -17,22 +15,22 @@ pub struct Cell {
 }
 
 impl Cell {
-    pub fn floor() -> Self {
+    pub fn floor(kind: FloorKind) -> Self {
         Self {
-            tile: Tile::Floor,
+            tile: Tile::Floor(kind),
             occupant: None,
         }
     }
 
     pub fn wall() -> Self {
         Self {
-            tile: Tile::Wall,
+            tile: Tile::Wall(WallKind::Solid),
             occupant: None,
         }
     }
 
     pub fn is_walkable(&self) -> bool {
-        matches!(self.tile, Tile::Floor | Tile::Desk) && self.occupant.is_none()
+        !self.tile.is_solid() && self.occupant.is_none()
     }
 }
 
@@ -46,7 +44,7 @@ pub struct Grid {
 impl Grid {
     pub fn new(width: u16, height: u16) -> Self {
         let cells = (0..width as usize * height as usize)
-            .map(|_| Cell::floor())
+            .map(|_| Cell::floor(FloorKind::Wood))
             .collect();
         Self {
             width,
@@ -58,12 +56,12 @@ impl Grid {
     pub fn with_walls(width: u16, height: u16) -> Self {
         let mut grid = Self::new(width, height);
         for x in 0..width {
-            grid.set_tile(Position::new(x, 0), Tile::Wall);
-            grid.set_tile(Position::new(x, height - 1), Tile::Wall);
+            grid.set_tile(Position::new(x, 0), Tile::Wall(WallKind::Solid));
+            grid.set_tile(Position::new(x, height - 1), Tile::Wall(WallKind::Solid));
         }
         for y in 0..height {
-            grid.set_tile(Position::new(0, y), Tile::Wall);
-            grid.set_tile(Position::new(width - 1, y), Tile::Wall);
+            grid.set_tile(Position::new(0, y), Tile::Wall(WallKind::Solid));
+            grid.set_tile(Position::new(width - 1, y), Tile::Wall(WallKind::Solid));
         }
         grid
     }
@@ -101,29 +99,17 @@ impl Grid {
     }
 
     pub fn remove_agent(&mut self, pos: Position) -> Option<AgentId> {
-        if let Some(cell) = self.get_mut(pos) {
-            cell.occupant.take()
-        } else {
-            None
-        }
+        self.get_mut(pos).and_then(|cell| cell.occupant.take())
     }
 
     pub fn move_agent(&mut self, from: Position, to: Position) -> bool {
         if from == to {
             return true;
         }
-        let is_target_walkable = self.get(to).map(|c| c.is_walkable()).unwrap_or(false);
-
-        if !is_target_walkable {
+        if !self.get(to).map(|c| c.is_walkable()).unwrap_or(false) {
             return false;
         }
-
-        let agent_id = if let Some(cell) = self.get_mut(from) {
-            cell.occupant.take()
-        } else {
-            return false;
-        };
-
+        let agent_id = self.get_mut(from).and_then(|c| c.occupant.take());
         if let Some(id) = agent_id
             && let Some(cell) = self.get_mut(to)
         {
@@ -136,9 +122,9 @@ impl Grid {
     pub fn find_empty_floor(&self) -> Option<Position> {
         use rand::Rng;
         let mut rng = rand::rng();
-        for _ in 0..100 {
-            let x = rng.random_range(1..self.width.saturating_sub(1).max(1));
-            let y = rng.random_range(1..self.height.saturating_sub(1).max(1));
+        for _ in 0..200 {
+            let x = rng.random_range(1..self.width.saturating_sub(1).max(2));
+            let y = rng.random_range(1..self.height.saturating_sub(1).max(2));
             let pos = Position::new(x, y);
             if let Some(cell) = self.get(pos)
                 && cell.is_walkable()
@@ -149,11 +135,29 @@ impl Grid {
         None
     }
 
-    pub fn bounds(&self) -> (u16, u16) {
-        (self.width, self.height)
+    pub fn find_tiles(&self, tile_match: &Tile) -> Vec<Position> {
+        (0..self.height)
+            .flat_map(|y| (0..self.width).map(move |x| Position::new(x, y)))
+            .filter(|pos| {
+                self.get(*pos)
+                    .map(|c| std::mem::discriminant(&c.tile) == std::mem::discriminant(tile_match))
+                    .unwrap_or(false)
+            })
+            .collect()
     }
 
-    pub fn cells(&self) -> &[Cell] {
-        &self.cells
+    pub fn find_adjacent_floor(&self, pos: Position) -> Option<Position> {
+        [
+            Position::new(pos.x + 1, pos.y),
+            Position::new(pos.x.wrapping_sub(1), pos.y),
+            Position::new(pos.x, pos.y + 1),
+            Position::new(pos.x, pos.y.wrapping_sub(1)),
+        ]
+        .into_iter()
+        .find(|p| self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))
+    }
+
+    pub fn bounds(&self) -> (u16, u16) {
+        (self.width, self.height)
     }
 }

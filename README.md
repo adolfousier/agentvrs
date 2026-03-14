@@ -1,16 +1,17 @@
 # agentverse
 
-Privacy-first terminal world for AI agents. Watch your agents live, think, work, and talk — all from your terminal.
+Privacy-first terminal world for AI agents. A Google-office-style pixel world where your agents live, work, eat, exercise, and play pinball — right in your terminal.
 
 Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs) agents via A2A protocol, and any other agent via HTTP.
 
 ## Features
 
-- **Terminal-native** — ratatui TUI with grid world, agent avatars, speech bubbles, and real-time state visualization
-- **Privacy-first** — runs entirely locally, binds to `127.0.0.1`, no telemetry, no cloud
-- **A2A protocol** — full wire-compatible A2A client for connecting OpenCrabs agents (agent discovery, message/send, tasks/get, tasks/cancel)
-- **HTTP API** — REST endpoints for non-crabs agents to connect, register, and communicate
-- **Modular architecture** — clean separation: world engine, agent registry, A2A bridge, API server, TUI renderer
+- **Pixel-art world** — office with desks, break room with vending machines and coffee, lounge with couches, gym with treadmills, arcade with pinball machines
+- **Animated agents** — unicode half-block sprites with walking animations, state-driven behavior, pathfinding, and speech bubbles
+- **Privacy-first** — runs entirely locally on `127.0.0.1`, no telemetry, no cloud
+- **A2A protocol** — wire-compatible A2A client for connecting OpenCrabs agents
+- **HTTP API** — REST endpoints for non-crabs agents to connect
+- **Modular architecture** — small focused files, each module < 100 lines
 
 ## Install
 
@@ -21,100 +22,92 @@ cargo install agentverse
 Or build from source:
 
 ```bash
-git clone https://github.com/adolfousier/agentverse.git
-cd agentverse
+git clone https://github.com/adolfousier/agentvrs.git
+cd agentvrs
 cargo build --release
 ```
 
 ## Usage
 
 ```bash
-# Run with defaults (32x16 grid, API on 127.0.0.1:18800)
-agentverse
-
-# With a config file
-mkdir -p ~/.config/agentverse
-cat > ~/.config/agentverse/config.toml << 'EOF'
-[world]
-width = 48
-height = 24
-tick_ms = 150
-
-[server]
-host = "127.0.0.1"
-port = 18800
-enabled = true
-
-[a2a]
-endpoints = ["http://localhost:18789"]
-discovery_interval_secs = 30
-EOF
-
 agentverse
 ```
+
+Agents spawn in the office world and autonomously:
+- Walk to desks and work
+- Grab food from vending machines
+- Get coffee
+- Work out on treadmills
+- Play pinball
+- Wander around
 
 ## Keybindings
 
 | Key | Action |
 |-----|--------|
+| `h/j/k/l` or arrows | Pan camera |
+| `n` / `p` | Next / previous agent |
+| `c` | Center camera on selected agent |
+| `f` | Fit world in view |
+| `Enter` | Agent detail view |
+| `Tab` | Message log |
+| `:` | Command input |
 | `q` / `Esc` | Quit |
-| `Ctrl+C` | Quit |
-| `j` / `Down` | Select next agent |
-| `k` / `Up` | Select previous agent |
-| `Enter` | View agent details |
-| `Tab` | Toggle message log |
-| `:` | Command input mode |
-| `Backspace` | Back to world view |
 
 ## HTTP API
 
-When `server.enabled = true`, these endpoints are available:
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/agents` | List all agents |
-| `POST` | `/agents/connect` | Register a new agent |
-| `POST` | `/agents/{id}/message` | Send message to agent |
-| `GET` | `/world` | World state snapshot |
-
-### Connect an external agent
+API runs on `127.0.0.1:18800` by default.
 
 ```bash
+# Connect an agent
 curl -X POST http://127.0.0.1:18800/agents/connect \
   -H "Content-Type: application/json" \
-  -d '{"name": "my-bot", "endpoint": "http://localhost:9090"}'
+  -d '{"name": "my-bot"}'
+
+# List agents
+curl http://127.0.0.1:18800/agents
+
+# World snapshot
+curl http://127.0.0.1:18800/world
 ```
 
 ## A2A Protocol
 
-Agentverse acts as an A2A **client** — it discovers and communicates with A2A-compatible agents (like OpenCrabs). Configure agent endpoints in `config.toml`:
+Connects to A2A-compatible agents (like OpenCrabs) as a client:
 
 ```toml
+# ~/.config/agentverse/config.toml
 [a2a]
-endpoints = ["http://localhost:18789", "http://192.168.1.50:18789"]
+endpoints = ["http://localhost:18789"]
 ```
-
-Agentverse will:
-1. Fetch the Agent Card from `/.well-known/agent.json`
-2. Spawn a visual avatar on the grid
-3. Map A2A task states to visual states (Working, Thinking, Idle, Error)
-4. Display agent responses as speech bubbles
 
 ## Architecture
 
 ```
 src/
-├── config/      # TOML config loading
-├── world/       # Grid, positions, simulation tick loop
-├── agent/       # Agent types, registry, messaging
-├── avatar/      # Sprites, color palettes
-├── a2a/         # A2A protocol types, client, bridge
-├── api/         # HTTP API server (axum)
-├── tui/         # Terminal UI (ratatui + crossterm)
-│   └── render/  # World view, sidebar, status bar, detail panel
-├── error/       # Error types
-└── tests/       # Integration tests
+├── config/           # TOML config
+├── world/
+│   ├── grid/
+│   │   ├── tiles.rs  # Tile/floor/wall enums
+│   │   └── layout.rs # Office world builder
+│   ├── pathfind.rs   # BFS pathfinding
+│   ├── position.rs   # Coordinates + direction
+│   └── simulation.rs # Tick loop, goal AI, movement
+├── agent/            # Types, registry, messaging
+├── avatar/
+│   ├── agents.rs     # Agent pixel sprites per state
+│   ├── furniture.rs  # Desk, vending, coffee, pinball sprites
+│   ├── floors.rs     # Floor/wall/rug rendering
+│   ├── palette.rs    # Colors (skin, shirt, hair, floors)
+│   └── sprite.rs     # SpriteFrame + StyledCell types
+├── a2a/              # A2A protocol client + bridge
+├── api/              # HTTP API (axum)
+├── tui/
+│   ├── render/       # Direct buffer pixel renderer
+│   ├── input.rs      # Keybindings
+│   └── app.rs        # App state + camera
+├── error/
+└── tests/            # 92 tests across 5 modules
 ```
 
 ## License

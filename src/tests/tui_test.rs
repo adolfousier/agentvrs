@@ -119,30 +119,41 @@ fn test_command_input_enter_clears_and_returns() {
 }
 
 #[test]
-fn test_navigate_down() {
+fn test_select_next_agent() {
     let mut app = test_app();
     assert_eq!(app.selected_index, 0);
-    handle_key(&mut app, key(KeyCode::Down));
+    handle_key(&mut app, key(KeyCode::Char('n')));
     assert_eq!(app.selected_index, 1);
-    handle_key(&mut app, key(KeyCode::Char('j')));
+    handle_key(&mut app, key(KeyCode::Char('n')));
     assert_eq!(app.selected_index, 2);
 }
 
 #[test]
-fn test_navigate_up() {
+fn test_select_prev_agent() {
     let mut app = test_app();
     app.selected_index = 3;
-    handle_key(&mut app, key(KeyCode::Up));
+    handle_key(&mut app, key(KeyCode::Char('p')));
     assert_eq!(app.selected_index, 2);
-    handle_key(&mut app, key(KeyCode::Char('k')));
+    handle_key(&mut app, key(KeyCode::Char('p')));
     assert_eq!(app.selected_index, 1);
 }
 
 #[test]
-fn test_navigate_up_at_zero() {
+fn test_select_prev_at_zero() {
     let mut app = test_app();
-    handle_key(&mut app, key(KeyCode::Up));
+    handle_key(&mut app, key(KeyCode::Char('p')));
     assert_eq!(app.selected_index, 0);
+}
+
+#[test]
+fn test_camera_pan() {
+    let mut app = test_app();
+    let start_x = app.camera.x;
+    let start_y = app.camera.y;
+    handle_key(&mut app, key(KeyCode::Char('l')));
+    assert_eq!(app.camera.x, start_x + 1);
+    handle_key(&mut app, key(KeyCode::Char('j')));
+    assert_eq!(app.camera.y, start_y + 1);
 }
 
 #[test]

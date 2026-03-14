@@ -1,5 +1,6 @@
 mod events;
 mod grid;
+pub mod pathfind;
 mod position;
 mod simulation;
 
