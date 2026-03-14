@@ -28,7 +28,7 @@ crossterm = { version = "0.29", features = ["event-stream"] }
 gtk4 = { version = "0.10", optional = true }
 
 # HTTP (client for A2A, server for external agents)
-reqwest = { version = "0.12", features = ["json"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 axum = "0.8"
 tower = { version = "0.5", features = ["util", "limit"] }
 tower-http = { version = "0.6", features = ["cors"] }
@@ -73,4 +73,3 @@ strip = true
 name = "agentverse"
 path = "src/main.rs"
 
-[lints.clippy]

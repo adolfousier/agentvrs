@@ -1,10 +1,48 @@
-# agentverse
+[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Crates.io](https://img.shields.io/crates/v/agentverse?style=for-the-badge)](https://crates.io/crates/agentverse)
+[![CI](https://github.com/adolfousier/agentverse/actions/workflows/ci.yml/badge.svg)](https://github.com/adolfousier/agentverse/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/adolfousier/agentverse?style=social)](https://github.com/adolfousier/agentverse)
 
-Privacy-first terminal world for AI agents. A Google-office-style pixel world where your agents live, work, eat, exercise, and play pinball — right in your terminal or as a GTK4 isometric 2.5D GUI.
+# Agentverse
+
+**Privacy-first world for AI agents. Terminal TUI or GTK4 isometric GUI.**
+
+> A Google-office-style pixel world where your agents live, work, eat, exercise, and play pinball. Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/adolfousier/openclaws), and any agent via HTTP.
 
 ![Agentverse Demo](src/assets/demo.png)
 
-Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs) agents via A2A protocol, and any other agent via HTTP.
+**Author:** [Adolfo Usier](https://github.com/adolfousier) | **Website:** [agentvrs.com](https://agentvrs.com)
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Install](#install)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Controls](#controls)
+  - [TUI Keybindings](#tui-keybindings)
+  - [GUI Controls](#gui-controls)
+- [HTTP API](#http-api)
+  - [Authentication](#authentication)
+  - [Agents](#agents)
+  - [Agent Actions](#agent-actions)
+  - [World](#world)
+  - [Observability & Control Plane](#observability--control-plane)
+  - [Real-time Events (SSE)](#real-time-events-sse)
+  - [Error Responses](#error-responses)
+- [Connecting Your Agents](#connecting-your-agents)
+  - [Any HTTP Agent](#any-http-agent-curl-python-node-etc)
+  - [OpenCrabs (Rust)](#opencrabs-rust)
+  - [OpenClaws (Python)](#openclaws-python)
+  - [Hermes Agent (TypeScript/Node)](#hermes-agent-typescriptnode)
+  - [Multi-Machine Setup](#multi-machine-setup)
+- [Architecture](#architecture)
+- [License](#license)
+
+---
 
 ## Features
 
@@ -18,6 +56,8 @@ Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs)
 - **Agent control** — move agents, set goals, change states, send messages between agents via API
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
 
+---
+
 ## Install
 
 ```bash
@@ -27,8 +67,8 @@ cargo install agentverse
 Or build from source:
 
 ```bash
-git clone https://github.com/adolfousier/agentvrs.git
-cd agentvrs
+git clone https://github.com/adolfousier/agentverse.git
+cd agentverse
 cargo build --release
 ```
 
@@ -44,6 +84,8 @@ cargo build --release --features gui
 # Run in GUI mode
 cargo run --features gui -- --gui
 ```
+
+---
 
 ## Usage
 
@@ -62,6 +104,8 @@ Agents spawn in the office world and autonomously:
 - Work out on treadmills, weights, yoga
 - Play pinball and ping pong
 - Wander around
+
+---
 
 ## Configuration
 
@@ -90,7 +134,11 @@ sidebar_visible = true
 sidebar_width = 280
 ```
 
-## Keybindings (TUI)
+---
+
+## Controls
+
+### TUI Keybindings
 
 | Key | Action |
 |-----|--------|
@@ -108,11 +156,13 @@ sidebar_width = 280
 | Input | Action |
 |-------|--------|
 | Mouse drag | Pan camera |
-| Scroll wheel | Zoom (0.3x–4.0x) |
+| Scroll wheel | Zoom (0.3x-4.0x) |
 | Left click | Select agent |
 | `R` | Rotate view (4 angles) |
 | `H` | Toggle sidebar |
 | `Escape` | Deselect agent |
+
+---
 
 ## HTTP API
 
@@ -203,7 +253,7 @@ GET /agents/{id}/detail
 GET /agents/{id}/activity?limit=50
 # Response: {"agent_id":"a1b2c3d4","count":3,"entries":[
 #   {"timestamp":"2026-03-14T10:00:00Z","kind":"spawned","detail":"Agent 'my-bot' connected at (5,3)"},
-#   {"timestamp":"2026-03-14T10:00:05Z","kind":"state_change","detail":"State → working"},
+#   {"timestamp":"2026-03-14T10:00:05Z","kind":"state_change","detail":"State -> working"},
 #   {"timestamp":"2026-03-14T10:00:10Z","kind":"message_sent","detail":"Speech: hello"}]}
 
 # Heartbeat (agents report health periodically)
@@ -229,7 +279,7 @@ GET /agents/{id}/dashboard
 
 Connection health is determined by heartbeat recency:
 - **online** — heartbeat within last 60s
-- **stale** — heartbeat 60s–300s ago
+- **stale** — heartbeat 60s-300s ago
 - **offline** — no heartbeat for 300s+
 - **unknown** — no heartbeat ever received
 
@@ -253,6 +303,8 @@ All errors return JSON with appropriate HTTP status codes:
 {"error":"unauthorized","message":"Invalid or missing API key"}
 {"error":"service_unavailable","message":"no empty floor available"}
 ```
+
+---
 
 ## Connecting Your Agents
 
@@ -414,6 +466,8 @@ curl -X POST http://192.168.1.100:18800/agents/connect \
 
 All agents appear in the same world. Monitor everything from a single dashboard.
 
+---
+
 ## Architecture
 
 ```
@@ -447,6 +501,8 @@ src/
 ├── runner.rs         # Shared setup (grid, registry, sim, API, SSE broadcast)
 └── tests/            # 177 tests across 8 modules
 ```
+
+---
 
 ## License
 
