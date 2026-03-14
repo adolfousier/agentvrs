@@ -129,7 +129,7 @@ fn populate_list(list_box: &ListBox, state: &GuiState) {
     let registry = state.registry.read().unwrap();
     let view = state.view.lock().unwrap();
 
-    for (i, agent) in registry.agents().enumerate() {
+    for agent in registry.agents() {
         let symbol = state_symbol(&agent.state);
         let s_color = state_color(&agent.state);
         let (r, g, b) = color_to_rgb_u8(s_color);
