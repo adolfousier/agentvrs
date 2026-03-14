@@ -18,15 +18,18 @@ pub async fn run(config: AppConfig) -> Result<()> {
 
     let state = Arc::new(GuiState::new(rt.grid, rt.registry, rt.event_rx));
 
-    // GTK must run on main thread; tokio runtime is already running
     let app = Application::builder().application_id(APP_ID).build();
 
     let state_clone = Arc::clone(&state);
     app.connect_activate(move |app| {
+        // Follow system dark/light mode
+        if let Some(settings) = gtk4::Settings::default() {
+            settings.set_gtk_application_prefer_dark_theme(true);
+        }
+
         window::build(app, &state_clone, tick_ms);
     });
 
-    // Run GTK main loop (blocks until window closes)
     let exit_code = app.run_with_args::<String>(&[]);
 
     let _ = rt.shutdown_tx.send(()).await;

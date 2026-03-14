@@ -30,8 +30,7 @@ fn draw(cr: &gtk4::cairo::Context, width: i32, height: i32, state: &GuiState) {
     let grid = state.grid.read().unwrap();
     let registry = state.registry.read().unwrap();
 
-    // Copy camera state so we can drop the lock
-    let (cam_offset_x, cam_offset_y, cam_zoom, cam_rotation, selected) = {
+    let (offset_x, offset_y, zoom, rotation, selected) = {
         let view = state.view.lock().unwrap();
         (
             view.camera.offset_x,
@@ -42,49 +41,39 @@ fn draw(cr: &gtk4::cairo::Context, width: i32, height: i32, state: &GuiState) {
         )
     };
 
-    let cam = crate::gui::types::Camera {
-        offset_x: cam_offset_x,
-        offset_y: cam_offset_y,
-        zoom: cam_zoom,
-        rotation: cam_rotation,
-    };
+    let world_cx = grid.width as f64 / 2.0;
+    let world_cy = grid.height as f64 / 2.0;
+    let center_x = w / 2.0 + offset_x;
+    let center_y = h / 2.0 + offset_y;
 
-    let center_x = w / 2.0 + cam.offset_x;
-    let center_y = h / 4.0 + cam.offset_y;
+    // Build correct draw order for current rotation
+    let order = iso::draw_order(grid.width, grid.height, rotation);
 
-    // Paint tiles back-to-front (painter's algorithm for isometric)
-    for gy in 0..grid.height {
-        for gx in 0..grid.width {
-            let (sx, sy) = iso::grid_to_screen(gx as f64, gy as f64, &cam);
-            let screen_x = sx + center_x;
-            let screen_y = sy + center_y;
-
-            if screen_x < -iso::TILE_W * cam.zoom
-                || screen_x > w + iso::TILE_W * cam.zoom
-                || screen_y < -iso::TILE_H * 2.0 * cam.zoom
-                || screen_y > h + iso::TILE_H * cam.zoom
-            {
-                continue;
-            }
-
-            let pos = Position::new(gx, gy);
-            if let Some(cell) = grid.get(pos) {
-                tile_render::draw_tile(cr, screen_x, screen_y, &cell.tile, cam.zoom);
-            }
-        }
-    }
-
-    // Paint agents (second pass so they draw on top)
-    for agent in registry.agents() {
-        let (sx, sy) = iso::grid_to_screen(
-            agent.position.x as f64,
-            agent.position.y as f64,
-            &cam,
-        );
+    // Pass 1: tiles in painter's order
+    for &(gx, gy) in &order {
+        let (sx, sy) = iso::grid_to_screen(gx as f64, gy as f64, zoom, rotation, world_cx, world_cy);
         let screen_x = sx + center_x;
         let screen_y = sy + center_y;
 
-        let is_selected = selected == Some(agent.id);
-        agent_render::draw_agent(cr, screen_x, screen_y, agent, cam.zoom, is_selected);
+        if screen_x < -iso::TILE_W * zoom
+            || screen_x > w + iso::TILE_W * zoom
+            || screen_y < -iso::TILE_H * 3.0 * zoom
+            || screen_y > h + iso::TILE_H * zoom
+        {
+            continue;
+        }
+
+        let pos = Position::new(gx, gy);
+        if let Some(cell) = grid.get(pos) {
+            tile_render::draw_tile(cr, screen_x, screen_y, &cell.tile, zoom);
+
+            // Draw agent on this tile (in same painter's order)
+            if let Some(agent_id) = cell.occupant {
+                if let Some(agent) = registry.get(&agent_id) {
+                    let is_selected = selected == Some(agent.id);
+                    agent_render::draw_agent(cr, screen_x, screen_y, agent, zoom, is_selected);
+                }
+            }
+        }
     }
 }

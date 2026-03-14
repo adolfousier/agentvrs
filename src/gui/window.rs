@@ -22,8 +22,6 @@ pub fn build(app: &Application, state: &Arc<GuiState>, tick_ms: u64) {
     let vbox = GtkBox::new(Orientation::Vertical, 0);
     vbox.append(&paned);
     vbox.append(&status);
-
-    // Make paned expand to fill
     paned.set_vexpand(true);
 
     let window = ApplicationWindow::builder()

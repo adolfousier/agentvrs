@@ -75,19 +75,27 @@ fn setup_click(da: &DrawingArea, state: &Arc<GuiState>) {
     click.connect_released(move |_, _, x, y| {
         let w = da_ref.width() as f64;
         let h = da_ref.height() as f64;
-        let view = state.view.lock().unwrap();
-        let cam = &view.camera;
-        let center_x = w / 2.0 + cam.offset_x;
-        let center_y = h / 4.0 + cam.offset_y;
-        let (gx, gy) = iso::screen_to_grid(x - center_x, y - center_y, cam);
-        drop(view);
+
+        let (offset_x, offset_y, zoom, rotation) = {
+            let view = state.view.lock().unwrap();
+            (view.camera.offset_x, view.camera.offset_y, view.camera.zoom, view.camera.rotation)
+        };
+
+        let grid = state.grid.read().unwrap();
+        let world_cx = grid.width as f64 / 2.0;
+        let world_cy = grid.height as f64 / 2.0;
+        let center_x = w / 2.0 + offset_x;
+        let center_y = h / 2.0 + offset_y;
+
+        let (gx, gy) = iso::screen_to_grid(
+            x - center_x, y - center_y, zoom, rotation, world_cx, world_cy,
+        );
 
         let gx = gx.round() as i32;
         let gy = gy.round() as i32;
 
-        if gx >= 0 && gy >= 0 {
+        if gx >= 0 && gy >= 0 && (gx as u16) < grid.width && (gy as u16) < grid.height {
             let pos = Position::new(gx as u16, gy as u16);
-            let grid = state.grid.read().unwrap();
             if let Some(cell) = grid.get(pos) {
                 let mut view = state.view.lock().unwrap();
                 view.selected_agent = cell.occupant;
