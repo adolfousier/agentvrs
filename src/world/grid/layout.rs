@@ -91,6 +91,14 @@ fn office_area(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     if x1 + 3 < x2 && y1 + 2 < y2 {
         g.set_tile(Position::new(x1 + 3, y1 + 2), Tile::Plant);
     }
+
+    // Floor lamps — near desks for good lighting
+    if start_x + 3 < x2 && start_y + 1 < y2 {
+        g.set_tile(Position::new(start_x + 3, start_y + 1), Tile::FloorLamp);
+    }
+    if start_x + 10 < x2 && start_y + 1 < y2 {
+        g.set_tile(Position::new(start_x + 10, start_y + 1), Tile::FloorLamp);
+    }
 }
 
 fn break_room(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
@@ -134,6 +142,14 @@ fn break_room(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     }
     if x1 + 3 < x2 && y2 - 3 > y1 {
         g.set_tile(Position::new(x1 + 3, y2 - 3), Tile::Plant);
+    }
+
+    // Small armchairs — cozy seating near couches
+    if mid_x - 5 > x1 && mid_y + 3 < y2 - 3 {
+        g.set_tile(Position::new(mid_x - 5, mid_y + 3), Tile::SmallArmchair);
+    }
+    if mid_x + 5 < x2 && mid_y + 3 < y2 - 3 {
+        g.set_tile(Position::new(mid_x + 5, mid_y + 3), Tile::SmallArmchair);
     }
 }
 
@@ -179,6 +195,23 @@ fn lounge(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     }
     if x2 - 5 > x1 && y1 + 3 < y2 {
         g.set_tile(Position::new(x2 - 5, y1 + 3), Tile::Plant);
+    }
+
+    // Floor lamp — near the couch area
+    if cx + 10 < x2 - 3 && cy < y2 - 3 {
+        g.set_tile(Position::new(cx + 10, cy), Tile::FloorLamp);
+    }
+
+    // Ping pong table — center of lounge
+    let pp_x = x1 + room_w / 2;
+    let pp_y = y1 + room_h * 3 / 4;
+    if pp_x < x2 - 3 && pp_y < y2 - 3 {
+        g.set_tile(Position::new(pp_x, pp_y), Tile::PingPongTable);
+    }
+
+    // Small armchair — near the rug
+    if rug_x + 5 < x2 - 3 && rug_y + 3 < y2 - 3 {
+        g.set_tile(Position::new(rug_x + 5, rug_y + 3), Tile::SmallArmchair);
     }
 }
 

@@ -1,6 +1,52 @@
 use crate::agent::{Agent, AgentState};
 use crate::avatar::palette::{hair_color, shirt_color, skin_color};
-use std::f64::consts::TAU;
+/// Draw a flat-shaded isometric block (rectangular prism) with three visible faces.
+/// `x, y` is the front-bottom-center of the block.
+/// `w` = width, `h` = height, `d` = isometric depth offset.
+/// The base color `(r,g,b)` is used to derive light/dark faces:
+///   - front face: base color
+///   - left face: darker (×0.7)
+///   - right face: slightly lighter (×0.85)
+///   - top face: lightest (×1.15, clamped)
+fn draw_iso_block(
+    cr: &gtk4::cairo::Context,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    d: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+) {
+    let hw = w / 2.0;
+    // Isometric depth offsets
+    let dx = d * 0.5;
+    let dy = d * 0.35;
+
+    // Front face (base color)
+    cr.rectangle(x - hw, y - h, w, h);
+    cr.set_source_rgb(r, g, b);
+    let _ = cr.fill();
+
+    // Top face (lightest)
+    cr.move_to(x - hw, y - h);
+    cr.line_to(x - hw + dx, y - h - dy);
+    cr.line_to(x + hw + dx, y - h - dy);
+    cr.line_to(x + hw, y - h);
+    cr.close_path();
+    cr.set_source_rgb((r * 1.15).min(1.0), (g * 1.15).min(1.0), (b * 1.15).min(1.0));
+    let _ = cr.fill();
+
+    // Right face (slightly darker)
+    cr.move_to(x + hw, y - h);
+    cr.line_to(x + hw + dx, y - h - dy);
+    cr.line_to(x + hw + dx, y - dy);
+    cr.line_to(x + hw, y);
+    cr.close_path();
+    cr.set_source_rgb(r * 0.85, g * 0.85, b * 0.85);
+    let _ = cr.fill();
+}
 
 pub fn draw_agent(
     cr: &gtk4::cairo::Context,
@@ -10,131 +56,189 @@ pub fn draw_agent(
     zoom: f64,
     is_selected: bool,
 ) {
-    let head_r = 10.0 * zoom;
+    // --- Dimensions (total ~54px at zoom=1) ---
+    let leg_w = 5.0 * zoom;
+    let leg_h = 10.0 * zoom;
     let body_w = 16.0 * zoom;
-    let shoulder_w = 20.0 * zoom;
-    let pants_h = 14.0 * zoom;
-    let torso_h = 16.0 * zoom;
-    let leg_w = 6.0 * zoom;
+    let body_h = 18.0 * zoom;
+    let head_size = 12.0 * zoom;
+    let hair_h = 4.0 * zoom;
+    let neck_h = 2.0 * zoom;
+    let depth = 5.0 * zoom; // isometric depth for all blocks
 
     let shirt = color_to_rgb(shirt_color(agent.color_index));
     let skin = color_to_rgb(skin_color(agent.color_index));
     let hair = color_to_rgb(hair_color(agent.color_index));
     let pants_color = (0.2, 0.2, 0.35);
 
-    // Selection ring on ground
+    // --- Selection diamond on ground ---
     if is_selected {
-        cr.save().unwrap();
-        cr.translate(sx, sy);
-        cr.scale(1.0, 0.5);
-        cr.arc(0.0, 0.0, 22.0 * zoom, 0.0, TAU);
-        cr.restore().unwrap();
+        let sel_rx = 22.0 * zoom;
+        let sel_ry = 11.0 * zoom;
+        cr.move_to(sx, sy - sel_ry);
+        cr.line_to(sx + sel_rx, sy);
+        cr.line_to(sx, sy + sel_ry);
+        cr.line_to(sx - sel_rx, sy);
+        cr.close_path();
         cr.set_source_rgba(0.2, 0.8, 1.0, 0.4);
         cr.set_line_width(3.0 * zoom);
         let _ = cr.stroke();
     }
 
-    // Shadow ellipse
-    cr.save().unwrap();
-    cr.translate(sx, sy);
-    cr.scale(1.0, 0.4);
-    cr.arc(0.0, 0.0, 14.0 * zoom, 0.0, TAU);
-    cr.restore().unwrap();
+    // --- Shadow diamond ---
+    let shad_rx = 14.0 * zoom;
+    let shad_ry = 5.0 * zoom;
+    cr.move_to(sx, sy - shad_ry);
+    cr.line_to(sx + shad_rx, sy);
+    cr.line_to(sx, sy + shad_ry);
+    cr.line_to(sx - shad_rx, sy);
+    cr.close_path();
     cr.set_source_rgba(0.0, 0.0, 0.0, 0.3);
     let _ = cr.fill();
 
-    // Legs (two separate rectangles for walking feel)
+    // --- Legs (two small blocks side by side) ---
     let leg_gap = 2.0 * zoom;
-    cr.rectangle(sx - leg_w - leg_gap / 2.0, sy - pants_h, leg_w, pants_h);
-    cr.set_source_rgb(
-        pants_color.0 * 0.8,
-        pants_color.1 * 0.8,
-        pants_color.2 * 0.8,
+    let legs_bot = sy; // feet touch ground
+
+    // Left leg (darker)
+    draw_iso_block(
+        cr,
+        sx - leg_w / 2.0 - leg_gap / 2.0,
+        legs_bot,
+        leg_w,
+        leg_h,
+        depth,
+        pants_color.0 * 0.75,
+        pants_color.1 * 0.75,
+        pants_color.2 * 0.75,
     );
-    let _ = cr.fill();
-    cr.rectangle(sx + leg_gap / 2.0, sy - pants_h, leg_w, pants_h);
-    cr.set_source_rgb(pants_color.0, pants_color.1, pants_color.2);
-    let _ = cr.fill();
 
-    // Torso (trapezoid: wider at shoulders)
-    let torso_bot = sy - pants_h;
-    let torso_top = torso_bot - torso_h;
-    cr.move_to(sx - body_w / 2.0, torso_bot);
-    cr.line_to(sx - shoulder_w / 2.0, torso_top);
-    cr.line_to(sx + shoulder_w / 2.0, torso_top);
-    cr.line_to(sx + body_w / 2.0, torso_bot);
-    cr.close_path();
-    cr.set_source_rgb(shirt.0, shirt.1, shirt.2);
-    let _ = cr.fill();
+    // Right leg
+    draw_iso_block(
+        cr,
+        sx + leg_w / 2.0 + leg_gap / 2.0,
+        legs_bot,
+        leg_w,
+        leg_h,
+        depth,
+        pants_color.0,
+        pants_color.1,
+        pants_color.2,
+    );
 
-    // Shirt detail — darker stripe
-    cr.move_to(sx - 2.0 * zoom, torso_bot);
-    cr.line_to(sx - 2.0 * zoom, torso_top + 2.0 * zoom);
-    cr.line_to(sx + 2.0 * zoom, torso_top + 2.0 * zoom);
-    cr.line_to(sx + 2.0 * zoom, torso_bot);
-    cr.close_path();
+    // --- Body / torso block ---
+    let body_bot = legs_bot - leg_h;
+    draw_iso_block(
+        cr,
+        sx,
+        body_bot,
+        body_w,
+        body_h,
+        depth,
+        shirt.0,
+        shirt.1,
+        shirt.2,
+    );
+
+    // Shirt detail — darker vertical stripe on front face
+    let stripe_w = 4.0 * zoom;
+    cr.rectangle(sx - stripe_w / 2.0, body_bot - body_h, stripe_w, body_h);
     cr.set_source_rgb(shirt.0 * 0.7, shirt.1 * 0.7, shirt.2 * 0.7);
     let _ = cr.fill();
 
-    // Arms
+    // --- Arms (narrow blocks on each side of torso) ---
     let arm_w = 4.0 * zoom;
-    let arm_h = torso_h * 0.8;
-    cr.rectangle(
-        sx - shoulder_w / 2.0 - arm_w,
-        torso_top + 2.0 * zoom,
+    let arm_h = body_h * 0.75;
+    let arm_top = body_bot - body_h + 2.0 * zoom;
+
+    // Left arm
+    draw_iso_block(
+        cr,
+        sx - body_w / 2.0 - arm_w / 2.0,
+        arm_top + arm_h,
         arm_w,
         arm_h,
+        depth * 0.6,
+        shirt.0 * 0.8,
+        shirt.1 * 0.8,
+        shirt.2 * 0.8,
     );
-    cr.set_source_rgb(shirt.0 * 0.85, shirt.1 * 0.85, shirt.2 * 0.85);
-    let _ = cr.fill();
-    cr.rectangle(sx + shoulder_w / 2.0, torso_top + 2.0 * zoom, arm_w, arm_h);
-    cr.set_source_rgb(shirt.0 * 0.9, shirt.1 * 0.9, shirt.2 * 0.9);
-    let _ = cr.fill();
 
-    // Neck
-    cr.rectangle(
-        sx - 3.0 * zoom,
-        torso_top - 4.0 * zoom,
-        6.0 * zoom,
-        5.0 * zoom,
+    // Right arm
+    draw_iso_block(
+        cr,
+        sx + body_w / 2.0 + arm_w / 2.0,
+        arm_top + arm_h,
+        arm_w,
+        arm_h,
+        depth * 0.6,
+        shirt.0 * 0.9,
+        shirt.1 * 0.9,
+        shirt.2 * 0.9,
     );
-    cr.set_source_rgb(skin.0, skin.1, skin.2);
-    let _ = cr.fill();
 
-    // Head
-    let head_y = torso_top - 4.0 * zoom - head_r;
-    cr.arc(sx, head_y, head_r, 0.0, TAU);
-    cr.set_source_rgb(skin.0, skin.1, skin.2);
-    let _ = cr.fill();
-
-    // Hair (top 60% of head)
-    cr.arc(sx, head_y, head_r, std::f64::consts::PI, TAU);
-    cr.set_source_rgb(hair.0, hair.1, hair.2);
-    let _ = cr.fill();
-    // Hair sides
-    cr.rectangle(sx - head_r, head_y - head_r, 2.0 * zoom, head_r);
-    let _ = cr.fill();
-    cr.rectangle(
-        sx + head_r - 2.0 * zoom,
-        head_y - head_r,
-        2.0 * zoom,
-        head_r,
-    );
-    let _ = cr.fill();
-
-    // Name label (dark rounded pill above head)
-    draw_name_label(
+    // --- Neck (small skin-colored block) ---
+    let neck_bot = body_bot - body_h;
+    draw_iso_block(
         cr,
         sx,
-        head_y - head_r - 4.0 * zoom,
-        &agent.name,
-        &agent.state,
-        zoom,
+        neck_bot,
+        6.0 * zoom,
+        neck_h,
+        depth * 0.5,
+        skin.0,
+        skin.1,
+        skin.2,
     );
 
-    // Speech bubble
+    // --- Head (square block) ---
+    let head_bot = neck_bot - neck_h;
+    draw_iso_block(
+        cr,
+        sx,
+        head_bot,
+        head_size,
+        head_size,
+        depth,
+        skin.0,
+        skin.1,
+        skin.2,
+    );
+
+    // --- Hair (flat block on top of head) ---
+    let hair_bot = head_bot - head_size;
+    draw_iso_block(
+        cr,
+        sx,
+        hair_bot,
+        head_size + 1.0 * zoom,
+        hair_h,
+        depth,
+        hair.0,
+        hair.1,
+        hair.2,
+    );
+
+    // Hair side strip on front face (left side of head)
+    cr.rectangle(
+        sx - head_size / 2.0,
+        head_bot - head_size,
+        2.0 * zoom,
+        head_size * 0.5,
+    );
+    cr.set_source_rgb(hair.0 * 0.85, hair.1 * 0.85, hair.2 * 0.85);
+    let _ = cr.fill();
+
+    // Total height: leg_h(10) + body_h(18) + neck_h(2) + head_size(12) + hair_h(4) = 46
+    // Plus isometric depth offsets (~3.5) + hair overhang ≈ ~54px at zoom=1
+
+    // --- Name label (dark rounded pill above head) ---
+    let label_y = hair_bot - hair_h - 4.0 * zoom;
+    draw_name_label(cr, sx, label_y, &agent.name, &agent.state, zoom);
+
+    // --- Speech bubble ---
     if let Some(ref speech) = agent.speech {
-        draw_speech_bubble(cr, sx, head_y - head_r - 22.0 * zoom, speech, zoom);
+        draw_speech_bubble(cr, sx, label_y - 18.0 * zoom, speech, zoom);
     }
 }
 
