@@ -261,7 +261,24 @@ fn draw_rug(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
     let _ = cr.fill();
 }
 
-// ─── Isometric block with edge outlines ───
+// ─── Ground shadow (drawn BEFORE the object) ───
+
+fn draw_ground_shadow(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64, w_ratio: f64, h_ratio: f64) {
+    let hw = TILE_W / 2.0 * z * w_ratio * 1.1;
+    let hh = TILE_H / 2.0 * z * h_ratio * 1.1;
+    // Offset shadow slightly to the right and down (light from top-left)
+    let ox = 3.0 * z;
+    let oy = 2.0 * z;
+    cr.move_to(sx + ox, sy + oy - hh);
+    cr.line_to(sx + ox + hw, sy + oy);
+    cr.line_to(sx + ox, sy + oy + hh);
+    cr.line_to(sx + ox - hw, sy + oy);
+    cr.close_path();
+    cr.set_source_rgba(0.0, 0.0, 0.0, 0.18);
+    let _ = cr.fill();
+}
+
+// ─── Isometric block with shadows, highlights, and edge outlines ───
 
 #[allow(clippy::too_many_arguments)]
 fn iso_block(
@@ -280,34 +297,34 @@ fn iso_block(
     let hh = TILE_H / 2.0 * z * h_ratio;
     let bh = height * z;
 
-    // Compute all 7 visible vertices
-    let bl = (sx - hw, sy);           // bottom-left
-    let br = (sx + hw, sy);           // bottom-right
-    let bf = (sx, sy + hh);           // bottom-front
-    let tl = (sx - hw, sy - bh);      // top-left
-    let tr = (sx + hw, sy - bh);      // top-right
-    let tf = (sx, sy + hh - bh);      // top-front
-    let tb = (sx, sy - hh - bh);      // top-back
+    // 7 visible vertices
+    let bl = (sx - hw, sy);
+    let br = (sx + hw, sy);
+    let bf = (sx, sy + hh);
+    let tl = (sx - hw, sy - bh);
+    let tr = (sx + hw, sy - bh);
+    let tf = (sx, sy + hh - bh);
+    let tb = (sx, sy - hh - bh);
 
-    // Left face (darkest)
+    // Left face (darkest — lit from top-right)
     cr.move_to(tl.0, tl.1);
     cr.line_to(bl.0, bl.1);
     cr.line_to(bf.0, bf.1);
     cr.line_to(tf.0, tf.1);
     cr.close_path();
-    cr.set_source_rgb(r * 0.62, g * 0.62, b * 0.62);
+    cr.set_source_rgb(r * 0.58, g * 0.58, b * 0.58);
     let _ = cr.fill();
 
-    // Right face (medium)
+    // Right face (medium — catches some light)
     cr.move_to(tr.0, tr.1);
     cr.line_to(br.0, br.1);
     cr.line_to(bf.0, bf.1);
     cr.line_to(tf.0, tf.1);
     cr.close_path();
-    cr.set_source_rgb(r * 0.80, g * 0.80, b * 0.80);
+    cr.set_source_rgb(r * 0.78, g * 0.78, b * 0.78);
     let _ = cr.fill();
 
-    // Top face (lightest)
+    // Top face (brightest — direct light)
     cr.move_to(tb.0, tb.1);
     cr.line_to(tr.0, tr.1);
     cr.line_to(tf.0, tf.1);
@@ -316,33 +333,49 @@ fn iso_block(
     cr.set_source_rgb(r, g, b);
     let _ = cr.fill();
 
-    // Edge outlines — this is what makes it look properly 3D
-    let edge_dark = 0.35_f64.min(r * 0.4);
-    cr.set_source_rgba(edge_dark, edge_dark, edge_dark, 0.6);
-    cr.set_line_width(0.8 * z);
+    // Highlight on top face — subtle bright gradient near the back edge
+    cr.move_to(tb.0, tb.1);
+    cr.line_to(tr.0, tr.1);
+    // Midpoint of right-to-front edge
+    let mid_r = ((tr.0 + tf.0) / 2.0, (tr.1 + tf.1) / 2.0);
+    let mid_l = ((tl.0 + tf.0) / 2.0, (tl.1 + tf.1) / 2.0);
+    cr.line_to(mid_r.0, mid_r.1);
+    cr.line_to(mid_l.0, mid_l.1);
+    cr.close_path();
+    cr.set_source_rgba(1.0, 1.0, 1.0, 0.08);
+    let _ = cr.fill();
 
-    // Left face outline
+    // Dark edge outlines
+    cr.set_source_rgba(0.0, 0.0, 0.0, 0.35);
+    cr.set_line_width(0.7 * z);
+
+    // Silhouette outline (visible edges only)
     cr.move_to(tl.0, tl.1);
     cr.line_to(bl.0, bl.1);
     cr.line_to(bf.0, bf.1);
-    cr.line_to(tf.0, tf.1);
-    cr.close_path();
-    let _ = cr.stroke();
-
-    // Right face outline
-    cr.move_to(tr.0, tr.1);
     cr.line_to(br.0, br.1);
-    cr.line_to(bf.0, bf.1);
-    cr.line_to(tf.0, tf.1);
+    cr.line_to(tr.0, tr.1);
+    cr.line_to(tb.0, tb.1);
     cr.close_path();
     let _ = cr.stroke();
 
-    // Top face outline
-    cr.move_to(tb.0, tb.1);
-    cr.line_to(tr.0, tr.1);
+    // Internal edges (the 3 visible seams)
+    cr.move_to(tl.0, tl.1);
     cr.line_to(tf.0, tf.1);
-    cr.line_to(tl.0, tl.1);
-    cr.close_path();
+    let _ = cr.stroke();
+    cr.move_to(tf.0, tf.1);
+    cr.line_to(bf.0, bf.1);
+    let _ = cr.stroke();
+    cr.move_to(tf.0, tf.1);
+    cr.line_to(tr.0, tr.1);
+    let _ = cr.stroke();
+
+    // Bright highlight edge on top-back and top-right edges (catches light)
+    cr.set_source_rgba(1.0, 1.0, 1.0, 0.15);
+    cr.set_line_width(1.0 * z);
+    cr.move_to(tl.0, tl.1);
+    cr.line_to(tb.0, tb.1);
+    cr.line_to(tr.0, tr.1);
     let _ = cr.stroke();
 }
 
@@ -417,21 +450,30 @@ fn right_face_rect(
 // ─── Furniture ───
 
 fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Desk body — big chunky brown block, fills most of tile
-    iso_block(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.60, 0.42, 0.22);
+    draw_ground_shadow(cr, sx, sy, z, 0.85, 0.70);
 
+    // Desk body — big chunky brown block
+    iso_block(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.65, 0.48, 0.28);
+
+    // Drawer panels on left face
+    left_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.08, 0.42, 0.08, 0.92, 0.52, 0.36, 0.18);
+    left_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.56, 0.90, 0.08, 0.92, 0.52, 0.36, 0.18);
+    // Drawer handles on left face
+    left_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.23, 0.27, 0.35, 0.65, 0.72, 0.58, 0.35);
+    left_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.71, 0.75, 0.35, 0.65, 0.72, 0.58, 0.35);
+
+    // Drawer panels on right face
+    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.08, 0.42, 0.08, 0.92, 0.58, 0.42, 0.24);
+    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.56, 0.90, 0.08, 0.92, 0.58, 0.42, 0.24);
     // Drawer handles on right face
-    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.30, 0.35, 0.15, 0.40, 0.50, 0.35, 0.18);
-    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.55, 0.60, 0.15, 0.40, 0.50, 0.35, 0.18);
+    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.23, 0.27, 0.35, 0.65, 0.72, 0.58, 0.35);
+    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.71, 0.75, 0.35, 0.65, 0.72, 0.58, 0.35);
 
-    // Drawer line dividers on right face
-    right_face_rect(cr, sx, sy, z, 0.85, 0.70, 22.0, 0.44, 0.46, 0.05, 0.95, 0.42, 0.30, 0.16);
-
-    // Monitor — centered on desk top, thin slab
+    // Monitor — centered on desk top
     let top = sy - 22.0 * z;
     iso_block(cr, sx, top, z, 0.40, 0.08, 16.0, 0.12, 0.12, 0.15);
 
-    // Screen on left face (bright blue glow)
+    // Screen on left face (blue glow)
     left_face_rect(cr, sx, top, z, 0.40, 0.08, 16.0, 0.06, 0.90, 0.06, 0.94, 0.10, 0.16, 0.28);
 
     // Code lines on screen
@@ -445,164 +487,214 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
         );
     }
 
-    // Keyboard on desk top — small flat block
-    iso_block(cr, sx, top, z, 0.25, 0.15, 1.5, 0.20, 0.20, 0.22);
+    // Keyboard on desk top
+    iso_block(cr, sx, top, z, 0.25, 0.15, 1.5, 0.22, 0.22, 0.25);
 }
 
 fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let h = 58.0;
     let wr = 0.70;
     let hr = 0.65;
+    draw_ground_shadow(cr, sx, sy, z, wr, hr);
+
     // Big red cabinet
-    iso_block(cr, sx, sy, z, wr, hr, h, 0.75, 0.14, 0.14);
+    iso_block(cr, sx, sy, z, wr, hr, h, 0.78, 0.16, 0.16);
 
-    // Glass panel on left face
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.05, 0.68, 0.06, 0.94, 0.22, 0.28, 0.35);
+    // Glass panel on left face (darker inset)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.06, 0.68, 0.06, 0.94, 0.18, 0.22, 0.30);
 
-    // Shelves inside glass (horizontal lines)
+    // Glass highlight (reflection streak)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.08, 0.40, 0.08, 0.15, 0.35, 0.42, 0.52);
+
+    // Shelf lines inside glass
     for row in 0..4 {
         let y_frac = 0.08 + row as f64 * 0.15;
-        left_face_rect(cr, sx, sy, z, wr, hr, h, y_frac, y_frac + 0.01, 0.08, 0.92, 0.35, 0.35, 0.40);
+        left_face_rect(cr, sx, sy, z, wr, hr, h, y_frac, y_frac + 0.01, 0.08, 0.92, 0.40, 0.40, 0.45);
     }
 
-    // Cans/bottles on shelves
-    let can_colors = [(0.90, 0.25, 0.15), (0.15, 0.55, 0.90), (0.15, 0.72, 0.25), (0.92, 0.72, 0.05)];
+    // Cans/bottles on shelves (bigger, brighter)
+    let can_colors = [(0.92, 0.28, 0.18), (0.18, 0.58, 0.92), (0.18, 0.75, 0.28), (0.95, 0.75, 0.08), (0.72, 0.18, 0.82)];
     for row in 0..4 {
         let y_top = 0.10 + row as f64 * 0.15;
         for col in 0..3 {
-            let x_left = 0.15 + col as f64 * 0.25;
+            let x_left = 0.14 + col as f64 * 0.26;
             let ci = (row * 3 + col) as usize % can_colors.len();
             let (cr2, cg, cb) = can_colors[ci];
-            left_face_rect(cr, sx, sy, z, wr, hr, h, y_top, y_top + 0.10, x_left, x_left + 0.18, cr2, cg, cb);
+            left_face_rect(cr, sx, sy, z, wr, hr, h, y_top, y_top + 0.11, x_left, x_left + 0.20, cr2, cg, cb);
         }
     }
 
-    // Dispensing slot
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.72, 0.82, 0.25, 0.75, 0.08, 0.08, 0.10);
+    // Dispensing slot (dark hole)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.72, 0.84, 0.22, 0.78, 0.05, 0.05, 0.08);
+    // Slot frame
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.71, 0.85, 0.20, 0.22, 0.45, 0.45, 0.48);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.71, 0.85, 0.78, 0.80, 0.45, 0.45, 0.48);
 
-    // Brand stripe on right face
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.08, 0.08, 0.92, 0.92, 0.20, 0.20);
+    // Price display (green LED)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.88, 0.94, 0.30, 0.70, 0.02, 0.02, 0.04);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.89, 0.93, 0.32, 0.68, 0.08, 0.65, 0.12);
 
-    // "DRINKS" text area on right face
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.35, 0.55, 0.15, 0.85, 0.65, 0.10, 0.10);
+    // Brand stripe on right face (bright red banner)
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.12, 0.06, 0.94, 0.95, 0.22, 0.22);
+
+    // Side panel detail on right face
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.15, 0.85, 0.10, 0.90, 0.68, 0.12, 0.12);
+    // Highlight stripe
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.40, 0.50, 0.10, 0.90, 0.85, 0.20, 0.20);
 }
 
 fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Kitchen counter — big dark block
     let wr = 0.85;
     let hr = 0.70;
-    iso_block(cr, sx, sy, z, wr, hr, 24.0, 0.18, 0.18, 0.22);
+    draw_ground_shadow(cr, sx, sy, z, wr, hr);
 
-    // Cabinet doors on left face (two panels)
-    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.08, 0.92, 0.06, 0.46, 0.14, 0.14, 0.18);
-    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.08, 0.92, 0.54, 0.94, 0.14, 0.14, 0.18);
+    // Kitchen counter — dark charcoal grey (like reference)
+    iso_block(cr, sx, sy, z, wr, hr, 24.0, 0.25, 0.25, 0.28);
 
-    // Door handles on left face
-    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.45, 0.50, 0.42, 0.46, 0.55, 0.55, 0.58);
-    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.45, 0.50, 0.90, 0.94, 0.55, 0.55, 0.58);
+    // Cabinet doors on left face (two recessed panels)
+    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.06, 0.92, 0.06, 0.46, 0.18, 0.18, 0.22);
+    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.06, 0.92, 0.54, 0.94, 0.18, 0.18, 0.22);
+    // Door handles
+    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.44, 0.50, 0.40, 0.46, 0.58, 0.58, 0.62);
+    left_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.44, 0.50, 0.88, 0.94, 0.58, 0.58, 0.62);
 
     // Cabinet doors on right face
-    right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.08, 0.92, 0.06, 0.46, 0.14, 0.14, 0.18);
-    right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.08, 0.92, 0.54, 0.94, 0.14, 0.14, 0.18);
+    right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.06, 0.92, 0.06, 0.46, 0.22, 0.22, 0.26);
+    right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.06, 0.92, 0.54, 0.94, 0.22, 0.22, 0.26);
+    // Handles
+    right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.44, 0.50, 0.40, 0.46, 0.58, 0.58, 0.62);
+    right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.44, 0.50, 0.88, 0.94, 0.58, 0.58, 0.62);
 
-    // Countertop — lighter slab on top
+    // Countertop — light stone/marble
     let top = sy - 24.0 * z;
-    iso_block(cr, sx, top, z, 0.88, 0.73, 2.5, 0.50, 0.45, 0.40);
+    iso_block(cr, sx, top, z, 0.88, 0.73, 2.5, 0.58, 0.55, 0.50);
 
-    // Coffee machine — white block centered on counter
+    // Coffee machine — white/silver block on counter
     let surface = top - 2.5 * z;
-    iso_block(cr, sx, surface, z, 0.35, 0.35, 20.0, 0.88, 0.88, 0.85);
+    iso_block(cr, sx, surface, z, 0.38, 0.38, 22.0, 0.90, 0.90, 0.88);
 
-    // Machine display on left face (blue screen)
-    left_face_rect(cr, sx, surface, z, 0.35, 0.35, 20.0, 0.12, 0.38, 0.10, 0.90, 0.10, 0.55, 0.75);
+    // Machine display — green "READY" screen on left face
+    left_face_rect(cr, sx, surface, z, 0.38, 0.38, 22.0, 0.10, 0.30, 0.10, 0.90, 0.02, 0.02, 0.04);
+    // Green "READY" text area
+    left_face_rect(cr, sx, surface, z, 0.38, 0.38, 22.0, 0.14, 0.26, 0.15, 0.85, 0.10, 0.72, 0.18);
 
-    // Drip nozzle area on left face
-    left_face_rect(cr, sx, surface, z, 0.35, 0.35, 20.0, 0.55, 0.85, 0.20, 0.80, 0.15, 0.15, 0.18);
+    // Drip nozzle area (dark recess)
+    left_face_rect(cr, sx, surface, z, 0.38, 0.38, 22.0, 0.50, 0.82, 0.18, 0.82, 0.12, 0.12, 0.15);
 
-    // Brand logo on right face
-    right_face_rect(cr, sx, surface, z, 0.35, 0.35, 20.0, 0.15, 0.35, 0.20, 0.80, 0.72, 0.72, 0.70);
+    // Coffee cup under nozzle (small white block on counter)
+    // Cup sits on the counter surface, in front of machine
+    iso_block(cr, sx, surface, z, 0.10, 0.10, 6.0, 0.95, 0.95, 0.92);
+    // Cup dark coffee inside (top face detail — darker circle)
+    let cup_top = surface - 6.0 * z;
+    let cup_hw = TILE_W / 2.0 * z * 0.08;
+    cr.save().unwrap();
+    cr.translate(sx, cup_top);
+    cr.scale(cup_hw / (3.0 * z), cup_hw / (6.0 * z));
+    cr.arc(0.0, 0.0, 3.0 * z, 0.0, TAU);
+    cr.restore().unwrap();
+    cr.set_source_rgb(0.25, 0.15, 0.05);
+    let _ = cr.fill();
+
+    // Steam wisps above cup
+    cr.set_source_rgba(0.85, 0.85, 0.85, 0.3);
+    cr.set_line_width(0.8 * z);
+    for i in 0..3 {
+        let ox = (i as f64 - 1.0) * 2.0 * z;
+        cr.move_to(sx + ox, cup_top - 1.0 * z);
+        cr.curve_to(
+            sx + ox + 1.5 * z, cup_top - 4.0 * z,
+            sx + ox - 1.5 * z, cup_top - 7.0 * z,
+            sx + ox + 1.0 * z, cup_top - 10.0 * z,
+        );
+        let _ = cr.stroke();
+    }
+
+    // Brand/logo on right face of machine
+    right_face_rect(cr, sx, surface, z, 0.38, 0.38, 22.0, 0.12, 0.30, 0.18, 0.82, 0.78, 0.78, 0.76);
 }
 
 fn draw_couch(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Seat — wide chunky navy block
     let wr = 0.90;
     let hr = 0.75;
-    iso_block(cr, sx, sy, z, wr, hr, 14.0, 0.22, 0.28, 0.45);
+    draw_ground_shadow(cr, sx, sy, z, wr, hr);
 
-    // Backrest — same width, stacked on top (shallow depth = pushed to back)
+    // Seat — wide chunky navy block
+    iso_block(cr, sx, sy, z, wr, hr, 14.0, 0.24, 0.30, 0.48);
+
+    // Backrest — stacked on top, shallower depth
     let seat_top = sy - 14.0 * z;
-    iso_block(cr, sx, seat_top, z, wr, 0.25, 20.0, 0.18, 0.22, 0.38);
+    iso_block(cr, sx, seat_top, z, wr, 0.25, 20.0, 0.20, 0.24, 0.40);
 
-    // Armrest details — drawn as thicker strips on the LEFT face edges
-    left_face_rect(cr, sx, sy, z, wr, hr, 14.0, 0.0, 1.0, 0.0, 0.12, 0.16, 0.20, 0.34);
-    // And right face edges
-    right_face_rect(cr, sx, sy, z, wr, hr, 14.0, 0.0, 1.0, 0.88, 1.0, 0.20, 0.25, 0.40);
+    // Armrest details on faces (raised strips)
+    left_face_rect(cr, sx, sy, z, wr, hr, 14.0, 0.0, 0.85, 0.0, 0.14, 0.18, 0.22, 0.38);
+    right_face_rect(cr, sx, sy, z, wr, hr, 14.0, 0.0, 0.85, 0.86, 1.0, 0.22, 0.28, 0.44);
 
-    // Seat cushion divider on top face (line across)
+    // Seat cushion dividers on top face
     let hw = TILE_W / 2.0 * z * wr;
     let hh = TILE_H / 2.0 * z * hr;
-    cr.set_source_rgba(0.14, 0.18, 0.30, 0.5);
+    cr.set_source_rgba(0.12, 0.16, 0.28, 0.45);
     cr.set_line_width(1.0 * z);
-    // Center line on top face following iso direction
-    cr.move_to(sx - hw * 0.3, seat_top - hh * 0.3);
-    cr.line_to(sx + hw * 0.3, seat_top + hh * 0.3);
-    let _ = cr.stroke();
+    // Two divider lines
+    for i in 1..3 {
+        let t = i as f64 / 3.0;
+        let x0 = sx - hw + hw * 2.0 * t;
+        let y0 = seat_top - hh + hh * 2.0 * t;
+        cr.move_to(x0, y0 - 3.0 * z);
+        cr.line_to(x0 - 5.0 * z, y0 + 3.0 * z);
+        let _ = cr.stroke();
+    }
 
-    // Throw pillow — small block on seat
-    iso_block(cr, sx, seat_top, z, 0.15, 0.15, 6.0, 0.88, 0.58, 0.28);
+    // Throw pillow
+    iso_block(cr, sx, seat_top, z, 0.15, 0.15, 6.0, 0.90, 0.60, 0.30);
 }
 
 fn draw_plant(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Pot — chunky terracotta block
-    iso_block(cr, sx, sy, z, 0.30, 0.30, 14.0, 0.62, 0.35, 0.18);
-    // Pot rim
-    iso_block(cr, sx, sy - 14.0 * z, z, 0.34, 0.34, 2.0, 0.55, 0.30, 0.14);
+    draw_ground_shadow(cr, sx, sy, z, 0.35, 0.35);
 
-    // Soil on top
-    let pot_top = sy - 16.0 * z;
-    cr.save().unwrap();
-    cr.translate(sx, pot_top);
-    cr.scale(1.0, 0.5);
-    cr.arc(0.0, 0.0, 4.0 * z, 0.0, TAU);
-    cr.restore().unwrap();
-    cr.set_source_rgb(0.28, 0.18, 0.08);
-    let _ = cr.fill();
+    // Pot — chunky terracotta block
+    iso_block(cr, sx, sy, z, 0.30, 0.30, 14.0, 0.65, 0.38, 0.20);
+    // Pot rim
+    iso_block(cr, sx, sy - 14.0 * z, z, 0.34, 0.34, 2.0, 0.58, 0.32, 0.16);
 
     // Trunk
-    cr.set_source_rgb(0.38, 0.26, 0.12);
+    let pot_top = sy - 16.0 * z;
+    cr.set_source_rgb(0.40, 0.28, 0.14);
     cr.set_line_width(3.0 * z);
     cr.move_to(sx, pot_top);
-    cr.line_to(sx, sy - 40.0 * z);
+    cr.line_to(sx, sy - 42.0 * z);
     let _ = cr.stroke();
 
     // Branches
     cr.set_line_width(2.0 * z);
-    cr.move_to(sx, sy - 34.0 * z);
-    cr.line_to(sx + 8.0 * z, sy - 42.0 * z);
+    cr.move_to(sx, sy - 36.0 * z);
+    cr.line_to(sx + 9.0 * z, sy - 44.0 * z);
     let _ = cr.stroke();
-    cr.move_to(sx, sy - 30.0 * z);
-    cr.line_to(sx - 7.0 * z, sy - 39.0 * z);
+    cr.move_to(sx, sy - 32.0 * z);
+    cr.line_to(sx - 8.0 * z, sy - 41.0 * z);
     let _ = cr.stroke();
 
-    // Foliage — turquoise/cyan spheres
+    // Foliage — turquoise/cyan spheres with highlight + shadow
     let leaves: [(f64, f64, f64, f64); 7] = [
-        (0.0, -50.0, 14.0, 0.85),
-        (-9.0, -44.0, 11.0, 0.75),
-        (10.0, -46.0, 11.0, 0.90),
-        (-6.0, -54.0, 10.0, 0.95),
-        (7.0, -52.0, 10.0, 0.80),
-        (-11.0, -38.0, 9.0, 0.70),
-        (12.0, -40.0, 9.0, 0.82),
+        (0.0, -52.0, 14.0, 0.88),
+        (-10.0, -46.0, 11.0, 0.75),
+        (11.0, -48.0, 11.0, 0.92),
+        (-7.0, -56.0, 10.0, 0.95),
+        (8.0, -54.0, 10.0, 0.82),
+        (-12.0, -40.0, 9.0, 0.72),
+        (13.0, -42.0, 9.0, 0.85),
     ];
     for (dx, dy, radius, shade) in &leaves {
-        cr.arc(sx + dx * z, sy + dy * z, radius * z, 0.0, TAU);
-        cr.set_source_rgb(0.12 * shade, 0.72 * shade, 0.68 * shade);
+        // Shadow layer
+        cr.arc(sx + dx * z + 1.0 * z, sy + dy * z + 1.0 * z, radius * z, 0.0, TAU);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.12);
         let _ = cr.fill();
-    }
-    // Highlights
-    for &(dx, dy, radius) in &[(1.0, -52.0, 5.0), (-3.0, -46.0, 4.0)] {
+        // Main leaf
         cr.arc(sx + dx * z, sy + dy * z, radius * z, 0.0, TAU);
-        cr.set_source_rgba(0.35, 0.88, 0.82, 0.22);
+        cr.set_source_rgb(0.12 * shade, 0.74 * shade, 0.70 * shade);
+        let _ = cr.fill();
+        // Highlight on upper portion
+        cr.arc(sx + dx * z - 1.0 * z, sy + dy * z - 1.5 * z, radius * z * 0.5, 0.0, TAU);
+        cr.set_source_rgba(0.40, 0.92, 0.88, 0.18);
         let _ = cr.fill();
     }
 }
@@ -611,47 +703,86 @@ fn draw_arcade(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let h = 58.0;
     let wr = 0.60;
     let hr = 0.55;
-    // Purple cabinet
-    iso_block(cr, sx, sy, z, wr, hr, h, 0.38, 0.10, 0.52);
+    draw_ground_shadow(cr, sx, sy, z, wr, hr);
 
-    // Yellow marquee on left face
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.09, 0.05, 0.95, 1.0, 0.88, 0.12);
+    // Bright purple cabinet (visible on dark floor)
+    iso_block(cr, sx, sy, z, wr, hr, h, 0.50, 0.15, 0.62);
 
-    // Screen bezel on left face (dark frame)
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.11, 0.52, 0.06, 0.94, 0.05, 0.05, 0.08);
-    // CRT screen (green phosphor glow)
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.13, 0.50, 0.10, 0.90, 0.02, 0.15, 0.02);
-    // Screen content (bright game graphics)
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.20, 0.28, 0.30, 0.70, 0.20, 0.80, 0.20);
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.32, 0.38, 0.20, 0.50, 0.80, 0.80, 0.10);
+    // Bright yellow marquee on left face
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.10, 0.05, 0.95, 1.0, 0.90, 0.15);
+    // Marquee highlight
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.03, 0.06, 0.10, 0.90, 1.0, 0.95, 0.40);
 
-    // Control panel on left face (angled)
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.54, 0.68, 0.08, 0.92, 0.20, 0.20, 0.22);
+    // Screen bezel (dark frame)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.11, 0.52, 0.05, 0.95, 0.04, 0.04, 0.06);
 
-    // Joystick + buttons on control panel (colored dots)
+    // CRT screen (bright green glow)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.13, 0.50, 0.09, 0.91, 0.02, 0.18, 0.02);
+
+    // Screen glow effect (bright overlay)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.14, 0.49, 0.10, 0.90, 0.05, 0.28, 0.05);
+
+    // Game graphics on screen
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.18, 0.26, 0.25, 0.75, 0.25, 0.85, 0.25);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.30, 0.38, 0.15, 0.55, 0.85, 0.85, 0.15);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.40, 0.46, 0.40, 0.80, 0.85, 0.30, 0.15);
+
+    // Control panel (lighter)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.54, 0.68, 0.06, 0.94, 0.24, 0.24, 0.28);
+
+    // Buttons on control panel
     let hw = TILE_W / 2.0 * z * wr;
     let hh = TILE_H / 2.0 * z * hr;
     let bh = h * z;
-    let btns = [(0.30, (0.80, 0.12, 0.12)), (0.45, (0.12, 0.12, 0.85)), (0.60, (0.12, 0.75, 0.12)), (0.75, (0.85, 0.85, 0.12))];
+    let btns = [
+        (0.28, (0.90, 0.15, 0.15)),
+        (0.42, (0.15, 0.15, 0.90)),
+        (0.56, (0.15, 0.85, 0.15)),
+        (0.70, (0.90, 0.90, 0.15)),
+    ];
     for (t, (br, bg, bb)) in btns {
         let bx = sx - hw + t * hw;
         let by = sy - bh + 0.62 * bh + t * hh;
-        cr.arc(bx, by, 1.8 * z, 0.0, TAU);
+        // Button shadow
+        cr.arc(bx + 0.5 * z, by + 0.5 * z, 2.0 * z, 0.0, TAU);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.3);
+        let _ = cr.fill();
+        // Button
+        cr.arc(bx, by, 2.0 * z, 0.0, TAU);
         cr.set_source_rgb(br, bg, bb);
+        let _ = cr.fill();
+        // Button highlight
+        cr.arc(bx - 0.3 * z, by - 0.3 * z, 1.0 * z, 0.0, TAU);
+        cr.set_source_rgba(1.0, 1.0, 1.0, 0.25);
         let _ = cr.fill();
     }
 
-    // Coin slot on left face
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.74, 0.78, 0.35, 0.65, 0.60, 0.55, 0.12);
+    // Coin slot
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.74, 0.78, 0.32, 0.68, 0.65, 0.60, 0.15);
+    // Coin slot opening
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.75, 0.77, 0.42, 0.58, 0.08, 0.08, 0.10);
 
-    // Side art on right face
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.12, 0.85, 0.10, 0.90, 0.30, 0.08, 0.42);
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.30, 0.60, 0.25, 0.75, 0.45, 0.12, 0.55);
+    // Side art on right face (vibrant)
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.10, 0.88, 0.08, 0.92, 0.42, 0.12, 0.55);
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.25, 0.65, 0.20, 0.80, 0.55, 0.18, 0.65);
+    // Lightning bolt shape
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.35, 0.45, 0.40, 0.60, 1.0, 0.90, 0.15);
+
+    // Screen glow on ground (ambient light)
+    cr.save().unwrap();
+    cr.translate(sx - 4.0 * z, sy + 4.0 * z);
+    cr.scale(1.0, 0.4);
+    cr.arc(0.0, 0.0, 10.0 * z, 0.0, TAU);
+    cr.restore().unwrap();
+    cr.set_source_rgba(0.10, 0.50, 0.10, 0.08);
+    let _ = cr.fill();
 }
 
 fn draw_treadmill(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    draw_ground_shadow(cr, sx, sy, z, 0.82, 0.50);
+
     // Base platform
-    iso_block(cr, sx, sy, z, 0.82, 0.50, 10.0, 0.20, 0.20, 0.22);
+    iso_block(cr, sx, sy, z, 0.82, 0.50, 10.0, 0.22, 0.22, 0.24);
 
     // Belt surface on top
     let belt_top = sy - 10.0 * z;
@@ -687,6 +818,8 @@ fn draw_treadmill(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_whiteboard(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    draw_ground_shadow(cr, sx, sy, z, 0.80, 0.20);
+
     // Two thin leg posts
     iso_block(cr, sx - 6.0 * z, sy + 2.0 * z, z, 0.04, 0.04, 48.0, 0.45, 0.45, 0.48);
     iso_block(cr, sx + 6.0 * z, sy, z, 0.04, 0.04, 48.0, 0.45, 0.45, 0.48);
@@ -711,6 +844,8 @@ fn draw_whiteboard(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_weight_bench(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    draw_ground_shadow(cr, sx, sy, z, 0.75, 0.40);
+
     // Frame base (metal)
     iso_block(cr, sx, sy, z, 0.75, 0.40, 6.0, 0.38, 0.38, 0.40);
 
@@ -742,6 +877,8 @@ fn draw_yoga_mat(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_floor_lamp(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    draw_ground_shadow(cr, sx, sy, z, 0.25, 0.25);
+
     // Circular base
     iso_block(cr, sx, sy, z, 0.22, 0.22, 3.0, 0.42, 0.42, 0.45);
 
@@ -763,6 +900,8 @@ fn draw_floor_lamp(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_ping_pong_table(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    draw_ground_shadow(cr, sx, sy, z, 0.90, 0.70);
+
     // 4 legs (thin posts at corners, moderate offset)
     iso_block(cr, sx - 8.0 * z, sy + 2.0 * z, z, 0.05, 0.05, 22.0, 0.38, 0.38, 0.40);
     iso_block(cr, sx + 8.0 * z, sy - 2.0 * z, z, 0.05, 0.05, 22.0, 0.38, 0.38, 0.40);
@@ -796,6 +935,8 @@ fn draw_ping_pong_table(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_small_armchair(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    draw_ground_shadow(cr, sx, sy, z, 0.60, 0.60);
+
     // Chunky seat block (burnt orange/leather)
     let wr = 0.60;
     let hr = 0.60;
