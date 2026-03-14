@@ -46,10 +46,6 @@ pub struct ViewState {
 }
 
 impl ViewState {
-    pub fn new() -> Self {
-        Self::with_sidebar(true)
-    }
-
     pub fn with_sidebar(sidebar_visible: bool) -> Self {
         Self {
             camera: Camera::new(),
