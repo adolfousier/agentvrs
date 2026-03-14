@@ -2,7 +2,7 @@ use crate::gui::iso::{TILE_H, TILE_W, WALL_HEIGHT};
 use crate::world::{FloorKind, Tile, WallKind};
 use std::f64::consts::TAU;
 
-pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom: f64) {
+pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom: f64, gx: u16, gy: u16) {
     match tile {
         Tile::Floor(kind) => draw_floor(cr, sx, sy, kind, zoom),
         Tile::Wall(kind) => draw_wall(cr, sx, sy, kind, zoom),
@@ -42,7 +42,7 @@ pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom:
         }
         Tile::YogaMat => {
             draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
-            draw_yoga_mat(cr, sx, sy, zoom);
+            draw_yoga_mat(cr, sx, sy, zoom, gx, gy);
         }
         Tile::FloorLamp => {
             draw_floor_diamond(cr, sx, sy, zoom, 0.78, 0.62, 0.42);
@@ -66,7 +66,7 @@ pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom:
         }
         Tile::KitchenCounter => {
             draw_floor_diamond(cr, sx, sy, zoom, 0.88, 0.84, 0.78);
-            draw_kitchen_counter(cr, sx, sy, zoom);
+            draw_kitchen_counter(cr, sx, sy, zoom, gx, gy);
         }
     }
 }
@@ -876,8 +876,8 @@ fn draw_weight_bench(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 
 // ─── Yoga mat — flat on floor ───
 
-fn draw_yoga_mat(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    let color_pick = ((sx * 7.0 + sy * 13.0) as i32).unsigned_abs() % 3;
+fn draw_yoga_mat(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64, gx: u16, gy: u16) {
+    let color_pick = ((gx as u32) * 7 + (gy as u32) * 13) % 3;
     let (mr, mg, mb) = match color_pick {
         0 => (0.18, 0.68, 0.62),
         1 => (0.58, 0.32, 0.68),
@@ -1045,7 +1045,7 @@ fn draw_ping_pong_half(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64, is_l
 
 // ─── Kitchen counter ───
 
-fn draw_kitchen_counter(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+fn draw_kitchen_counter(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64, gx: u16, gy: u16) {
     let wr = 0.96;
     let hr = 0.45; // narrow depth like real counter
 
@@ -1059,12 +1059,12 @@ fn draw_kitchen_counter(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.05, 0.92, 0.04, 0.46, 0.25, 0.25, 0.30);
     right_face_rect(cr, sx, sy, z, wr, hr, 24.0, 0.05, 0.92, 0.54, 0.96, 0.25, 0.25, 0.30);
 
-    // Countertop
-    iso_diamond(cr, sx, sy, z, 1.0, 0.85, 25.0, 0.60, 0.56, 0.50);
+    // Countertop — same width as cabinet, slightly overhanging depth
+    iso_diamond(cr, sx, sy, z, 0.98, 0.50, 25.0, 0.60, 0.56, 0.50);
 
     // Appliance on counter based on position hash
     let surface = sy - 25.0 * z;
-    let variant = ((sx * 7.3 + sy * 13.7) as i32).unsigned_abs() % 5;
+    let variant = ((gx as u32) * 7 + (gy as u32) * 13) % 5;
     match variant {
         0 => {
             // Microwave

@@ -66,7 +66,7 @@ fn draw(cr: &gtk4::cairo::Context, width: i32, height: i32, state: &GuiState) {
 
         let pos = Position::new(gx, gy);
         if let Some(cell) = grid.get(pos) {
-            tile_render::draw_tile(cr, screen_x, screen_y, &cell.tile, zoom);
+            tile_render::draw_tile(cr, screen_x, screen_y, &cell.tile, zoom, gx, gy);
 
             // Draw agent on this tile (in same painter's order)
             if let Some(agent_id) = cell.occupant {
