@@ -18,8 +18,19 @@ use std::io;
 use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 
+const SIDEBAR_WIDTH: u16 = 24;
+const STATUS_HEIGHT: u16 = 2;
+const TILE_W: u16 = 4;
+const TILE_H: u16 = 3;
+
 pub async fn run(config: AppConfig) -> Result<()> {
-    let grid = Arc::new(RwLock::new(build_office_world()));
+    let (term_w, term_h) = crossterm::terminal::size()?;
+    let world_cols = term_w.saturating_sub(SIDEBAR_WIDTH);
+    let world_rows = term_h.saturating_sub(STATUS_HEIGHT);
+    let world_w = (world_cols / TILE_W).max(20);
+    let world_h = (world_rows / TILE_H).max(10);
+
+    let grid = Arc::new(RwLock::new(build_office_world(world_w, world_h)));
     let registry = Arc::new(RwLock::new(AgentRegistry::new()));
     let message_log = Arc::new(RwLock::new(MessageLog::new()));
     let (event_tx, event_rx) = mpsc::channel::<WorldEvent>(256);

@@ -1,13 +1,13 @@
 use super::palette::{hair_color, shirt_color, skin_color};
 use super::sprite::{SpriteFrame, StyledCell};
 use crate::agent::{AgentState, Facing};
+use ratatui::style::Color;
 
-/// Get the sprite for an agent based on state, facing, animation frame, and color index.
 pub fn agent_sprite(state: &AgentState, facing: &Facing, frame: u8, color_idx: u8) -> SpriteFrame {
     let skin = skin_color(color_idx);
     let shirt = shirt_color(color_idx);
     let hair = hair_color(color_idx);
-    let pants = ratatui::style::Color::Rgb(50, 50, 80);
+    let pants = Color::Rgb(60, 60, 90);
 
     let base = match state {
         AgentState::Idle | AgentState::Offline => idle_sprite(skin, hair, shirt, pants),
@@ -27,239 +27,85 @@ pub fn agent_sprite(state: &AgentState, facing: &Facing, frame: u8, color_idx: u
     }
 }
 
-fn s(ch: char, fg: ratatui::style::Color) -> StyledCell {
+fn e() -> StyledCell {
+    StyledCell::empty()
+}
+
+fn s(ch: char, fg: Color) -> StyledCell {
     StyledCell::transparent(ch, fg)
 }
 
-fn idle_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-) -> SpriteFrame {
+fn idle_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
     [
-        [
-            StyledCell::empty(),
-            s('▄', skin),
-            s('▀', hair),
-            StyledCell::empty(),
-        ],
-        [
-            StyledCell::empty(),
-            s('█', shirt),
-            s('█', shirt),
-            StyledCell::empty(),
-        ],
-        [
-            StyledCell::empty(),
-            s('▐', pants),
-            s('▌', pants),
-            StyledCell::empty(),
-        ],
+        [e(), s('▄', skin), s('▀', hair), e()],
+        [e(), s('█', shirt), s('█', shirt), e()],
+        [e(), s('▐', pants), s('▌', pants), e()],
     ]
 }
 
-fn walk_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-    frame: u8,
-) -> SpriteFrame {
+fn walk_sprite(skin: Color, hair: Color, shirt: Color, pants: Color, frame: u8) -> SpriteFrame {
     if frame.is_multiple_of(2) {
         [
-            [
-                StyledCell::empty(),
-                s('▄', skin),
-                s('▀', hair),
-                StyledCell::empty(),
-            ],
-            [
-                StyledCell::empty(),
-                s('█', shirt),
-                s('▌', shirt),
-                StyledCell::empty(),
-            ],
-            [
-                StyledCell::empty(),
-                s('▗', pants),
-                s('▖', pants),
-                StyledCell::empty(),
-            ],
+            [e(), s('▄', skin), s('▀', hair), e()],
+            [e(), s('█', shirt), s('▌', shirt), e()],
+            [e(), s('▗', pants), s('▖', pants), e()],
         ]
     } else {
         [
-            [
-                StyledCell::empty(),
-                s('▄', skin),
-                s('▀', hair),
-                StyledCell::empty(),
-            ],
-            [
-                StyledCell::empty(),
-                s('▐', shirt),
-                s('█', shirt),
-                StyledCell::empty(),
-            ],
-            [
-                StyledCell::empty(),
-                s('▖', pants),
-                s('▗', pants),
-                StyledCell::empty(),
-            ],
+            [e(), s('▄', skin), s('▀', hair), e()],
+            [e(), s('▐', shirt), s('█', shirt), e()],
+            [e(), s('▖', pants), s('▗', pants), e()],
         ]
     }
 }
 
-fn working_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-) -> SpriteFrame {
+fn working_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
     [
-        [
-            StyledCell::empty(),
-            s('▄', skin),
-            s('▀', hair),
-            StyledCell::empty(),
-        ],
+        [e(), s('▄', skin), s('▀', hair), e()],
         [s('▖', shirt), s('█', shirt), s('█', shirt), s('▗', shirt)],
-        [
-            StyledCell::empty(),
-            s('▀', pants),
-            s('▀', pants),
-            StyledCell::empty(),
-        ],
+        [e(), s('▀', pants), s('▀', pants), e()],
     ]
 }
 
-fn thinking_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-) -> SpriteFrame {
-    let yellow = ratatui::style::Color::Yellow;
+fn thinking_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
     [
-        [
-            s('?', yellow),
-            s('▄', skin),
-            s('▀', hair),
-            StyledCell::empty(),
-        ],
-        [
-            StyledCell::empty(),
-            s('█', shirt),
-            s('█', shirt),
-            s('▌', skin),
-        ],
-        [
-            StyledCell::empty(),
-            s('▐', pants),
-            s('▌', pants),
-            StyledCell::empty(),
-        ],
+        [s('?', Color::Yellow), s('▄', skin), s('▀', hair), e()],
+        [e(), s('█', shirt), s('█', shirt), s('▌', skin)],
+        [e(), s('▐', pants), s('▌', pants), e()],
     ]
 }
 
-fn eating_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-) -> SpriteFrame {
-    let food = ratatui::style::Color::Rgb(255, 165, 0);
+fn eating_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+    let food = Color::Rgb(255, 165, 0);
     [
-        [
-            StyledCell::empty(),
-            s('▄', skin),
-            s('▀', hair),
-            StyledCell::empty(),
-        ],
-        [
-            StyledCell::empty(),
-            s('█', shirt),
-            s('█', shirt),
-            s('◘', food),
-        ],
-        [
-            StyledCell::empty(),
-            s('▐', pants),
-            s('▌', pants),
-            StyledCell::empty(),
-        ],
+        [e(), s('▄', skin), s('▀', hair), e()],
+        [e(), s('█', shirt), s('█', shirt), s('◘', food)],
+        [e(), s('▐', pants), s('▌', pants), e()],
     ]
 }
 
-fn active_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-) -> SpriteFrame {
+fn active_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
     [
-        [
-            StyledCell::empty(),
-            s('▄', skin),
-            s('▀', hair),
-            StyledCell::empty(),
-        ],
+        [e(), s('▄', skin), s('▀', hair), e()],
         [s('╱', shirt), s('█', shirt), s('█', shirt), s('╲', shirt)],
-        [
-            StyledCell::empty(),
-            s('╱', pants),
-            s('╲', pants),
-            StyledCell::empty(),
-        ],
+        [e(), s('╱', pants), s('╲', pants), e()],
     ]
 }
 
-fn messaging_sprite(
-    skin: ratatui::style::Color,
-    hair: ratatui::style::Color,
-    shirt: ratatui::style::Color,
-    pants: ratatui::style::Color,
-) -> SpriteFrame {
-    let cyan = ratatui::style::Color::Cyan;
+fn messaging_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
     [
-        [
-            StyledCell::empty(),
-            s('▄', skin),
-            s('▀', hair),
-            s('◆', cyan),
-        ],
-        [
-            StyledCell::empty(),
-            s('█', shirt),
-            s('█', shirt),
-            StyledCell::empty(),
-        ],
-        [
-            StyledCell::empty(),
-            s('▐', pants),
-            s('▌', pants),
-            StyledCell::empty(),
-        ],
+        [e(), s('▄', skin), s('▀', hair), s('◆', Color::Cyan)],
+        [e(), s('█', shirt), s('█', shirt), e()],
+        [e(), s('▐', pants), s('▌', pants), e()],
     ]
 }
 
-fn error_sprite(skin: ratatui::style::Color, hair: ratatui::style::Color) -> SpriteFrame {
-    let red = ratatui::style::Color::Red;
+fn error_sprite(skin: Color, hair: Color) -> SpriteFrame {
+    let red = Color::Red;
     [
         [s('!', red), s('▄', skin), s('▀', hair), s('!', red)],
-        [
-            StyledCell::empty(),
-            s('█', red),
-            s('█', red),
-            StyledCell::empty(),
-        ],
-        [
-            StyledCell::empty(),
-            s('▐', red),
-            s('▌', red),
-            StyledCell::empty(),
-        ],
+        [e(), s('█', red), s('█', red), e()],
+        [e(), s('▐', red), s('▌', red), e()],
     ]
 }
 

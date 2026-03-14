@@ -16,19 +16,16 @@ pub fn tile_sprite(tile: &Tile, gx: u16, gy: u16) -> SpriteFrame {
 fn floor_sprite(kind: &FloorKind, gx: u16, gy: u16) -> SpriteFrame {
     let (fg, bg) = floor_colors(kind);
     match kind {
-        FloorKind::Wood => {
-            let ch = if gy.is_multiple_of(2) { '░' } else { '▁' };
-            [[StyledCell::new(ch, fg, Some(bg)); 4]; 3]
-        }
+        FloorKind::Wood => [[StyledCell::new('─', fg, Some(bg)); 4]; 3],
         FloorKind::Tile => {
             let alt = if (gx + gy).is_multiple_of(2) {
                 bg
             } else {
-                Color::Rgb(220, 220, 230)
+                Color::Rgb(205, 205, 215)
             };
             [[StyledCell::new(' ', fg, Some(alt)); 4]; 3]
         }
-        FloorKind::Carpet => [[StyledCell::new('▒', fg, Some(bg)); 4]; 3],
+        FloorKind::Carpet => [[StyledCell::new(' ', fg, Some(bg)); 4]; 3],
         FloorKind::Concrete => [[StyledCell::new(' ', fg, Some(bg)); 4]; 3],
     }
 }
@@ -36,27 +33,32 @@ fn floor_sprite(kind: &FloorKind, gx: u16, gy: u16) -> SpriteFrame {
 fn wall_sprite(kind: &WallKind) -> SpriteFrame {
     let color = wall_color(kind);
     match kind {
-        WallKind::Solid => [[StyledCell::new('█', color, Some(color)); 4]; 3],
+        WallKind::Solid => {
+            let bg = Color::Rgb(70, 70, 80);
+            [[StyledCell::new('█', color, Some(bg)); 4]; 3]
+        }
         WallKind::Window => {
-            let glass = Color::Rgb(200, 230, 255);
+            let frame_c = Color::Rgb(90, 100, 115);
+            let glass = Color::Rgb(170, 200, 230);
+            let sky = Color::Rgb(140, 180, 220);
             [
                 [
-                    StyledCell::new('╔', color, Some(glass)),
-                    StyledCell::new('═', color, Some(glass)),
-                    StyledCell::new('═', color, Some(glass)),
-                    StyledCell::new('╗', color, Some(glass)),
+                    StyledCell::new('▛', frame_c, Some(glass)),
+                    StyledCell::new('▀', frame_c, Some(glass)),
+                    StyledCell::new('▀', frame_c, Some(glass)),
+                    StyledCell::new('▜', frame_c, Some(glass)),
                 ],
                 [
-                    StyledCell::new('║', color, Some(glass)),
-                    StyledCell::new('░', glass, Some(Color::Rgb(220, 240, 255))),
-                    StyledCell::new('░', glass, Some(Color::Rgb(220, 240, 255))),
-                    StyledCell::new('║', color, Some(glass)),
+                    StyledCell::new('▌', frame_c, Some(sky)),
+                    StyledCell::new(' ', frame_c, Some(sky)),
+                    StyledCell::new(' ', frame_c, Some(sky)),
+                    StyledCell::new('▐', frame_c, Some(sky)),
                 ],
                 [
-                    StyledCell::new('╚', color, Some(glass)),
-                    StyledCell::new('═', color, Some(glass)),
-                    StyledCell::new('═', color, Some(glass)),
-                    StyledCell::new('╝', color, Some(glass)),
+                    StyledCell::new('▙', frame_c, Some(glass)),
+                    StyledCell::new('▄', frame_c, Some(glass)),
+                    StyledCell::new('▄', frame_c, Some(glass)),
+                    StyledCell::new('▟', frame_c, Some(glass)),
                 ],
             ]
         }
@@ -64,12 +66,12 @@ fn wall_sprite(kind: &WallKind) -> SpriteFrame {
 }
 
 fn rug_sprite() -> SpriteFrame {
-    let rug = Color::Rgb(180, 50, 50);
-    let bg = Color::Rgb(150, 40, 40);
+    let rug = Color::Rgb(160, 45, 45);
+    let bg = Color::Rgb(140, 35, 35);
     [[StyledCell::new('▓', rug, Some(bg)); 4]; 3]
 }
 
 fn door_sprite() -> SpriteFrame {
-    let door = Color::Rgb(120, 120, 120);
+    let door = Color::Rgb(100, 100, 105);
     [[StyledCell::new(' ', door, Some(door)); 4]; 3]
 }

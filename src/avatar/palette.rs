@@ -69,16 +69,16 @@ pub fn state_symbol(state: &AgentState) -> &'static str {
 
 pub fn floor_colors(kind: &FloorKind) -> (Color, Color) {
     match kind {
-        FloorKind::Wood => (Color::Rgb(160, 120, 80), Color::Rgb(139, 90, 43)),
-        FloorKind::Tile => (Color::Rgb(200, 200, 210), Color::Rgb(180, 180, 190)),
-        FloorKind::Carpet => (Color::Rgb(70, 70, 120), Color::Rgb(60, 60, 100)),
-        FloorKind::Concrete => (Color::Rgb(140, 140, 140), Color::Rgb(120, 120, 120)),
+        FloorKind::Wood => (Color::Rgb(150, 110, 70), Color::Rgb(130, 85, 40)),
+        FloorKind::Tile => (Color::Rgb(210, 210, 215), Color::Rgb(195, 195, 205)),
+        FloorKind::Carpet => (Color::Rgb(55, 55, 95), Color::Rgb(45, 45, 80)),
+        FloorKind::Concrete => (Color::Rgb(130, 130, 135), Color::Rgb(115, 115, 120)),
     }
 }
 
 pub fn wall_color(kind: &WallKind) -> Color {
     match kind {
-        WallKind::Solid => Color::Rgb(90, 90, 100),
-        WallKind::Window => Color::Rgb(180, 220, 255),
+        WallKind::Solid => Color::Rgb(80, 80, 90),
+        WallKind::Window => Color::Rgb(100, 110, 130),
     }
 }

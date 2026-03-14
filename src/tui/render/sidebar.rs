@@ -39,8 +39,9 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
 
     let block = Block::default()
         .title(" agents ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .borders(Borders::LEFT)
+        .border_style(Style::default().fg(Color::Rgb(50, 50, 55)))
+        .style(Style::default().bg(Color::Rgb(25, 25, 30)));
 
     let list = List::new(items).block(block);
     frame.render_widget(list, area);
