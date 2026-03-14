@@ -10,6 +10,10 @@ repository = "https://github.com/adolfousier/agentverse"
 keywords = ["ai", "agents", "terminal", "a2a", "tui"]
 categories = ["command-line-utilities"]
 
+[features]
+default = []
+gui = ["gtk4"]
+
 [dependencies]
 # Async Runtime
 tokio = { version = "1.43", features = ["full"] }
@@ -19,6 +23,9 @@ async-trait = "0.1"
 # TUI
 ratatui = { version = "0.30", features = ["all-widgets"] }
 crossterm = { version = "0.29", features = ["event-stream"] }
+
+# GUI (optional)
+gtk4 = { version = "0.10", optional = true }
 
 # HTTP (client for A2A, server for external agents)
 reqwest = { version = "0.12", features = ["json"], default-features = false }

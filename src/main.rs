@@ -1,5 +1,4 @@
 use agentverse::config::AppConfig;
-use agentverse::tui;
 use anyhow::Result;
 
 #[tokio::main]
@@ -14,5 +13,18 @@ async fn main() -> Result<()> {
         .with_target(false)
         .init();
 
-    tui::run(config).await
+    let use_gui = std::env::args().any(|a| a == "--gui");
+
+    if use_gui {
+        #[cfg(feature = "gui")]
+        {
+            agentverse::gui::run(config).await
+        }
+        #[cfg(not(feature = "gui"))]
+        {
+            anyhow::bail!("GUI not available. Rebuild with: cargo build --features gui")
+        }
+    } else {
+        agentverse::tui::run(config).await
+    }
 }
