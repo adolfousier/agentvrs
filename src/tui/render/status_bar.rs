@@ -3,7 +3,7 @@ use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Block, Borders, Paragraph};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let agent_count = {
@@ -23,12 +23,9 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             format!(" {} ", mode_label),
             Style::default().fg(Color::Black).bg(Color::Cyan),
         ),
+        Span::raw(format!(" agents:{} ", agent_count)),
         Span::styled(
-            format!(" {}agt ", agent_count),
-            Style::default().fg(Color::Gray),
-        ),
-        Span::styled(
-            format!("t:{} ", app.tick_count),
+            format!("tick:{} ", app.tick_count),
             Style::default().fg(Color::DarkGray),
         ),
     ];
@@ -45,12 +42,13 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         ));
     } else {
         spans.push(Span::styled(
-            "q:quit hjkl:pan n/p:sel c:center f:fit tab:log :cmd",
+            "q:quit  j/k:agent  enter:detail  tab:log  ::cmd",
             Style::default().fg(Color::DarkGray),
         ));
     }
 
     let line = Line::from(spans);
-    let paragraph = Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 30, 35)));
+    let block = Block::default().borders(Borders::TOP);
+    let paragraph = Paragraph::new(line).block(block);
     frame.render_widget(paragraph, area);
 }

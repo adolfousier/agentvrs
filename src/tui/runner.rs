@@ -18,17 +18,22 @@ use std::io;
 use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 
-const SIDEBAR_WIDTH: u16 = 24;
-const STATUS_HEIGHT: u16 = 2;
+const SIDEBAR_WIDTH: u16 = 28;
+const STATUS_HEIGHT: u16 = 3;
 const TILE_W: u16 = 4;
 const TILE_H: u16 = 3;
 
-pub async fn run(config: AppConfig) -> Result<()> {
-    let (term_w, term_h) = crossterm::terminal::size()?;
-    let world_cols = term_w.saturating_sub(SIDEBAR_WIDTH);
+fn compute_world_size() -> (u16, u16) {
+    let (term_w, term_h) = crossterm::terminal::size().unwrap_or((120, 40));
+    let world_cols = term_w.saturating_sub(SIDEBAR_WIDTH + 2);
     let world_rows = term_h.saturating_sub(STATUS_HEIGHT);
-    let world_w = (world_cols / TILE_W).max(20);
-    let world_h = (world_rows / TILE_H).max(10);
+    let world_w = (world_cols / TILE_W).max(16);
+    let world_h = (world_rows / TILE_H).max(8);
+    (world_w, world_h)
+}
+
+pub async fn run(config: AppConfig) -> Result<()> {
+    let (world_w, world_h) = compute_world_size();
 
     let grid = Arc::new(RwLock::new(build_office_world(world_w, world_h)));
     let registry = Arc::new(RwLock::new(AgentRegistry::new()));
@@ -88,6 +93,9 @@ pub async fn run(config: AppConfig) -> Result<()> {
 
         match events.next()? {
             TuiEvent::Key(key) if key.kind == KeyEventKind::Press => handle_key(&mut app, key),
+            TuiEvent::Resize(_, _) => {
+                // Terminal resized — ratatui auto-redraws with new frame size
+            }
             _ => {}
         }
 

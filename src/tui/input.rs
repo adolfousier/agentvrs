@@ -1,5 +1,4 @@
 use super::app::{App, AppMode};
-use crate::world::Position;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub fn handle_key(app: &mut App, key: KeyEvent) {
@@ -22,38 +21,12 @@ fn world_view(app: &mut App, key: KeyEvent) {
             app.mode = AppMode::CommandInput;
             app.command_input.clear();
         }
-        // Camera pan
-        KeyCode::Left | KeyCode::Char('h') => {
-            app.camera.x = app.camera.x.saturating_sub(1);
-        }
-        KeyCode::Right | KeyCode::Char('l') => {
-            let bounds = app.grid.read().unwrap().bounds();
-            app.camera.x = (app.camera.x + 1).min(bounds.0.saturating_sub(1));
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            app.camera.y = app.camera.y.saturating_sub(1);
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            let bounds = app.grid.read().unwrap().bounds();
-            app.camera.y = (app.camera.y + 1).min(bounds.1.saturating_sub(1));
-        }
         // Agent selection
-        KeyCode::Char('n') => app.selected_index += 1,
-        KeyCode::Char('p') => app.selected_index = app.selected_index.saturating_sub(1),
+        KeyCode::Char('n') | KeyCode::Down | KeyCode::Char('j') => app.selected_index += 1,
+        KeyCode::Char('p') | KeyCode::Up | KeyCode::Char('k') => {
+            app.selected_index = app.selected_index.saturating_sub(1);
+        }
         KeyCode::Enter => app.mode = AppMode::AgentDetail,
-        // Center on selected agent
-        KeyCode::Char('c') => {
-            let reg = app.registry.read().unwrap();
-            let agents: Vec<_> = reg.agents().collect();
-            if app.selected_index < agents.len() {
-                app.camera = agents[app.selected_index].position;
-            }
-        }
-        // Fit world
-        KeyCode::Char('f') => {
-            let g = app.grid.read().unwrap();
-            app.camera = Position::new(g.width / 2, g.height / 2);
-        }
         _ => {}
     }
 }

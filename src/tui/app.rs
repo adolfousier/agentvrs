@@ -1,5 +1,5 @@
 use crate::agent::{AgentId, AgentRegistry, MessageLog};
-use crate::world::{Grid, Position, WorldEvent};
+use crate::world::{Grid, WorldEvent};
 use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 
@@ -23,7 +23,6 @@ pub struct App {
     pub should_quit: bool,
     pub command_input: String,
     pub status_message: Option<String>,
-    pub camera: Position,
 }
 
 impl App {
@@ -33,10 +32,6 @@ impl App {
         message_log: Arc<RwLock<MessageLog>>,
         event_rx: mpsc::Receiver<WorldEvent>,
     ) -> Self {
-        let camera = {
-            let g = grid.read().unwrap();
-            Position::new(g.width / 2, g.height / 2)
-        };
         Self {
             mode: AppMode::WorldView,
             grid,
@@ -49,7 +44,6 @@ impl App {
             should_quit: false,
             command_input: String::new(),
             status_message: None,
-            camera,
         }
     }
 

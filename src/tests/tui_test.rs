@@ -146,14 +146,12 @@ fn test_select_prev_at_zero() {
 }
 
 #[test]
-fn test_camera_pan() {
+fn test_select_with_arrow_keys() {
     let mut app = test_app();
-    let start_x = app.camera.x;
-    let start_y = app.camera.y;
-    handle_key(&mut app, key(KeyCode::Char('l')));
-    assert_eq!(app.camera.x, start_x + 1);
-    handle_key(&mut app, key(KeyCode::Char('j')));
-    assert_eq!(app.camera.y, start_y + 1);
+    handle_key(&mut app, key(KeyCode::Down));
+    assert_eq!(app.selected_index, 1);
+    handle_key(&mut app, key(KeyCode::Up));
+    assert_eq!(app.selected_index, 0);
 }
 
 #[test]

@@ -29,9 +29,16 @@ impl StyledCell {
     }
 }
 
-/// A 4x3 sprite frame.
+/// A 4x3 sprite frame (used for tiles/furniture).
 pub type SpriteFrame = [[StyledCell; 4]; 3];
 
 pub fn empty_frame() -> SpriteFrame {
     [[StyledCell::empty(); 4]; 3]
+}
+
+/// A large 8x6 sprite frame (used for agents — spans 2x2 tiles).
+pub type BigSpriteFrame = [[StyledCell; 8]; 6];
+
+pub fn empty_big_frame() -> BigSpriteFrame {
+    [[StyledCell::empty(); 8]; 6]
 }

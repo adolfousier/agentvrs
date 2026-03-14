@@ -1,13 +1,18 @@
 use super::palette::{hair_color, shirt_color, skin_color};
-use super::sprite::{SpriteFrame, StyledCell};
+use super::sprite::{BigSpriteFrame, StyledCell};
 use crate::agent::{AgentState, Facing};
 use ratatui::style::Color;
 
-pub fn agent_sprite(state: &AgentState, facing: &Facing, frame: u8, color_idx: u8) -> SpriteFrame {
+pub fn agent_sprite(
+    state: &AgentState,
+    facing: &Facing,
+    frame: u8,
+    color_idx: u8,
+) -> BigSpriteFrame {
     let skin = skin_color(color_idx);
     let shirt = shirt_color(color_idx);
     let hair = hair_color(color_idx);
-    let pants = Color::Rgb(60, 60, 90);
+    let pants = Color::Rgb(50, 50, 80);
 
     let base = match state {
         AgentState::Idle | AgentState::Offline => idle_sprite(skin, hair, shirt, pants),
@@ -27,89 +32,126 @@ pub fn agent_sprite(state: &AgentState, facing: &Facing, frame: u8, color_idx: u
     }
 }
 
+const S: Color = Color::Rgb(40, 40, 50);
+
+fn b(ch: char, fg: Color) -> StyledCell {
+    StyledCell::new(ch, fg, Some(S))
+}
+
 fn e() -> StyledCell {
     StyledCell::empty()
 }
 
-fn s(ch: char, fg: Color) -> StyledCell {
-    StyledCell::transparent(ch, fg)
-}
-
-fn idle_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+fn idle_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> BigSpriteFrame {
     [
-        [e(), s('▄', skin), s('▀', hair), e()],
-        [e(), s('█', shirt), s('█', shirt), e()],
-        [e(), s('▐', pants), s('▌', pants), e()],
+        [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [e(), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), e()],
+        [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), e()],
+        [e(), e(), b('█', pants), b('█', pants), b('█', pants), b('█', pants), e(), e()],
+        [e(), e(), b('▀', pants), b('▀', pants), b('▀', pants), b('▀', pants), e(), e()],
     ]
 }
 
-fn walk_sprite(skin: Color, hair: Color, shirt: Color, pants: Color, frame: u8) -> SpriteFrame {
+fn walk_sprite(
+    skin: Color,
+    hair: Color,
+    shirt: Color,
+    pants: Color,
+    frame: u8,
+) -> BigSpriteFrame {
     if frame.is_multiple_of(2) {
         [
-            [e(), s('▄', skin), s('▀', hair), e()],
-            [e(), s('█', shirt), s('▌', shirt), e()],
-            [e(), s('▗', pants), s('▖', pants), e()],
+            [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+            [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+            [e(), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▌', shirt), e(), e()],
+            [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), e()],
+            [e(), e(), b('▗', pants), b('█', pants), b('█', pants), b('▖', pants), e(), e()],
+            [e(), e(), e(), b('▀', pants), b('▀', pants), e(), e(), e()],
         ]
     } else {
         [
-            [e(), s('▄', skin), s('▀', hair), e()],
-            [e(), s('▐', shirt), s('█', shirt), e()],
-            [e(), s('▖', pants), s('▗', pants), e()],
+            [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+            [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+            [e(), e(), b('▐', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), e()],
+            [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), e()],
+            [e(), e(), b('▖', pants), b('█', pants), b('█', pants), b('▗', pants), e(), e()],
+            [e(), e(), b('▀', pants), e(), e(), b('▀', pants), e(), e()],
         ]
     }
 }
 
-fn working_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+fn working_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> BigSpriteFrame {
     [
-        [e(), s('▄', skin), s('▀', hair), e()],
-        [s('▖', shirt), s('█', shirt), s('█', shirt), s('▗', shirt)],
-        [e(), s('▀', pants), s('▀', pants), e()],
+        [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [b('▖', shirt), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), b('▗', shirt)],
+        [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), e()],
+        [e(), e(), b('█', pants), b('▀', pants), b('▀', pants), b('█', pants), e(), e()],
+        [e(), e(), b('▀', pants), e(), e(), b('▀', pants), e(), e()],
     ]
 }
 
-fn thinking_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+fn thinking_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> BigSpriteFrame {
+    let y = Color::Yellow;
     [
-        [s('?', Color::Yellow), s('▄', skin), s('▀', hair), e()],
-        [e(), s('█', shirt), s('█', shirt), s('▌', skin)],
-        [e(), s('▐', pants), s('▌', pants), e()],
+        [e(), b('?', y), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [e(), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), e()],
+        [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), b('▌', skin)],
+        [e(), e(), b('█', pants), b('█', pants), b('█', pants), b('█', pants), e(), e()],
+        [e(), e(), b('▀', pants), b('▀', pants), b('▀', pants), b('▀', pants), e(), e()],
     ]
 }
 
-fn eating_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+fn eating_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> BigSpriteFrame {
     let food = Color::Rgb(255, 165, 0);
     [
-        [e(), s('▄', skin), s('▀', hair), e()],
-        [e(), s('█', shirt), s('█', shirt), s('◘', food)],
-        [e(), s('▐', pants), s('▌', pants), e()],
+        [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [e(), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), e()],
+        [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('◘', food), e()],
+        [e(), e(), b('█', pants), b('█', pants), b('█', pants), b('█', pants), e(), e()],
+        [e(), e(), b('▀', pants), b('▀', pants), b('▀', pants), b('▀', pants), e(), e()],
     ]
 }
 
-fn active_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+fn active_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> BigSpriteFrame {
     [
-        [e(), s('▄', skin), s('▀', hair), e()],
-        [s('╱', shirt), s('█', shirt), s('█', shirt), s('╲', shirt)],
-        [e(), s('╱', pants), s('╲', pants), e()],
+        [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), e()],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [b('╱', shirt), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), b('╲', shirt)],
+        [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), e()],
+        [e(), b('╱', pants), b('█', pants), e(), e(), b('█', pants), b('╲', pants), e()],
+        [e(), b('▀', pants), e(), e(), e(), e(), b('▀', pants), e()],
     ]
 }
 
-fn messaging_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> SpriteFrame {
+fn messaging_sprite(skin: Color, hair: Color, shirt: Color, pants: Color) -> BigSpriteFrame {
+    let cyan = Color::Cyan;
     [
-        [e(), s('▄', skin), s('▀', hair), s('◆', Color::Cyan)],
-        [e(), s('█', shirt), s('█', shirt), e()],
-        [e(), s('▐', pants), s('▌', pants), e()],
+        [e(), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), b('◆', cyan), e()],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [e(), b('▄', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), b('▄', shirt), e()],
+        [e(), e(), b('█', shirt), b('█', shirt), b('█', shirt), b('█', shirt), e(), e()],
+        [e(), e(), b('█', pants), b('█', pants), b('█', pants), b('█', pants), e(), e()],
+        [e(), e(), b('▀', pants), b('▀', pants), b('▀', pants), b('▀', pants), e(), e()],
     ]
 }
 
-fn error_sprite(skin: Color, hair: Color) -> SpriteFrame {
+fn error_sprite(skin: Color, hair: Color) -> BigSpriteFrame {
     let red = Color::Red;
     [
-        [s('!', red), s('▄', skin), s('▀', hair), s('!', red)],
-        [e(), s('█', red), s('█', red), e()],
-        [e(), s('▐', red), s('▌', red), e()],
+        [b('!', red), e(), b('▄', hair), b('▄', hair), b('▄', hair), b('▄', hair), e(), b('!', red)],
+        [e(), e(), b('█', hair), b('█', skin), b('█', skin), b('█', hair), e(), e()],
+        [e(), e(), b('█', red), b('█', red), b('█', red), b('█', red), e(), e()],
+        [e(), e(), b('█', red), b('█', red), b('█', red), b('█', red), e(), e()],
+        [e(), e(), b('█', red), b('█', red), b('█', red), b('█', red), e(), e()],
+        [e(), e(), b('▀', red), b('▀', red), b('▀', red), b('▀', red), e(), e()],
     ]
 }
 
-fn mirror(mut frame: SpriteFrame) -> SpriteFrame {
+fn mirror(mut frame: BigSpriteFrame) -> BigSpriteFrame {
     for row in &mut frame {
         row.reverse();
     }

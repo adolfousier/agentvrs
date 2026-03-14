@@ -1,6 +1,6 @@
 use crate::avatar::agents::agent_sprite;
 use crate::avatar::floors::tile_sprite;
-use crate::avatar::sprite::{SpriteFrame, TILE_H, TILE_W};
+use crate::avatar::sprite::{BigSpriteFrame, SpriteFrame, TILE_H, TILE_W};
 use crate::tui::app::App;
 use crate::world::Position;
 use ratatui::Frame;
@@ -12,53 +12,52 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let registry = app.registry.read().unwrap();
     let buf = frame.buffer_mut();
 
-    // Fill entire area with dark background (covers any leftover cells)
-    let dark = Color::Rgb(20, 20, 25);
+    // Fill entire area with dark bg
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
-            let pos = ratatui::layout::Position::new(x, y);
-            if let Some(cell) = buf.cell_mut(pos) {
+            if let Some(cell) = buf.cell_mut(ratatui::layout::Position::new(x, y)) {
                 cell.set_char(' ');
-                cell.set_bg(dark);
-                cell.set_fg(dark);
+                cell.set_bg(Color::Rgb(25, 25, 30));
+                cell.set_fg(Color::Rgb(25, 25, 30));
             }
         }
     }
 
-    let tiles_x = area.width / TILE_W;
-    let tiles_y = area.height / TILE_H;
+    // Show the entire world — no camera, auto-fit
+    let tiles_x = (area.width / TILE_W).min(grid.width);
+    let tiles_y = (area.height / TILE_H).min(grid.height);
 
-    let cam = app.camera;
-    let start_x = cam.x.saturating_sub(tiles_x / 2);
-    let start_y = cam.y.saturating_sub(tiles_y / 2);
-
-    // Pass 1: tiles — render at area origin, no centering
-    for gy in start_y..(start_y + tiles_y).min(grid.height) {
-        for gx in start_x..(start_x + tiles_x).min(grid.width) {
+    // Pass 1: tiles
+    for gy in 0..tiles_y {
+        for gx in 0..tiles_x {
             let pos = Position::new(gx, gy);
             if let Some(cell) = grid.get(pos) {
-                let sx = area.x + (gx - start_x) * TILE_W;
-                let sy = area.y + (gy - start_y) * TILE_H;
+                let sx = area.x + gx * TILE_W;
+                let sy = area.y + gy * TILE_H;
                 let sprite = tile_sprite(&cell.tile, gx, gy);
                 render_sprite(buf, sx, sy, &sprite, area);
             }
         }
     }
 
-    // Pass 2: agents
+    // Pass 2: agents (rendered at 8x6, centered on their grid position)
     for agent in registry.agents() {
         let gx = agent.position.x;
         let gy = agent.position.y;
-        if gx >= start_x && gx < start_x + tiles_x && gy >= start_y && gy < start_y + tiles_y {
-            let sx = area.x + (gx - start_x) * TILE_W;
-            let sy = area.y + (gy - start_y) * TILE_H;
+        if gx < tiles_x && gy < tiles_y {
+            // Center the 8x6 agent on its tile position
+            let sx = area.x + gx * TILE_W;
+            let sy = area.y + gy * TILE_H;
+            // Offset so the agent is centered: shift left by 2, up by 1.5 (round to 1)
+            let ax = sx.saturating_sub(2);
+            let ay = sy.saturating_sub(2);
             let sprite = agent_sprite(
                 &agent.state,
                 &agent.anim.facing,
                 agent.anim.frame,
                 agent.color_index,
             );
-            render_sprite(buf, sx, sy, &sprite, area);
+            render_big_sprite(buf, ax, ay, &sprite, area);
         }
     }
 
@@ -67,17 +66,50 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         if let Some(ref speech) = agent.speech {
             let gx = agent.position.x;
             let gy = agent.position.y;
-            if gx >= start_x && gx < start_x + tiles_x && gy >= start_y && gy < start_y + tiles_y
-            {
-                let sx = area.x + (gx - start_x) * TILE_W;
-                let sy = area.y + (gy - start_y) * TILE_H;
-                render_speech(buf, sx, sy.saturating_sub(1), speech, area);
+            if gx < tiles_x && gy < tiles_y {
+                let sx = area.x + gx * TILE_W;
+                let sy = area.y + gy * TILE_H;
+                render_speech(buf, sx, sy.saturating_sub(3), speech, area);
             }
         }
     }
 }
 
-fn render_sprite(buf: &mut ratatui::buffer::Buffer, x: u16, y: u16, sprite: &SpriteFrame, clip: Rect) {
+fn render_sprite(
+    buf: &mut ratatui::buffer::Buffer,
+    x: u16,
+    y: u16,
+    sprite: &SpriteFrame,
+    clip: Rect,
+) {
+    for (row_idx, row) in sprite.iter().enumerate() {
+        for (col_idx, cell) in row.iter().enumerate() {
+            let bx = x + col_idx as u16;
+            let by = y + row_idx as u16;
+            if bx >= clip.x && bx < clip.x + clip.width && by >= clip.y && by < clip.y + clip.height
+            {
+                let pos = ratatui::layout::Position::new(bx, by);
+                if let Some(buf_cell) = buf.cell_mut(pos) {
+                    if let Some(bg) = cell.bg {
+                        buf_cell.set_bg(bg);
+                    }
+                    if cell.ch != ' ' {
+                        buf_cell.set_char(cell.ch);
+                        buf_cell.set_fg(cell.fg);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn render_big_sprite(
+    buf: &mut ratatui::buffer::Buffer,
+    x: u16,
+    y: u16,
+    sprite: &BigSpriteFrame,
+    clip: Rect,
+) {
     for (row_idx, row) in sprite.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
             let bx = x + col_idx as u16;

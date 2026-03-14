@@ -67,7 +67,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             },
         ]
     } else {
-        vec![Line::raw("  No agent selected. Use j/k and Enter.")]
+        vec![Line::raw("  No agent selected. Use n/p and Enter.")]
     };
 
     let block = Block::default()
