@@ -1,8 +1,8 @@
 /// Tile dimensions in screen pixels (2:1 isometric ratio).
 pub const TILE_W: f64 = 64.0;
 pub const TILE_H: f64 = 32.0;
-/// Height extrusion for walls (shorter than agents for visibility).
-pub const WALL_HEIGHT: f64 = 28.0;
+/// Height extrusion for walls (thin like reference).
+pub const WALL_HEIGHT: f64 = 18.0;
 
 /// Convert grid coordinates to screen position (center of diamond).
 /// Rotates around the world center so rotation doesn't shift the view.
