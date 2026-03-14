@@ -69,11 +69,11 @@ fn draw(cr: &gtk4::cairo::Context, width: i32, height: i32, state: &GuiState) {
             tile_render::draw_tile(cr, screen_x, screen_y, &cell.tile, zoom, gx, gy);
 
             // Draw agent on this tile (in same painter's order)
-            if let Some(agent_id) = cell.occupant {
-                if let Some(agent) = registry.get(&agent_id) {
-                    let is_selected = selected == Some(agent.id);
-                    agent_render::draw_agent(cr, screen_x, screen_y, agent, zoom, is_selected);
-                }
+            if let Some(agent_id) = cell.occupant
+                && let Some(agent) = registry.get(&agent_id)
+            {
+                let is_selected = selected == Some(agent.id);
+                agent_render::draw_agent(cr, screen_x, screen_y, agent, zoom, is_selected);
             }
         }
     }

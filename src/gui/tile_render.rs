@@ -83,6 +83,7 @@ pub fn draw_tile(
 
 /// Helper: draw an isometric diamond (flat surface) at a given height offset.
 /// w_ratio/h_ratio control size relative to tile. Returns the 4 corner points.
+#[allow(clippy::too_many_arguments)]
 fn iso_diamond(
     cr: &gtk4::cairo::Context,
     sx: f64,
@@ -115,6 +116,7 @@ fn iso_diamond(
 }
 
 /// Helper: draw left face of an iso shape (parallelogram from top diamond to bottom diamond)
+#[allow(clippy::too_many_arguments)]
 fn iso_left_face(
     cr: &gtk4::cairo::Context,
     sx: f64,
@@ -142,6 +144,7 @@ fn iso_left_face(
 }
 
 /// Helper: draw right face of an iso shape
+#[allow(clippy::too_many_arguments)]
 fn iso_right_face(
     cr: &gtk4::cairo::Context,
     sx: f64,

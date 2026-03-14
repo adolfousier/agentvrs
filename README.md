@@ -254,15 +254,165 @@ All errors return JSON with appropriate HTTP status codes:
 {"error":"service_unavailable","message":"no empty floor available"}
 ```
 
-## A2A Protocol
+## Connecting Your Agents
 
-Connects to A2A-compatible agents (like OpenCrabs) as a client:
+Agentverse works with any agent that can make HTTP requests. Connect from any language, any machine.
+
+### Any HTTP Agent (curl, Python, Node, etc.)
+
+```bash
+# 1. Connect your agent
+curl -X POST http://127.0.0.1:18800/agents/connect \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-agent"}'
+# Returns: {"agent_id":"a1b2c3d4-...","position":[5,3]}
+
+# 2. Send heartbeats (keep-alive, report health)
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/heartbeat \
+  -H "Content-Type: application/json" \
+  -d '{"status":"healthy","metadata":{"task":"researching"}}'
+
+# 3. Control your agent
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/state \
+  -H "Content-Type: application/json" -d '{"state":"working"}'
+
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/message \
+  -H "Content-Type: application/json" -d '{"text":"Found 3 results"}'
+
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/goal \
+  -H "Content-Type: application/json" -d '{"goal":"desk"}'
+
+# 4. Monitor from the dashboard
+curl http://127.0.0.1:18800/agents/a1b2c3d4/dashboard
+```
+
+### OpenCrabs (Rust)
+
+[OpenCrabs](https://github.com/adolfousier/opencrabs) agents connect natively via A2A protocol and HTTP API.
 
 ```toml
 # ~/.config/agentverse/config.toml
 [a2a]
 endpoints = ["http://localhost:18789"]
 ```
+
+```rust
+// Or connect programmatically via HTTP
+let client = reqwest::Client::new();
+
+// Register in the world
+let res: serde_json::Value = client
+    .post("http://127.0.0.1:18800/agents/connect")
+    .json(&serde_json::json!({"name": "opencrabs-agent", "endpoint": "http://localhost:18789"}))
+    .send().await?.json().await?;
+let agent_id = res["agent_id"].as_str().unwrap();
+
+// Heartbeat loop
+loop {
+    client.post(format!("http://127.0.0.1:18800/agents/{agent_id}/heartbeat"))
+        .json(&serde_json::json!({"status": "healthy"}))
+        .send().await?;
+    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+}
+```
+
+### OpenClaws (Python)
+
+Connect your [OpenClaws](https://github.com/adolfousier/openclaws) agents with a few lines of Python.
+
+```python
+import requests
+import time
+import threading
+
+AGENTVERSE = "http://127.0.0.1:18800"
+
+# Connect
+res = requests.post(f"{AGENTVERSE}/agents/connect",
+    json={"name": "openclaws-agent"}).json()
+agent_id = res["agent_id"]
+
+# Heartbeat thread
+def heartbeat():
+    while True:
+        requests.post(f"{AGENTVERSE}/agents/{agent_id}/heartbeat",
+            json={"status": "healthy", "metadata": {"model": "claude-sonnet"}})
+        time.sleep(30)
+threading.Thread(target=heartbeat, daemon=True).start()
+
+# Update state as your agent works
+requests.post(f"{AGENTVERSE}/agents/{agent_id}/state", json={"state": "thinking"})
+requests.post(f"{AGENTVERSE}/agents/{agent_id}/message", json={"text": "Analyzing data..."})
+requests.post(f"{AGENTVERSE}/agents/{agent_id}/state", json={"state": "working"})
+requests.post(f"{AGENTVERSE}/agents/{agent_id}/message", json={"text": "Done! Found 42 results"})
+
+# Check your dashboard
+dashboard = requests.get(f"{AGENTVERSE}/agents/{agent_id}/dashboard").json()
+```
+
+### Hermes Agent (TypeScript/Node)
+
+Connect [Hermes](https://github.com/anthropics/hermes) or any Node.js agent.
+
+```typescript
+const AGENTVERSE = "http://127.0.0.1:18800";
+
+// Connect
+const { agent_id } = await fetch(`${AGENTVERSE}/agents/connect`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ name: "hermes-agent" }),
+}).then(r => r.json());
+
+// Heartbeat every 30s
+setInterval(() => {
+  fetch(`${AGENTVERSE}/agents/${agent_id}/heartbeat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "healthy", metadata: { uptime: process.uptime() } }),
+  });
+}, 30_000);
+
+// Reflect agent activity in the world
+await fetch(`${AGENTVERSE}/agents/${agent_id}/state`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ state: "thinking" }),
+});
+
+await fetch(`${AGENTVERSE}/agents/${agent_id}/message`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ text: "Processing query..." }),
+});
+
+// Listen to world events via SSE
+const events = new EventSource(`${AGENTVERSE}/events`);
+events.onmessage = (e) => console.log(JSON.parse(e.data));
+```
+
+### Multi-Machine Setup
+
+Agents can connect from any machine on your network. Change the bind address:
+
+```toml
+# ~/.config/agentverse/config.toml
+[server]
+host = "0.0.0.0"     # listen on all interfaces
+port = 18800
+api_key = "your-secret-key"  # always use auth when exposed
+```
+
+Then connect from other machines:
+
+```bash
+curl -X POST http://192.168.1.100:18800/agents/connect \
+  -H "X-API-Key: your-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"remote-agent"}'
+```
+
+All agents appear in the same world. Monitor everything from a single dashboard.
 
 ## Architecture
 

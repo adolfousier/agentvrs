@@ -1,13 +1,11 @@
 use crate::agent::{Agent, AgentState};
 use crate::avatar::palette::{hair_color, shirt_color, skin_color};
+
 /// Draw a flat-shaded isometric block (rectangular prism) with three visible faces.
 /// `x, y` is the front-bottom-center of the block.
 /// `w` = width, `h` = height, `d` = isometric depth offset.
-/// The base color `(r,g,b)` is used to derive light/dark faces:
-///   - front face: base color
-///   - left face: darker (×0.7)
-///   - right face: slightly lighter (×0.85)
-///   - top face: lightest (×1.15, clamped)
+/// The base color `(r,g,b)` is used to derive light/dark faces.
+#[allow(clippy::too_many_arguments)]
 fn draw_iso_block(
     cr: &gtk4::cairo::Context,
     x: f64,
@@ -280,7 +278,7 @@ fn draw_name_label(
 
     // Name text
     cr.set_source_rgb(0.95, 0.95, 0.95);
-    let _ = cr.move_to(bx + pad_x + dot_r * 2.0 + dot_gap, by + bh - pad_y);
+    cr.move_to(bx + pad_x + dot_r * 2.0 + dot_gap, by + bh - pad_y);
     let _ = cr.show_text(display);
 }
 
@@ -318,7 +316,7 @@ fn draw_speech_bubble(cr: &gtk4::cairo::Context, sx: f64, sy: f64, text: &str, z
 
     // Text
     cr.set_source_rgb(0.1, 0.1, 0.1);
-    let _ = cr.move_to(bx + pad, by + bh - pad);
+    cr.move_to(bx + pad, by + bh - pad);
     let _ = cr.show_text(&display);
 }
 
