@@ -1,6 +1,6 @@
 use crate::agent::AgentId;
-use crate::world::*;
 use crate::world::pathfind::find_path;
+use crate::world::*;
 
 // ─── Position ───────────────────────────────────────────────
 

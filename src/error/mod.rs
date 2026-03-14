@@ -66,9 +66,7 @@ impl IntoResponse for ApiError {
             ApiError::ServiceUnavailable(msg) => {
                 (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable", msg)
             }
-            ApiError::Internal(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal_error", msg)
-            }
+            ApiError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error", msg),
         };
         let body = ErrorBody {
             error: error_code.to_string(),

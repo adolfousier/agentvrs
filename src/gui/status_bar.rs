@@ -31,7 +31,7 @@ pub fn create(state: &GuiState) -> GtkBox {
     bar.append(&Separator::new(Orientation::Vertical));
 
     let status_label = Label::new(Some(
-        "r:rotate  scroll:zoom  ctrl+shift+scroll:rotate  drag:pan  click:select  h:sidebar",
+        "r:rotate  scroll:zoom  drag:pan  click:select  h:sidebar",
     ));
     status_label.set_widget_name("status-label");
     status_label.set_hexpand(true);

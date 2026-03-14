@@ -1,4 +1,5 @@
 use crate::agent::AgentRegistry;
+use crate::api::observability::AgentObserver;
 use crate::api::server::build_router;
 use crate::api::types::*;
 use crate::error::ErrorBody;
@@ -15,6 +16,7 @@ fn test_state() -> (axum::Router, Arc<RwLock<AgentRegistry>>, Arc<RwLock<Grid>>)
     let (event_tx, _rx) = mpsc::channel::<WorldEvent>(64);
     let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(64);
     let tick_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
     let router = build_router(
         Arc::clone(&registry),
         Arc::clone(&grid),
@@ -22,6 +24,7 @@ fn test_state() -> (axum::Router, Arc<RwLock<AgentRegistry>>, Arc<RwLock<Grid>>)
         broadcast_tx,
         None,
         tick_count,
+        observer,
     );
     (router, registry, grid)
 }
@@ -34,6 +37,7 @@ fn test_state_with_auth(
     let (event_tx, _rx) = mpsc::channel::<WorldEvent>(64);
     let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(64);
     let tick_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
     let router = build_router(
         Arc::clone(&registry),
         Arc::clone(&grid),
@@ -41,6 +45,7 @@ fn test_state_with_auth(
         broadcast_tx,
         Some(api_key.to_string()),
         tick_count,
+        observer,
     );
     (router, registry, grid)
 }
@@ -60,9 +65,7 @@ async fn connect_helper(router: &axum::Router, name: &str) -> String {
         ))
         .unwrap();
     let resp = router.clone().oneshot(req).await.unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), 4096)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
     let connect: ConnectResponse = serde_json::from_slice(&body).unwrap();
     connect.agent_id
 }
@@ -79,9 +82,7 @@ async fn test_health_endpoint() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let health: HealthResponse = serde_json::from_slice(&body).unwrap();
     assert_eq!(health.status, "ok");
     assert_eq!(health.agents, 0);
@@ -99,9 +100,7 @@ async fn test_list_agents_empty() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let agents: Vec<ApiAgent> = serde_json::from_slice(&body).unwrap();
     assert!(agents.is_empty());
 }
@@ -152,9 +151,7 @@ async fn test_list_agents_after_connect() {
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), 4096)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
     let agents: Vec<ApiAgent> = serde_json::from_slice(&body).unwrap();
     assert_eq!(agents.len(), 1);
     assert_eq!(agents[0].name, "listed-bot");
@@ -175,9 +172,7 @@ async fn test_delete_agent() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let del: DeleteResponse = serde_json::from_slice(&body).unwrap();
     assert_eq!(del.status, "removed");
     assert_eq!(registry.read().unwrap().count(), 0);
@@ -273,9 +268,7 @@ async fn test_send_self_message() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let msg_resp: MessageResponse = serde_json::from_slice(&body).unwrap();
     assert_eq!(msg_resp.status, "delivered");
     assert!(msg_resp.delivered_to.is_none());
@@ -308,19 +301,14 @@ async fn test_agent_to_agent_message() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let msg_resp: MessageResponse = serde_json::from_slice(&body).unwrap();
     assert_eq!(msg_resp.status, "delivered");
     assert_eq!(msg_resp.delivered_to.as_deref(), Some(receiver_id.as_str()));
 
     // Receiver should have the speech, sender should not
     let reg = registry.read().unwrap();
-    let receiver = reg
-        .agents()
-        .find(|a| a.name == "receiver")
-        .unwrap();
+    let receiver = reg.agents().find(|a| a.name == "receiver").unwrap();
     assert_eq!(receiver.speech.as_deref(), Some("hey there"));
     assert_eq!(receiver.state, crate::agent::AgentState::Messaging);
 }
@@ -463,9 +451,7 @@ async fn test_set_goal_invalid() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
-    let body = axum::body::to_bytes(resp.into_body(), 4096)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
     let err: ErrorBody = serde_json::from_slice(&body).unwrap();
     assert_eq!(err.error, "bad_request");
     assert!(err.message.contains("swimming"));
@@ -561,8 +547,16 @@ async fn test_set_agent_state_invalid() {
 #[tokio::test]
 async fn test_set_all_valid_states() {
     let states = [
-        "idle", "walking", "thinking", "working", "messaging", "eating", "exercising", "playing",
-        "error", "offline",
+        "idle",
+        "walking",
+        "thinking",
+        "working",
+        "messaging",
+        "eating",
+        "exercising",
+        "playing",
+        "error",
+        "offline",
     ];
     for state_name in &states {
         let (router, _, _) = test_state();
@@ -601,9 +595,7 @@ async fn test_world_snapshot() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let snapshot: WorldSnapshot = serde_json::from_slice(&body).unwrap();
     assert_eq!(snapshot.width, 16);
     assert_eq!(snapshot.height, 12);
@@ -620,9 +612,7 @@ async fn test_world_snapshot_with_agents() {
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), 4096)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
     let snapshot: WorldSnapshot = serde_json::from_slice(&body).unwrap();
     assert_eq!(snapshot.agents.len(), 1);
     assert_eq!(snapshot.agents[0].name, "snap-agent");
@@ -638,9 +628,7 @@ async fn test_world_tiles() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), 65536)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 65536).await.unwrap();
     let tile_map: TileMapResponse = serde_json::from_slice(&body).unwrap();
     assert_eq!(tile_map.width, 16);
     assert_eq!(tile_map.height, 12);
@@ -667,9 +655,7 @@ async fn test_api_key_auth_required() {
     let resp = router.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-    let body = axum::body::to_bytes(resp.into_body(), 1024)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
     let err: ErrorBody = serde_json::from_slice(&body).unwrap();
     assert_eq!(err.error, "unauthorized");
 }
@@ -737,9 +723,7 @@ async fn test_error_response_json_format() {
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
-    let body = axum::body::to_bytes(resp.into_body(), 4096)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
     let err: ErrorBody = serde_json::from_slice(&body).unwrap();
     assert_eq!(err.error, "not_found");
     assert!(!err.message.is_empty());

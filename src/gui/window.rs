@@ -7,7 +7,12 @@ use std::sync::Arc;
 pub fn build(app: &Application, state: &Arc<GuiState>, tick_ms: u64) {
     let (win_w, win_h, sidebar_visible, sidebar_width) = {
         let cfg = state.config.lock().unwrap();
-        (cfg.gui.window_width, cfg.gui.window_height, cfg.gui.sidebar_visible, cfg.gui.sidebar_width)
+        (
+            cfg.gui.window_width,
+            cfg.gui.window_height,
+            cfg.gui.sidebar_visible,
+            cfg.gui.sidebar_width,
+        )
     };
 
     let header = HeaderBar::new();

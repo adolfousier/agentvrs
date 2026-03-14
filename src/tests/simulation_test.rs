@@ -3,20 +3,24 @@ use crate::world::{Grid, Position, Simulation, WorldEvent, build_office_world};
 use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 
-fn setup_sim() -> (Simulation, mpsc::Receiver<WorldEvent>, Arc<RwLock<AgentRegistry>>, Arc<RwLock<Grid>>) {
+fn setup_sim() -> (
+    Simulation,
+    mpsc::Receiver<WorldEvent>,
+    Arc<RwLock<AgentRegistry>>,
+    Arc<RwLock<Grid>>,
+) {
     let grid = Arc::new(RwLock::new(build_office_world(28, 20)));
     let registry = Arc::new(RwLock::new(AgentRegistry::new()));
     let (event_tx, event_rx) = mpsc::channel::<WorldEvent>(256);
-    let sim = Simulation::new(
-        Arc::clone(&grid),
-        Arc::clone(&registry),
-        event_tx,
-        200,
-    );
+    let sim = Simulation::new(Arc::clone(&grid), Arc::clone(&registry), event_tx, 200);
     (sim, event_rx, registry, grid)
 }
 
-fn spawn_agent(registry: &Arc<RwLock<AgentRegistry>>, grid: &Arc<RwLock<Grid>>, name: &str) -> crate::agent::AgentId {
+fn spawn_agent(
+    registry: &Arc<RwLock<AgentRegistry>>,
+    grid: &Arc<RwLock<Grid>>,
+    name: &str,
+) -> crate::agent::AgentId {
     let mut g = grid.write().unwrap();
     let mut r = registry.write().unwrap();
     let pos = g.find_empty_floor().unwrap();
@@ -129,24 +133,28 @@ async fn test_simulation_idle_agent_gets_goal() {
 
 #[tokio::test]
 async fn test_simulation_walking_agent_moves() {
+    use crate::world::pathfind::find_path;
+
     let (mut sim, _event_rx, registry, grid) = setup_sim();
     let id = spawn_agent(&registry, &grid, "walker");
 
-    // Set up a walking path manually
     let start_pos = {
         let reg = registry.read().unwrap();
         reg.get(&id).unwrap().position
     };
 
-    let target = Position::new(start_pos.x + 2, start_pos.y);
+    // Find a real walkable target via pathfinding
+    let (target, path) = {
+        let g = grid.read().unwrap();
+        let t = g.find_empty_floor().unwrap();
+        let p = find_path(&g, start_pos, t).unwrap();
+        (t, p)
+    };
 
     {
         let mut reg = registry.write().unwrap();
         let agent = reg.get_mut(&id).unwrap();
-        agent.path = vec![
-            Position::new(start_pos.x + 1, start_pos.y),
-            target,
-        ];
+        agent.path = path;
         agent.goal = Some(AgentGoal::Wander(target));
         agent.set_state(AgentState::Walking);
     }
@@ -157,7 +165,6 @@ async fn test_simulation_walking_agent_moves() {
 
     let reg = registry.read().unwrap();
     let agent = reg.get(&id).unwrap();
-    // Agent should have moved at least one step
     assert_ne!(agent.position, start_pos);
 }
 

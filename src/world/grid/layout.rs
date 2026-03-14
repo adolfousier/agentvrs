@@ -64,7 +64,6 @@ fn office_area(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     if wb_y < y2 {
         g.set_tile(Position::new(x1, wb_y), Tile::Whiteboard);
     }
-
 }
 
 fn kitchen_break(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
@@ -196,5 +195,4 @@ fn gym_arcade(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
             ax += 3;
         }
     }
-
 }

@@ -275,7 +275,8 @@ impl Simulation {
             // Path blocked — try to repath, only go idle if that also fails
             let goal_target = {
                 let reg = self.registry.read().unwrap();
-                reg.get(&id).and_then(|a| a.goal.as_ref().map(|g| g.target()))
+                reg.get(&id)
+                    .and_then(|a| a.goal.as_ref().map(|g| g.target()))
             };
             let repath_ok = if let Some(target) = goal_target {
                 let grid = self.grid.read().unwrap();

@@ -1,7 +1,7 @@
 use crate::gui::app::GuiState;
 use crate::gui::iso;
 use crate::world::Position;
-use gtk4::gdk::{Key, ModifierType};
+use gtk4::gdk::Key;
 use gtk4::prelude::*;
 use gtk4::{ApplicationWindow, DrawingArea, EventControllerKey, EventControllerScroll};
 use gtk4::{EventControllerScrollFlags, GestureClick, GestureDrag, Paned};
@@ -100,22 +100,10 @@ fn setup_scroll(da: &DrawingArea, state: &Arc<GuiState>) {
     let scroll = EventControllerScroll::new(EventControllerScrollFlags::VERTICAL);
     let state = Arc::clone(state);
 
-    scroll.connect_scroll(move |ctrl, _, dy| {
-        let mods = ctrl.current_event_state();
-        let ctrl_shift =
-            mods.contains(ModifierType::CONTROL_MASK) && mods.contains(ModifierType::SHIFT_MASK);
-
+    scroll.connect_scroll(move |_ctrl, _, dy| {
         let mut view = state.view.lock().unwrap();
-        if ctrl_shift {
-            if dy < 0.0 {
-                view.camera.rotate_cw();
-            } else {
-                view.camera.rotate_ccw();
-            }
-        } else {
-            let factor = if dy < 0.0 { 1.1 } else { 0.9 };
-            view.camera.zoom_by(factor);
-        }
+        let factor = if dy < 0.0 { 1.1 } else { 0.9 };
+        view.camera.zoom_by(factor);
         gtk4::glib::Propagation::Stop
     });
 

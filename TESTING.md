@@ -14,6 +14,7 @@ cargo test tests::api_test
 cargo test tests::tui_test
 cargo test tests::config_test
 cargo test tests::simulation_test
+cargo test tests::observability_test
 
 # Single test
 cargo test tests::world_test::test_grid_move_agent
@@ -37,8 +38,9 @@ src/tests/
 ├── a2a_test.rs         # A2A protocol wire compatibility
 ├── api_test.rs         # HTTP API endpoint tests (tower::ServiceExt)
 ├── tui_test.rs         # TUI state machine and input handling
-├── config_test.rs      # Configuration loading, saving, serialization
-└── simulation_test.rs  # Simulation tick loop, agent behavior, state transitions
+├── config_test.rs         # Configuration loading, saving, serialization
+├── simulation_test.rs     # Simulation tick loop, agent behavior, state transitions
+└── observability_test.rs  # Observability endpoints (detail, activity, heartbeat, status, tasks, dashboard)
 ```
 
 ## Test Coverage by Module
@@ -199,6 +201,31 @@ src/tests/
 - Agent list navigation (j/k, Up/Down)
 - Boundary behavior (navigate up at index 0)
 
+### observability_test.rs (11 tests)
+
+**Detail:**
+- Agent detail response (name, state, kind)
+- Detail for nonexistent agent (404)
+
+**Activity:**
+- Connect records spawned activity
+- Activity limit query parameter
+- State change recorded in activity log
+- Message recorded in activity log
+
+**Heartbeat:**
+- Post heartbeat with metadata
+
+**Status:**
+- Status with heartbeat (online health)
+- Status without heartbeat (unknown health)
+
+**Tasks:**
+- Empty task history
+
+**Dashboard:**
+- Full dashboard aggregation (detail + activity + health)
+
 ## Writing New Tests
 
 1. Add tests to the appropriate `*_test.rs` file
@@ -214,6 +241,11 @@ src/tests/
 - `test_state()` — Creates router with no auth, 16x12 walled grid
 - `test_state_with_auth(key)` — Creates router with API key auth enabled
 - `connect_helper(router, name)` — Connects an agent, returns agent ID string
+
+### Observability Tests
+- `test_state()` — Creates router with observer, no auth, 16x12 walled grid
+- `connect(router, name)` — Connects an agent, returns agent ID string
+- `set_state(router, id, state)` — Sets agent state via API
 
 ### Simulation Tests
 - `setup_sim()` — Creates simulation with 28x20 office world

@@ -1,17 +1,19 @@
+use super::observability::{ActivityKind, AgentObserver};
 use super::types::*;
 use crate::agent::{Agent, AgentGoal, AgentKind, AgentRegistry, AgentState};
 use crate::error::ApiError;
 use crate::world::pathfind::find_path;
 use crate::world::{Grid, Position, Tile, WorldEvent};
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::response::Json;
 use axum::response::sse::{Event, KeepAlive, Sse};
+use chrono::Utc;
 use futures::stream::Stream;
 use std::convert::Infallible;
 use std::sync::{Arc, RwLock};
 use tokio::sync::{broadcast, mpsc};
-use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::BroadcastStream;
 
 #[derive(Clone)]
 pub struct ApiState {
@@ -21,6 +23,7 @@ pub struct ApiState {
     pub event_broadcast: broadcast::Sender<WorldEvent>,
     pub api_key: Option<String>,
     pub tick_count: Arc<std::sync::atomic::AtomicU64>,
+    pub observer: Arc<RwLock<AgentObserver>>,
 }
 
 // --- Health (no auth) ---
@@ -58,8 +61,9 @@ pub async fn connect_agent(
 ) -> Result<Json<ConnectResponse>, ApiError> {
     let position = {
         let grid = state.grid.read().unwrap();
-        grid.find_empty_floor()
-            .ok_or(ApiError::ServiceUnavailable("no empty floor available".into()))?
+        grid.find_empty_floor().ok_or(ApiError::ServiceUnavailable(
+            "no empty floor available".into(),
+        ))?
     };
 
     let kind = match req.endpoint {
@@ -84,6 +88,18 @@ pub async fn connect_agent(
         .event_tx
         .send(WorldEvent::AgentSpawned { agent_id, position })
         .await;
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(
+            agent_id,
+            ActivityKind::Spawned,
+            format!(
+                "Agent '{}' connected at ({},{})",
+                req.name, position.x, position.y
+            ),
+        );
+    }
 
     Ok(Json(ConnectResponse {
         agent_id: agent_id.to_string(),
@@ -117,6 +133,12 @@ pub async fn delete_agent(
             agent_id: target_id,
         })
         .await;
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(target_id, ActivityKind::Removed, "Agent disconnected");
+        obs.remove_agent(&target_id);
+    }
 
     Ok(Json(DeleteResponse {
         status: "removed".to_string(),
@@ -166,14 +188,37 @@ pub async fn send_agent_message(
             .send(WorldEvent::MessageSent {
                 from: sender_id,
                 to: target_id,
-                text: msg.text,
+                text: msg.text.clone(),
             })
             .await;
+
+        {
+            let mut obs = state.observer.write().unwrap();
+            obs.record_activity(
+                sender_id,
+                ActivityKind::MessageSent,
+                format!("Sent to {}: {}", &to_str[..8.min(to_str.len())], &msg.text),
+            );
+            obs.record_activity(
+                target_id,
+                ActivityKind::MessageReceived,
+                format!("From {}: {}", &sender_id.to_string()[..8], &msg.text),
+            );
+        }
 
         return Ok(Json(MessageResponse {
             status: "delivered".to_string(),
             delivered_to: Some(to_str),
         }));
+    }
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(
+            sender_id,
+            ActivityKind::MessageSent,
+            format!("Speech: {}", &msg.text),
+        );
     }
 
     Ok(Json(MessageResponse {
@@ -198,21 +243,35 @@ pub async fn move_agent(
             .get(target)
             .ok_or(ApiError::BadRequest("position out of bounds".into()))?;
         if cell.tile.is_solid() {
-            return Err(ApiError::BadRequest("target position is not walkable".into()));
+            return Err(ApiError::BadRequest(
+                "target position is not walkable".into(),
+            ));
         }
     }
 
-    let mut reg = state.registry.write().unwrap();
-    let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
+    let agent_id = {
+        let mut reg = state.registry.write().unwrap();
+        let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
 
-    let grid = state.grid.read().unwrap();
-    let path = find_path(&grid, agent.position, target)
-        .ok_or(ApiError::BadRequest("no path to target position".into()))?;
+        let grid = state.grid.read().unwrap();
+        let path = find_path(&grid, agent.position, target)
+            .ok_or(ApiError::BadRequest("no path to target position".into()))?;
 
-    agent.path = path;
-    agent.goal = Some(AgentGoal::Wander(target));
-    agent.set_state(AgentState::Walking);
-    agent.anim.activity_ticks = 0;
+        agent.path = path;
+        agent.goal = Some(AgentGoal::Wander(target));
+        agent.set_state(AgentState::Walking);
+        agent.anim.activity_ticks = 0;
+        agent.id
+    };
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(
+            agent_id,
+            ActivityKind::Movement,
+            format!("Moving to ({},{})", req.x, req.y),
+        );
+    }
 
     Ok(Json(serde_json::json!({
         "status": "moving",
@@ -243,11 +302,17 @@ pub async fn set_agent_goal(
                 .ok_or(ApiError::ServiceUnavailable("no empty floor".into()))?;
             let mut reg = state.registry.write().unwrap();
             let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
+            let agent_id = agent.id;
             if let Some(path) = find_path(&grid, agent.position, target) {
                 agent.goal = Some(AgentGoal::Wander(target));
                 agent.path = path;
                 agent.set_state(AgentState::Walking);
                 agent.anim.activity_ticks = 0;
+            }
+            drop(reg);
+            {
+                let mut obs = state.observer.write().unwrap();
+                obs.record_activity(agent_id, ActivityKind::GoalAssigned, "Goal: wander");
             }
             return Ok(Json(serde_json::json!({
                 "status": "wandering",
@@ -287,18 +352,32 @@ pub async fn set_agent_goal(
 
     let adj = grid
         .find_adjacent_floor(target)
-        .ok_or(ApiError::ServiceUnavailable("no adjacent floor available".into()))?;
+        .ok_or(ApiError::ServiceUnavailable(
+            "no adjacent floor available".into(),
+        ))?;
 
-    let mut reg = state.registry.write().unwrap();
-    let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
+    let agent_id = {
+        let mut reg = state.registry.write().unwrap();
+        let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
 
-    let path = find_path(&grid, agent.position, adj)
-        .ok_or(ApiError::BadRequest("no path to target".into()))?;
+        let path = find_path(&grid, agent.position, adj)
+            .ok_or(ApiError::BadRequest("no path to target".into()))?;
 
-    agent.goal = Some(goal_fn(target));
-    agent.path = path;
-    agent.set_state(AgentState::Walking);
-    agent.anim.activity_ticks = 0;
+        agent.goal = Some(goal_fn(target));
+        agent.path = path;
+        agent.set_state(AgentState::Walking);
+        agent.anim.activity_ticks = 0;
+        agent.id
+    };
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(
+            agent_id,
+            ActivityKind::GoalAssigned,
+            format!("Goal: {}", req.goal),
+        );
+    }
 
     Ok(Json(serde_json::json!({
         "status": "heading_to_goal",
@@ -314,15 +393,27 @@ pub async fn set_agent_state(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let new_state = parse_agent_state(&req.state)?;
 
-    let mut reg = state.registry.write().unwrap();
-    let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
-    agent.set_state(new_state.clone());
-    agent.anim.activity_ticks = 0;
+    let agent_id = {
+        let mut reg = state.registry.write().unwrap();
+        let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
+        agent.set_state(new_state.clone());
+        agent.anim.activity_ticks = 0;
 
-    // Clear path/goal if setting to idle
-    if new_state == AgentState::Idle {
-        agent.path.clear();
-        agent.goal = None;
+        // Clear path/goal if setting to idle
+        if new_state == AgentState::Idle {
+            agent.path.clear();
+            agent.goal = None;
+        }
+        agent.id
+    };
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(
+            agent_id,
+            ActivityKind::StateChange,
+            format!("State → {}", req.state),
+        );
     }
 
     Ok(Json(serde_json::json!({
@@ -396,6 +487,188 @@ pub async fn event_stream(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
+// --- Observability Endpoints ---
+
+pub async fn get_agent(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+) -> Result<Json<ApiAgentDetail>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+
+    let obs = state.observer.read().unwrap();
+    let last_activity_secs_ago = obs
+        .get_activity(&agent_id, 1)
+        .first()
+        .map(|e| (Utc::now() - e.timestamp).num_seconds().max(0) as u64)
+        .unwrap_or(0);
+    let connection_health = obs.connection_health(&agent_id).to_string();
+    let goal = agent.goal.as_ref().map(|g| format!("{:?}", g));
+
+    Ok(Json(ApiAgentDetail {
+        id: agent.id.to_string(),
+        name: agent.name.clone(),
+        kind: format!("{:?}", agent.kind),
+        state: agent.state.label().to_string(),
+        position: (agent.position.x, agent.position.y),
+        task_count: agent.task_count,
+        speech: agent.speech.clone(),
+        goal,
+        last_activity_secs_ago,
+        connection_health,
+    }))
+}
+
+pub async fn get_agent_activity(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+    Query(query): Query<LimitQuery>,
+) -> Result<Json<ActivityResponse>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+    drop(reg);
+
+    let limit = query.limit.unwrap_or(50);
+    let obs = state.observer.read().unwrap();
+    let entries: Vec<_> = obs
+        .get_activity(&agent_id, limit)
+        .into_iter()
+        .cloned()
+        .collect();
+
+    Ok(Json(ActivityResponse {
+        agent_id: agent_id.to_string(),
+        count: entries.len(),
+        entries,
+    }))
+}
+
+pub async fn post_agent_heartbeat(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+    Json(req): Json<HeartbeatRequest>,
+) -> Result<Json<HeartbeatResponse>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+    drop(reg);
+
+    let mut obs = state.observer.write().unwrap();
+    obs.update_heartbeat(agent_id, &req.status, req.metadata);
+    obs.record_activity(
+        agent_id,
+        ActivityKind::Heartbeat,
+        format!("Heartbeat: {}", req.status),
+    );
+
+    let hb = obs.get_heartbeat(&agent_id).unwrap();
+    Ok(Json(HeartbeatResponse {
+        status: "ok".to_string(),
+        last_seen: hb.last_seen.to_rfc3339(),
+    }))
+}
+
+pub async fn get_agent_status(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+) -> Result<Json<AgentStatusResponse>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+    let name = agent.name.clone();
+    let agent_state = agent.state.label().to_string();
+    drop(reg);
+
+    let obs = state.observer.read().unwrap();
+    let connection_health = obs.connection_health(&agent_id).to_string();
+    let heartbeat = obs.get_heartbeat(&agent_id).cloned();
+
+    Ok(Json(AgentStatusResponse {
+        agent_id: agent_id.to_string(),
+        name,
+        state: agent_state,
+        connection_health,
+        heartbeat,
+    }))
+}
+
+pub async fn get_agent_tasks(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+    Query(query): Query<LimitQuery>,
+) -> Result<Json<TaskHistoryResponse>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+    drop(reg);
+
+    let limit = query.limit.unwrap_or(50);
+    let obs = state.observer.read().unwrap();
+    let tasks: Vec<_> = obs
+        .get_tasks(&agent_id, limit)
+        .into_iter()
+        .cloned()
+        .collect();
+
+    Ok(Json(TaskHistoryResponse {
+        agent_id: agent_id.to_string(),
+        count: tasks.len(),
+        tasks,
+    }))
+}
+
+pub async fn get_agent_dashboard(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+) -> Result<Json<DashboardResponse>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+    let goal = agent.goal.as_ref().map(|g| format!("{:?}", g));
+    let detail = ApiAgentDetail {
+        id: agent.id.to_string(),
+        name: agent.name.clone(),
+        kind: format!("{:?}", agent.kind),
+        state: agent.state.label().to_string(),
+        position: (agent.position.x, agent.position.y),
+        task_count: agent.task_count,
+        speech: agent.speech.clone(),
+        goal,
+        last_activity_secs_ago: 0,        // filled below
+        connection_health: String::new(), // filled below
+    };
+    drop(reg);
+
+    let obs = state.observer.read().unwrap();
+    let recent_activity: Vec<_> = obs
+        .get_activity(&agent_id, 20)
+        .into_iter()
+        .cloned()
+        .collect();
+    let task_history: Vec<_> = obs.get_tasks(&agent_id, 20).into_iter().cloned().collect();
+    let heartbeat = obs.get_heartbeat(&agent_id).cloned();
+    let connection_health = obs.connection_health(&agent_id).to_string();
+
+    let last_activity_secs_ago = recent_activity
+        .last()
+        .map(|e| (Utc::now() - e.timestamp).num_seconds().max(0) as u64)
+        .unwrap_or(0);
+
+    Ok(Json(DashboardResponse {
+        agent: ApiAgentDetail {
+            last_activity_secs_ago,
+            connection_health: connection_health.clone(),
+            ..detail
+        },
+        recent_activity,
+        task_history,
+        heartbeat,
+        connection_health,
+    }))
+}
+
 // --- Auth Middleware ---
 
 pub async fn auth_middleware(
@@ -404,10 +677,7 @@ pub async fn auth_middleware(
     next: axum::middleware::Next,
 ) -> Result<axum::response::Response, ApiError> {
     if let Some(ref expected) = state.api_key {
-        let provided = req
-            .headers()
-            .get("X-API-Key")
-            .and_then(|v| v.to_str().ok());
+        let provided = req.headers().get("X-API-Key").and_then(|v| v.to_str().ok());
         if provided != Some(expected.as_str()) {
             return Err(ApiError::Unauthorized);
         }

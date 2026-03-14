@@ -1,3 +1,4 @@
+use super::observability::AgentObserver;
 use super::routes::{self, ApiState};
 use crate::agent::AgentRegistry;
 use crate::config::ServerConfig;
@@ -16,6 +17,7 @@ pub fn build_router(
     event_broadcast: broadcast::Sender<WorldEvent>,
     api_key: Option<String>,
     tick_count: Arc<std::sync::atomic::AtomicU64>,
+    observer: Arc<RwLock<AgentObserver>>,
 ) -> Router {
     let state = ApiState {
         registry,
@@ -24,6 +26,7 @@ pub fn build_router(
         event_broadcast,
         api_key,
         tick_count,
+        observer,
     };
 
     // Health endpoint — no auth required
@@ -40,6 +43,14 @@ pub fn build_router(
         .route("/agents/{id}/move", post(routes::move_agent))
         .route("/agents/{id}/goal", post(routes::set_agent_goal))
         .route("/agents/{id}/state", post(routes::set_agent_state))
+        // Observability endpoints
+        .route("/agents/{id}/detail", get(routes::get_agent))
+        .route("/agents/{id}/activity", get(routes::get_agent_activity))
+        .route("/agents/{id}/heartbeat", post(routes::post_agent_heartbeat))
+        .route("/agents/{id}/status", get(routes::get_agent_status))
+        .route("/agents/{id}/tasks", get(routes::get_agent_tasks))
+        .route("/agents/{id}/dashboard", get(routes::get_agent_dashboard))
+        // World
         .route("/world", get(routes::world_snapshot))
         .route("/world/tiles", get(routes::world_tiles))
         .route("/events", get(routes::event_stream))
@@ -60,6 +71,7 @@ pub async fn start_api_server(
     event_tx: mpsc::Sender<WorldEvent>,
     event_broadcast: broadcast::Sender<WorldEvent>,
     tick_count: Arc<std::sync::atomic::AtomicU64>,
+    observer: Arc<RwLock<AgentObserver>>,
 ) -> anyhow::Result<()> {
     let router = build_router(
         registry,
@@ -68,6 +80,7 @@ pub async fn start_api_server(
         event_broadcast,
         config.api_key.clone(),
         tick_count,
+        observer,
     );
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;

@@ -1,5 +1,6 @@
 use crate::agent::{Agent, AgentKind, AgentRegistry, MessageLog};
 use crate::api;
+use crate::api::observability::AgentObserver;
 use crate::config::AppConfig;
 use crate::world::{Grid, Simulation, WorldEvent, build_office_world};
 use anyhow::Result;
@@ -50,6 +51,9 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
     let tick_count = Arc::clone(&sim.shared_tick);
     tokio::spawn(sim.run(shutdown_rx));
 
+    // Agent observer (activity logs, heartbeats, task history)
+    let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
+
     // API server
     if config.server.enabled {
         let sg = Arc::clone(&grid);
@@ -58,8 +62,9 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
         let sbtx = broadcast_tx;
         let sc = config.server.clone();
         let st = Arc::clone(&tick_count);
+        let so = Arc::clone(&observer);
         tokio::spawn(async move {
-            if let Err(e) = api::start_api_server(&sc, sr, sg, stx, sbtx, st).await {
+            if let Err(e) = api::start_api_server(&sc, sr, sg, stx, sbtx, st, so).await {
                 tracing::error!("API server error: {}", e);
             }
         });

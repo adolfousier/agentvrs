@@ -13,6 +13,7 @@ Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs)
 - **Animated agents** — walking animations, state-driven behavior, BFS pathfinding, and speech bubbles
 - **Privacy-first** — runs entirely locally on `127.0.0.1`, no telemetry, no cloud
 - **Production-ready API** — REST endpoints with JSON error responses, API key auth, rate limiting, SSE event streaming
+- **Observability & control plane** — activity logs, heartbeat monitoring, task history, connection health, full agent dashboard — control all agents from one place across multiple machines
 - **A2A protocol** — wire-compatible A2A client for connecting OpenCrabs agents
 - **Agent control** — move agents, set goals, change states, send messages between agents via API
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
@@ -187,6 +188,51 @@ GET /world/tiles
 # Response: {"width":28,"height":20,"tiles":[[{"tile":"Floor(Wood)","occupant":null},...]]}
 ```
 
+#### Observability & Control Plane
+
+Monitor and control all your agents from a single place — across multiple machines.
+
+```bash
+# Agent detail (kind, goal, connection health, last activity)
+GET /agents/{id}/detail
+# Response: {"id":"a1b2c3d4","name":"my-bot","kind":"External","state":"working",
+#   "position":[5,3],"task_count":2,"speech":null,"goal":"GoToDesk((4,3))",
+#   "last_activity_secs_ago":12,"connection_health":"online"}
+
+# Activity log (timestamped history of state changes, messages, goals)
+GET /agents/{id}/activity?limit=50
+# Response: {"agent_id":"a1b2c3d4","count":3,"entries":[
+#   {"timestamp":"2026-03-14T10:00:00Z","kind":"spawned","detail":"Agent 'my-bot' connected at (5,3)"},
+#   {"timestamp":"2026-03-14T10:00:05Z","kind":"state_change","detail":"State → working"},
+#   {"timestamp":"2026-03-14T10:00:10Z","kind":"message_sent","detail":"Speech: hello"}]}
+
+# Heartbeat (agents report health periodically)
+POST /agents/{id}/heartbeat
+# Body: {"status":"healthy","metadata":{"cpu":0.42,"memory_mb":128}}
+# Response: {"status":"ok","last_seen":"2026-03-14T10:00:00Z"}
+
+# Connection status (online/stale/offline/unknown based on heartbeat recency)
+GET /agents/{id}/status
+# Response: {"agent_id":"a1b2c3d4","name":"my-bot","state":"working",
+#   "connection_health":"online","heartbeat":{"last_seen":"...","status":"healthy",...}}
+
+# Task history
+GET /agents/{id}/tasks?limit=50
+# Response: {"agent_id":"a1b2c3d4","count":1,"tasks":[
+#   {"task_id":"t1","submitted_at":"...","state":"completed","last_updated":"...","response_summary":"Done"}]}
+
+# Full dashboard (detail + recent activity + tasks + heartbeat in one call)
+GET /agents/{id}/dashboard
+# Response: {"agent":{ ... },"recent_activity":[ ... ],"task_history":[ ... ],
+#   "heartbeat":{ ... },"connection_health":"online"}
+```
+
+Connection health is determined by heartbeat recency:
+- **online** — heartbeat within last 60s
+- **stale** — heartbeat 60s–300s ago
+- **offline** — no heartbeat for 300s+
+- **unknown** — no heartbeat ever received
+
 #### Real-time Events (SSE)
 
 ```bash
@@ -235,9 +281,10 @@ src/
 ├── avatar/           # TUI pixel sprites (agents, furniture, floors)
 ├── a2a/              # A2A protocol client + bridge
 ├── api/
-│   ├── routes.rs     # All endpoint handlers + auth middleware
-│   ├── server.rs     # Router, middleware layers, server startup
-│   └── types.rs      # Request/response structs
+│   ├── routes.rs        # Endpoint handlers + auth middleware
+│   ├── server.rs        # Router, middleware layers, server startup
+│   ├── types.rs         # Request/response structs
+│   └── observability.rs # AgentObserver, activity logs, heartbeat, task history
 ├── gui/              # GTK4 isometric 2.5D (optional, behind `gui` feature)
 │   ├── world_view.rs # Cairo isometric renderer
 │   ├── tile_render.rs# Furniture/wall/floor 3D rendering
@@ -248,7 +295,7 @@ src/
 ├── tui/              # Terminal UI (ratatui)
 ├── error/            # AppError + ApiError with JSON responses
 ├── runner.rs         # Shared setup (grid, registry, sim, API, SSE broadcast)
-└── tests/            # 95 tests across 5 modules
+└── tests/            # 177 tests across 8 modules
 ```
 
 ## License

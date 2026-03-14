@@ -55,10 +55,18 @@ pub struct GuiConfig {
     pub sidebar_width: i32,
 }
 
-fn default_win_width() -> i32 { 1200 }
-fn default_win_height() -> i32 { 800 }
-fn default_sidebar_visible() -> bool { true }
-fn default_sidebar_width() -> i32 { 280 }
+fn default_win_width() -> i32 {
+    1200
+}
+fn default_win_height() -> i32 {
+    800
+}
+fn default_sidebar_visible() -> bool {
+    true
+}
+fn default_sidebar_width() -> i32 {
+    280
+}
 
 impl Default for GuiConfig {
     fn default() -> Self {

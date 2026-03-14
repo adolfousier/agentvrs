@@ -1,3 +1,4 @@
+use super::observability::{ActivityEntry, HeartbeatInfo, TaskRecord};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,4 +91,74 @@ pub struct MessageResponse {
 pub struct DeleteResponse {
     pub status: String,
     pub agent_id: String,
+}
+
+// ─── Observability Types ────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAgentDetail {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+    pub state: String,
+    pub position: (u16, u16),
+    pub task_count: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speech: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub goal: Option<String>,
+    pub last_activity_secs_ago: u64,
+    pub connection_health: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeartbeatRequest {
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeartbeatResponse {
+    pub status: String,
+    pub last_seen: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentStatusResponse {
+    pub agent_id: String,
+    pub name: String,
+    pub state: String,
+    pub connection_health: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heartbeat: Option<HeartbeatInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityResponse {
+    pub agent_id: String,
+    pub count: usize,
+    pub entries: Vec<ActivityEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskHistoryResponse {
+    pub agent_id: String,
+    pub count: usize,
+    pub tasks: Vec<TaskRecord>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct LimitQuery {
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardResponse {
+    pub agent: ApiAgentDetail,
+    pub recent_activity: Vec<ActivityEntry>,
+    pub task_history: Vec<TaskRecord>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heartbeat: Option<HeartbeatInfo>,
+    pub connection_health: String,
 }

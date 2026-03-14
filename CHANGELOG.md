@@ -3,6 +3,11 @@
 ## [0.1.1] - 2026-03-14
 
 ### Added
+- Agent observability & control plane: activity logs, heartbeat monitoring, task history, connection health dashboard
+- New API endpoints: `GET /agents/{id}/detail`, `GET /agents/{id}/activity`, `POST /agents/{id}/heartbeat`, `GET /agents/{id}/status`, `GET /agents/{id}/tasks`, `GET /agents/{id}/dashboard`
+- Connection health tracking (online/stale/offline/unknown) based on heartbeat recency
+- All API actions (connect, delete, message, move, goal, state) now record timestamped activity entries
+- 11 new observability tests in dedicated `observability_test.rs`
 - GTK4 GUI with isometric 2.5D world view (`--gui` flag, requires `gui` feature)
 - Cairo-rendered isometric tiles with 3D extrusion and shading
 - Isometric furniture: desks, vending machines, arcade cabinets, coffee machines, yoga mats, gym equipment, kitchen counters, ping pong tables

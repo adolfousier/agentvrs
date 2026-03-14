@@ -151,7 +151,11 @@ impl Grid {
         self.find_adjacent_floor_avoiding(pos, &[])
     }
 
-    pub fn find_adjacent_floor_avoiding(&self, pos: Position, avoid: &[Position]) -> Option<Position> {
+    pub fn find_adjacent_floor_avoiding(
+        &self,
+        pos: Position,
+        avoid: &[Position],
+    ) -> Option<Position> {
         // LEFT face normal points toward -x (bottom-left on screen).
         // Agent at (x-1, y) looks toward +x and sees the LEFT face (detail face).
         let candidates = [
@@ -164,10 +168,7 @@ impl Grid {
         candidates
             .iter()
             .copied()
-            .find(|p| {
-                !avoid.contains(p)
-                    && self.get(*p).map(|c| c.is_walkable()).unwrap_or(false)
-            })
+            .find(|p| !avoid.contains(p) && self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))
             // Fallback: any walkable spot
             .or_else(|| {
                 candidates

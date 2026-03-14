@@ -35,7 +35,11 @@ fn draw_iso_block(
     cr.line_to(x + hw + dx, y - h - dy);
     cr.line_to(x + hw, y - h);
     cr.close_path();
-    cr.set_source_rgb((r * 1.15).min(1.0), (g * 1.15).min(1.0), (b * 1.15).min(1.0));
+    cr.set_source_rgb(
+        (r * 1.15).min(1.0),
+        (g * 1.15).min(1.0),
+        (b * 1.15).min(1.0),
+    );
     let _ = cr.fill();
 
     // Right face (slightly darker)
@@ -129,15 +133,7 @@ pub fn draw_agent(
     // --- Body / torso block ---
     let body_bot = legs_bot - leg_h;
     draw_iso_block(
-        cr,
-        sx,
-        body_bot,
-        body_w,
-        body_h,
-        depth,
-        shirt.0,
-        shirt.1,
-        shirt.2,
+        cr, sx, body_bot, body_w, body_h, depth, shirt.0, shirt.1, shirt.2,
     );
 
     // Shirt detail — darker vertical stripe on front face
@@ -194,15 +190,7 @@ pub fn draw_agent(
     // --- Head (square block) ---
     let head_bot = neck_bot - neck_h;
     draw_iso_block(
-        cr,
-        sx,
-        head_bot,
-        head_size,
-        head_size,
-        depth,
-        skin.0,
-        skin.1,
-        skin.2,
+        cr, sx, head_bot, head_size, head_size, depth, skin.0, skin.1, skin.2,
     );
 
     // --- Hair (flat block on top of head) ---
