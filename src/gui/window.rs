@@ -33,7 +33,7 @@ pub fn build(app: &Application, state: &Arc<GuiState>, tick_ms: u64) {
         .build();
     window.set_titlebar(Some(&header));
 
-    input::setup(&window, state, &drawing_area);
+    input::setup(&window, state, &drawing_area, &sidebar_widget);
     start_tick_timer(state, &drawing_area, &status, tick_ms);
 
     window.present();

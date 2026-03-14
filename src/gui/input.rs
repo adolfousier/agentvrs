@@ -4,14 +4,14 @@ use crate::world::Position;
 use gtk4::gdk::{Key, ModifierType};
 use gtk4::prelude::*;
 use gtk4::{ApplicationWindow, DrawingArea, EventControllerKey, EventControllerScroll};
-use gtk4::{EventControllerScrollFlags, GestureClick, GestureDrag};
+use gtk4::{EventControllerScrollFlags, GestureClick, GestureDrag, Paned};
 use std::sync::Arc;
 
-pub fn setup(window: &ApplicationWindow, state: &Arc<GuiState>, da: &DrawingArea) {
+pub fn setup(window: &ApplicationWindow, state: &Arc<GuiState>, da: &DrawingArea, sidebar: &Paned) {
     setup_drag(da, state);
     setup_scroll(da, state);
     setup_click(da, state);
-    setup_keyboard(window, state, da);
+    setup_keyboard(window, state, da, sidebar);
 }
 
 fn setup_drag(da: &DrawingArea, state: &Arc<GuiState>) {
@@ -50,14 +50,12 @@ fn setup_scroll(da: &DrawingArea, state: &Arc<GuiState>) {
 
         let mut view = state.view.lock().unwrap();
         if ctrl_shift {
-            // Ctrl+Shift+Scroll = rotate
             if dy < 0.0 {
                 view.camera.rotate_cw();
             } else {
                 view.camera.rotate_ccw();
             }
         } else {
-            // Plain scroll = zoom
             let factor = if dy < 0.0 { 1.1 } else { 0.9 };
             view.camera.zoom_by(factor);
         }
@@ -106,16 +104,25 @@ fn setup_click(da: &DrawingArea, state: &Arc<GuiState>) {
     da.add_controller(click);
 }
 
-fn setup_keyboard(window: &ApplicationWindow, state: &Arc<GuiState>, da: &DrawingArea) {
+fn setup_keyboard(window: &ApplicationWindow, state: &Arc<GuiState>, da: &DrawingArea, sidebar: &Paned) {
     let key_ctrl = EventControllerKey::new();
     let state = Arc::clone(state);
     let da = da.clone();
+    let sidebar = sidebar.clone();
 
     key_ctrl.connect_key_pressed(move |_, key, _, _| match key {
         Key::r | Key::R => {
             let mut view = state.view.lock().unwrap();
             view.camera.rotate_cw();
             da.queue_draw();
+            gtk4::glib::Propagation::Stop
+        }
+        Key::h | Key::H => {
+            let mut view = state.view.lock().unwrap();
+            view.sidebar_visible = !view.sidebar_visible;
+            let visible = view.sidebar_visible;
+            drop(view);
+            sidebar.set_visible(visible);
             gtk4::glib::Propagation::Stop
         }
         Key::Escape => {

@@ -53,19 +53,19 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
 }
 
 fn office_area(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
-    // Desks in a grid with walking room
-    let mut dy = y1 + 1;
-    while dy < y2 - 1 {
-        let mut dx = x1 + 2;
+    // Desks in a grid — keep 2 tiles from walls for visual clearance
+    let mut dy = y1 + 2;
+    while dy < y2 - 2 {
+        let mut dx = x1 + 3;
         while dx < x2 - 2 {
             g.set_tile(Position::new(dx, dy), Tile::Desk);
             dx += 4;
         }
         dy += 3;
     }
-    // Whiteboard on left wall
-    if y1 + 2 < y2 {
-        g.set_tile(Position::new(x1, y1 + 2), Tile::Whiteboard);
+    // Whiteboard — 2 tiles from left wall
+    if y1 + 3 < y2 {
+        g.set_tile(Position::new(x1 + 2, y1 + 3), Tile::Whiteboard);
     }
 }
 
@@ -75,17 +75,17 @@ fn break_room(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
             g.set_tile(Position::new(x, y), Tile::Floor(FloorKind::Tile));
         }
     }
-    // Vending + coffee along top
-    if x1 + 1 < x2 { g.set_tile(Position::new(x1 + 1, y1 + 1), Tile::VendingMachine); }
-    if x1 + 4 < x2 { g.set_tile(Position::new(x1 + 4, y1 + 1), Tile::VendingMachine); }
-    if x1 + 7 < x2 { g.set_tile(Position::new(x1 + 7, y1 + 1), Tile::CoffeeMachine); }
-    // Couches
+    // Vending + coffee — 2 tiles from top wall
+    if x1 + 2 < x2 { g.set_tile(Position::new(x1 + 2, y1 + 2), Tile::VendingMachine); }
+    if x1 + 5 < x2 { g.set_tile(Position::new(x1 + 5, y1 + 2), Tile::VendingMachine); }
+    if x1 + 8 < x2 { g.set_tile(Position::new(x1 + 8, y1 + 2), Tile::CoffeeMachine); }
+    // Couches — center of room
     let mid_y = y1 + (y2 - y1) / 2;
-    if x1 + 2 < x2 { g.set_tile(Position::new(x1 + 2, mid_y), Tile::Couch); }
-    if x1 + 5 < x2 { g.set_tile(Position::new(x1 + 5, mid_y), Tile::Couch); }
-    // Plants
-    if x2 - 2 > x1 && y2 - 2 > y1 { g.set_tile(Position::new(x2 - 2, y2 - 2), Tile::Plant); }
-    if x1 + 2 < x2 && y2 - 2 > y1 { g.set_tile(Position::new(x1 + 2, y2 - 2), Tile::Plant); }
+    if x1 + 3 < x2 { g.set_tile(Position::new(x1 + 3, mid_y), Tile::Couch); }
+    if x1 + 6 < x2 { g.set_tile(Position::new(x1 + 6, mid_y), Tile::Couch); }
+    // Plants — corners but with clearance
+    if x2 - 3 > x1 && y2 - 3 > y1 { g.set_tile(Position::new(x2 - 3, y2 - 3), Tile::Plant); }
+    if x1 + 3 < x2 && y2 - 3 > y1 { g.set_tile(Position::new(x1 + 3, y2 - 3), Tile::Plant); }
 }
 
 fn lounge(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
@@ -94,9 +94,9 @@ fn lounge(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
             g.set_tile(Position::new(x, y), Tile::Floor(FloorKind::Carpet));
         }
     }
-    if x1 + 2 < x2 && y1 + 1 < y2 { g.set_tile(Position::new(x1 + 2, y1 + 1), Tile::Couch); }
-    if x1 + 5 < x2 && y1 + 1 < y2 { g.set_tile(Position::new(x1 + 5, y1 + 1), Tile::Couch); }
-    if x1 + 9 < x2 && y1 + 1 < y2 { g.set_tile(Position::new(x1 + 9, y1 + 1), Tile::Plant); }
+    if x1 + 3 < x2 && y1 + 2 < y2 { g.set_tile(Position::new(x1 + 3, y1 + 2), Tile::Couch); }
+    if x1 + 6 < x2 && y1 + 2 < y2 { g.set_tile(Position::new(x1 + 6, y1 + 2), Tile::Couch); }
+    if x1 + 9 < x2 && y1 + 2 < y2 { g.set_tile(Position::new(x1 + 9, y1 + 2), Tile::Plant); }
     // Rug
     let cx = x1 + (x2 - x1) / 3;
     let cy = y1 + (y2 - y1) / 2;
@@ -115,11 +115,14 @@ fn gym_arcade(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
             g.set_tile(Position::new(x, y), Tile::Floor(FloorKind::Concrete));
         }
     }
-    if x1 + 2 < x2 && y1 + 1 < y2 { g.set_tile(Position::new(x1 + 2, y1 + 1), Tile::GymTreadmill); }
-    if x1 + 6 < x2 && y1 + 1 < y2 { g.set_tile(Position::new(x1 + 6, y1 + 1), Tile::GymTreadmill); }
-    let bot = y2.saturating_sub(2).max(y1 + 2);
-    if x1 + 2 < x2 && bot < y2 { g.set_tile(Position::new(x1 + 2, bot), Tile::PinballMachine); }
-    if x1 + 6 < x2 && bot < y2 { g.set_tile(Position::new(x1 + 6, bot), Tile::PinballMachine); }
+    // Treadmills — 2 tiles from walls
+    if x1 + 3 < x2 && y1 + 2 < y2 { g.set_tile(Position::new(x1 + 3, y1 + 2), Tile::GymTreadmill); }
+    if x1 + 7 < x2 && y1 + 2 < y2 { g.set_tile(Position::new(x1 + 7, y1 + 2), Tile::GymTreadmill); }
+    // Arcade machines
+    let bot = y2.saturating_sub(3).max(y1 + 3);
+    if x1 + 3 < x2 && bot < y2 { g.set_tile(Position::new(x1 + 3, bot), Tile::PinballMachine); }
+    if x1 + 7 < x2 && bot < y2 { g.set_tile(Position::new(x1 + 7, bot), Tile::PinballMachine); }
+    // Plant
     let mid = y1 + (y2 - y1) / 2;
-    if x2 - 2 > x1 && mid < y2 { g.set_tile(Position::new(x2 - 2, mid), Tile::Plant); }
+    if x2 - 3 > x1 && mid < y2 { g.set_tile(Position::new(x2 - 3, mid), Tile::Plant); }
 }

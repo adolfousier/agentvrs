@@ -38,6 +38,7 @@ pub struct ViewState {
     pub drag_start: (f64, f64),
     pub tick_count: u64,
     pub status_message: Option<String>,
+    pub sidebar_visible: bool,
 }
 
 impl ViewState {
@@ -50,6 +51,7 @@ impl ViewState {
             drag_start: (0.0, 0.0),
             tick_count: 0,
             status_message: None,
+            sidebar_visible: true,
         }
     }
 }
