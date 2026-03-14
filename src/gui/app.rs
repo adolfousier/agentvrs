@@ -1,4 +1,5 @@
 use crate::agent::AgentRegistry;
+use crate::config::AppConfig;
 use crate::gui::types::ViewState;
 use crate::world::{Grid, WorldEvent};
 use std::sync::{Arc, Mutex, RwLock};
@@ -10,6 +11,7 @@ pub struct GuiState {
     pub registry: Arc<RwLock<AgentRegistry>>,
     pub view: Arc<Mutex<ViewState>>,
     pub event_rx: Arc<Mutex<mpsc::Receiver<WorldEvent>>>,
+    pub config: Arc<Mutex<AppConfig>>,
 }
 
 impl GuiState {
@@ -17,12 +19,15 @@ impl GuiState {
         grid: Arc<RwLock<Grid>>,
         registry: Arc<RwLock<AgentRegistry>>,
         event_rx: mpsc::Receiver<WorldEvent>,
+        config: AppConfig,
     ) -> Self {
+        let sidebar_visible = config.gui.sidebar_visible;
         Self {
             grid,
             registry,
-            view: Arc::new(Mutex::new(ViewState::new())),
+            view: Arc::new(Mutex::new(ViewState::with_sidebar(sidebar_visible))),
             event_rx: Arc::new(Mutex::new(event_rx)),
+            config: Arc::new(Mutex::new(config)),
         }
     }
 

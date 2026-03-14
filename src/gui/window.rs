@@ -5,6 +5,11 @@ use gtk4::{Application, ApplicationWindow, Box as GtkBox, HeaderBar, Orientation
 use std::sync::Arc;
 
 pub fn build(app: &Application, state: &Arc<GuiState>, tick_ms: u64) {
+    let (win_w, win_h, sidebar_visible, sidebar_width) = {
+        let cfg = state.config.lock().unwrap();
+        (cfg.gui.window_width, cfg.gui.window_height, cfg.gui.sidebar_visible, cfg.gui.sidebar_width)
+    };
+
     let header = HeaderBar::new();
     header.set_title_widget(Some(&gtk4::Label::new(Some("Agentverse"))));
 
@@ -15,9 +20,10 @@ pub fn build(app: &Application, state: &Arc<GuiState>, tick_ms: u64) {
     let paned = Paned::new(Orientation::Horizontal);
     paned.set_start_child(Some(&drawing_area));
     paned.set_end_child(Some(&sidebar_widget));
-    paned.set_position(800);
+    paned.set_position(win_w - sidebar_width);
     paned.set_shrink_start_child(false);
     paned.set_shrink_end_child(false);
+    sidebar_widget.set_visible(sidebar_visible);
 
     let vbox = GtkBox::new(Orientation::Vertical, 0);
     vbox.append(&paned);
@@ -27,14 +33,28 @@ pub fn build(app: &Application, state: &Arc<GuiState>, tick_ms: u64) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Agentverse")
-        .default_width(1200)
-        .default_height(800)
+        .default_width(win_w)
+        .default_height(win_h)
         .child(&vbox)
         .build();
     window.set_titlebar(Some(&header));
 
     input::setup(&window, state, &drawing_area, &sidebar_widget);
     start_tick_timer(state, &drawing_area, &status, tick_ms);
+
+    // Save config on window close
+    let state_close = Arc::clone(state);
+    let paned_close = paned.clone();
+    let sidebar_close = sidebar_widget.clone();
+    window.connect_close_request(move |win| {
+        let mut cfg = state_close.config.lock().unwrap();
+        cfg.gui.window_width = win.width();
+        cfg.gui.window_height = win.height();
+        cfg.gui.sidebar_visible = sidebar_close.is_visible();
+        cfg.gui.sidebar_width = win.width() - paned_close.position();
+        let _ = cfg.save();
+        gtk4::glib::Propagation::Proceed
+    });
 
     window.present();
 }

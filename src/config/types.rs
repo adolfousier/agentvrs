@@ -8,6 +8,8 @@ pub struct AppConfig {
     pub server: ServerConfig,
     #[serde(default)]
     pub a2a: A2aConfig,
+    #[serde(default)]
+    pub gui: GuiConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +38,34 @@ pub struct A2aConfig {
     pub endpoints: Vec<String>,
     #[serde(default = "default_discovery_interval")]
     pub discovery_interval_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GuiConfig {
+    #[serde(default = "default_win_width")]
+    pub window_width: i32,
+    #[serde(default = "default_win_height")]
+    pub window_height: i32,
+    #[serde(default = "default_sidebar_visible")]
+    pub sidebar_visible: bool,
+    #[serde(default = "default_sidebar_width")]
+    pub sidebar_width: i32,
+}
+
+fn default_win_width() -> i32 { 1200 }
+fn default_win_height() -> i32 { 800 }
+fn default_sidebar_visible() -> bool { true }
+fn default_sidebar_width() -> i32 { 280 }
+
+impl Default for GuiConfig {
+    fn default() -> Self {
+        Self {
+            window_width: default_win_width(),
+            window_height: default_win_height(),
+            sidebar_visible: default_sidebar_visible(),
+            sidebar_width: default_sidebar_width(),
+        }
+    }
 }
 
 fn default_width() -> u16 {
@@ -98,6 +128,16 @@ impl AppConfig {
         } else {
             Ok(Self::default())
         }
+    }
+
+    pub fn save(&self) -> anyhow::Result<()> {
+        let config_path = dirs_config_path();
+        if let Some(parent) = config_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let content = toml::to_string_pretty(self)?;
+        std::fs::write(&config_path, content)?;
+        Ok(())
     }
 }
 

@@ -16,7 +16,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
     let rt = runner::setup(&config, world_w, world_h).await?;
     let tick_ms = config.world.tick_ms;
 
-    let state = Arc::new(GuiState::new(rt.grid, rt.registry, rt.event_rx));
+    let state = Arc::new(GuiState::new(rt.grid, rt.registry, rt.event_rx, config));
 
     let app = Application::builder().application_id(APP_ID).build();
 

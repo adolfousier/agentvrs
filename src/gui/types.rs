@@ -47,6 +47,10 @@ pub struct ViewState {
 
 impl ViewState {
     pub fn new() -> Self {
+        Self::with_sidebar(true)
+    }
+
+    pub fn with_sidebar(sidebar_visible: bool) -> Self {
         Self {
             camera: Camera::new(),
             selected_agent: None,
@@ -55,7 +59,7 @@ impl ViewState {
             drag_start: (0.0, 0.0),
             tick_count: 0,
             status_message: None,
-            sidebar_visible: true,
+            sidebar_visible,
             rotate_drag_start: 0,
             rotate_drag_accum: 0.0,
             last_logged_speech: None,
