@@ -24,6 +24,10 @@ impl Camera {
     pub fn rotate_cw(&mut self) {
         self.rotation = (self.rotation + 1) % 4;
     }
+
+    pub fn rotate_ccw(&mut self) {
+        self.rotation = (self.rotation + 3) % 4;
+    }
 }
 
 pub struct ViewState {

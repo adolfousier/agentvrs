@@ -1,10 +1,10 @@
 use crate::gui::app::GuiState;
 use crate::gui::iso;
 use crate::world::Position;
+use gtk4::gdk::{Key, ModifierType};
 use gtk4::prelude::*;
 use gtk4::{ApplicationWindow, DrawingArea, EventControllerKey, EventControllerScroll};
 use gtk4::{EventControllerScrollFlags, GestureClick, GestureDrag};
-use gtk4::gdk::Key;
 use std::sync::Arc;
 
 pub fn setup(window: &ApplicationWindow, state: &Arc<GuiState>, da: &DrawingArea) {
@@ -43,10 +43,24 @@ fn setup_scroll(da: &DrawingArea, state: &Arc<GuiState>) {
     let scroll = EventControllerScroll::new(EventControllerScrollFlags::VERTICAL);
     let state = Arc::clone(state);
 
-    scroll.connect_scroll(move |_, _, dy| {
+    scroll.connect_scroll(move |ctrl, _, dy| {
+        let mods = ctrl.current_event_state();
+        let ctrl_shift =
+            mods.contains(ModifierType::CONTROL_MASK) && mods.contains(ModifierType::SHIFT_MASK);
+
         let mut view = state.view.lock().unwrap();
-        let factor = if dy < 0.0 { 1.1 } else { 0.9 };
-        view.camera.zoom_by(factor);
+        if ctrl_shift {
+            // Ctrl+Shift+Scroll = rotate
+            if dy < 0.0 {
+                view.camera.rotate_cw();
+            } else {
+                view.camera.rotate_ccw();
+            }
+        } else {
+            // Plain scroll = zoom
+            let factor = if dy < 0.0 { 1.1 } else { 0.9 };
+            view.camera.zoom_by(factor);
+        }
         gtk4::glib::Propagation::Stop
     });
 
@@ -89,34 +103,32 @@ fn setup_keyboard(window: &ApplicationWindow, state: &Arc<GuiState>, da: &Drawin
     let state = Arc::clone(state);
     let da = da.clone();
 
-    key_ctrl.connect_key_pressed(move |_, key, _, _| {
-        match key {
-            Key::r | Key::R => {
-                let mut view = state.view.lock().unwrap();
-                view.camera.rotate_cw();
-                da.queue_draw();
-                gtk4::glib::Propagation::Stop
-            }
-            Key::Escape => {
-                let mut view = state.view.lock().unwrap();
-                view.selected_agent = None;
-                da.queue_draw();
-                gtk4::glib::Propagation::Stop
-            }
-            Key::plus | Key::equal => {
-                let mut view = state.view.lock().unwrap();
-                view.camera.zoom_by(1.2);
-                da.queue_draw();
-                gtk4::glib::Propagation::Stop
-            }
-            Key::minus => {
-                let mut view = state.view.lock().unwrap();
-                view.camera.zoom_by(0.8);
-                da.queue_draw();
-                gtk4::glib::Propagation::Stop
-            }
-            _ => gtk4::glib::Propagation::Proceed,
+    key_ctrl.connect_key_pressed(move |_, key, _, _| match key {
+        Key::r | Key::R => {
+            let mut view = state.view.lock().unwrap();
+            view.camera.rotate_cw();
+            da.queue_draw();
+            gtk4::glib::Propagation::Stop
         }
+        Key::Escape => {
+            let mut view = state.view.lock().unwrap();
+            view.selected_agent = None;
+            da.queue_draw();
+            gtk4::glib::Propagation::Stop
+        }
+        Key::plus | Key::equal => {
+            let mut view = state.view.lock().unwrap();
+            view.camera.zoom_by(1.2);
+            da.queue_draw();
+            gtk4::glib::Propagation::Stop
+        }
+        Key::minus => {
+            let mut view = state.view.lock().unwrap();
+            view.camera.zoom_by(0.8);
+            da.queue_draw();
+            gtk4::glib::Propagation::Stop
+        }
+        _ => gtk4::glib::Propagation::Proceed,
     });
 
     window.add_controller(key_ctrl);
