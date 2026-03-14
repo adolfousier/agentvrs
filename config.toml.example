@@ -1,0 +1,16 @@
+# agentverse configuration
+# Copy to ~/.config/agentverse/config.toml
+
+[world]
+width = 32
+height = 16
+tick_ms = 200
+
+[server]
+host = "127.0.0.1"
+port = 18800
+enabled = true
+
+[a2a]
+endpoints = ["http://localhost:18789"]
+discovery_interval_secs = 30
