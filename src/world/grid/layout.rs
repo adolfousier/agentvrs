@@ -82,12 +82,12 @@ fn kitchen_break(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     // Coffee machine at one end
     g.set_tile(Position::new(x2 - 1, y1), Tile::CoffeeMachine);
 
-    // Vending machines — against side wall
-    if y1 + 2 < y2 {
-        g.set_tile(Position::new(x1, y1 + 2), Tile::VendingMachine);
+    // Vending machines — 1 tile inward from side wall
+    if x1 + 1 < x2 && y1 + 2 < y2 {
+        g.set_tile(Position::new(x1 + 1, y1 + 2), Tile::VendingMachine);
     }
-    if y1 + 4 < y2 {
-        g.set_tile(Position::new(x1, y1 + 4), Tile::VendingMachine);
+    if x1 + 1 < x2 && y1 + 4 < y2 {
+        g.set_tile(Position::new(x1 + 1, y1 + 4), Tile::VendingMachine);
     }
 
     // Seating in remaining space

@@ -46,7 +46,7 @@ impl Simulation {
                     let mut reg = self.registry.write().unwrap();
                     if let Some(agent) = reg.get_mut(&id) {
                         agent.anim.activity_ticks += 1;
-                        if agent.anim.activity_ticks < 15 {
+                        if agent.anim.activity_ticks < 40 {
                             continue;
                         }
                     }
@@ -147,7 +147,7 @@ impl Simulation {
         };
 
         let Some(next_pos) = next else {
-            // Arrived — transition to activity
+            // Arrived — transition to activity and face the target furniture
             let mut reg = self.registry.write().unwrap();
             if let Some(agent) = reg.get_mut(&id) {
                 let new_state = match &agent.goal {
@@ -159,6 +159,15 @@ impl Simulation {
                     Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,
                     _ => AgentState::Idle,
                 };
+                // Face toward the target furniture
+                if let Some(goal) = &agent.goal {
+                    let target = goal.target();
+                    agent.anim.facing = if target.x >= agent.position.x {
+                        Facing::Right
+                    } else {
+                        Facing::Left
+                    };
+                }
                 agent.set_state(new_state);
                 agent.anim.activity_ticks = 0;
             }
@@ -216,11 +225,11 @@ impl Simulation {
         if let Some(agent) = reg.get_mut(&id) {
             agent.anim.activity_ticks += 1;
             let min_ticks = match agent.state {
-                AgentState::Working => 40,
-                AgentState::Eating => 15,
-                AgentState::Playing => 25,
-                AgentState::Exercising => 30,
-                _ => 20,
+                AgentState::Working => 120,
+                AgentState::Eating => 50,
+                AgentState::Playing => 80,
+                AgentState::Exercising => 90,
+                _ => 60,
             };
             if agent.anim.activity_ticks > min_ticks && rand::rng().random_range(0..10) < 2 {
                 agent.set_state(AgentState::Idle);
