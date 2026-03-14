@@ -3,14 +3,16 @@ use super::{Grid, WorldEvent};
 use crate::agent::{AgentGoal, AgentId, AgentRegistry, AgentState, Facing};
 use crate::world::{Position, Tile};
 use std::sync::{Arc, RwLock};
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 pub struct Simulation {
     pub grid: Arc<RwLock<Grid>>,
     pub registry: Arc<RwLock<AgentRegistry>>,
     pub event_tx: mpsc::Sender<WorldEvent>,
+    pub broadcast_tx: broadcast::Sender<WorldEvent>,
     pub tick_ms: u64,
     tick_count: u64,
+    pub shared_tick: Arc<std::sync::atomic::AtomicU64>,
 }
 
 impl Simulation {
@@ -20,17 +22,33 @@ impl Simulation {
         event_tx: mpsc::Sender<WorldEvent>,
         tick_ms: u64,
     ) -> Self {
+        let (broadcast_tx, _) = broadcast::channel(256);
         Self {
             grid,
             registry,
             event_tx,
+            broadcast_tx,
             tick_ms,
             tick_count: 0,
+            shared_tick: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         }
+    }
+
+    pub fn with_broadcast(mut self, broadcast_tx: broadcast::Sender<WorldEvent>) -> Self {
+        self.broadcast_tx = broadcast_tx;
+        self
+    }
+
+    /// Send event to both mpsc (TUI/GUI) and broadcast (SSE) channels.
+    async fn emit(&self, event: WorldEvent) {
+        let _ = self.event_tx.send(event.clone()).await;
+        let _ = self.broadcast_tx.send(event);
     }
 
     pub async fn tick(&mut self) {
         self.tick_count += 1;
+        self.shared_tick
+            .store(self.tick_count, std::sync::atomic::Ordering::Relaxed);
 
         let agents: Vec<(AgentId, AgentState, Position)> = {
             let reg = self.registry.read().unwrap();
@@ -63,6 +81,18 @@ impl Simulation {
                 | AgentState::Eating
                 | AgentState::Playing
                 | AgentState::Exercising => self.maybe_finish(id),
+                AgentState::Messaging => {
+                    // Auto-transition back to Idle after 30 ticks
+                    let mut reg = self.registry.write().unwrap();
+                    if let Some(agent) = reg.get_mut(&id) {
+                        agent.anim.activity_ticks += 1;
+                        if agent.anim.activity_ticks >= 30 {
+                            agent.set_state(AgentState::Idle);
+                            agent.clear_speech();
+                            agent.anim.activity_ticks = 0;
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -79,12 +109,10 @@ impl Simulation {
             }
         }
 
-        let _ = self
-            .event_tx
-            .send(WorldEvent::Tick {
-                count: self.tick_count,
-            })
-            .await;
+        self.emit(WorldEvent::Tick {
+            count: self.tick_count,
+        })
+        .await;
     }
 
     fn assign_random_goal(&self, id: AgentId) {
@@ -237,14 +265,12 @@ impl Simulation {
                     agent.path.remove(0);
                 }
             }
-            let _ = self
-                .event_tx
-                .send(WorldEvent::AgentMoved {
-                    agent_id: id,
-                    from: pos,
-                    to: next_pos,
-                })
-                .await;
+            self.emit(WorldEvent::AgentMoved {
+                agent_id: id,
+                from: pos,
+                to: next_pos,
+            })
+            .await;
         } else {
             // Path blocked — try to repath, only go idle if that also fails
             let goal_target = {

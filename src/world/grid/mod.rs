@@ -180,4 +180,8 @@ impl Grid {
     pub fn bounds(&self) -> (u16, u16) {
         (self.width, self.height)
     }
+
+    pub fn cells(&self) -> &[Cell] {
+        &self.cells
+    }
 }

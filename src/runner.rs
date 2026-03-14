@@ -4,7 +4,7 @@ use crate::config::AppConfig;
 use crate::world::{Grid, Simulation, WorldEvent, build_office_world};
 use anyhow::Result;
 use std::sync::{Arc, RwLock};
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 pub struct WorldRuntime {
     pub grid: Arc<RwLock<Grid>>,
@@ -21,6 +21,9 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
     let (event_tx, event_rx) = mpsc::channel::<WorldEvent>(256);
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>(1);
 
+    // Broadcast channel for SSE subscribers
+    let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(256);
+
     // Spawn demo agents on empty floors
     {
         let mut g = grid.write().unwrap();
@@ -36,13 +39,15 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
         }
     }
 
-    // Simulation
+    // Simulation (with broadcast for SSE)
     let sim = Simulation::new(
         Arc::clone(&grid),
         Arc::clone(&registry),
         event_tx.clone(),
         config.world.tick_ms,
-    );
+    )
+    .with_broadcast(broadcast_tx.clone());
+    let tick_count = Arc::clone(&sim.shared_tick);
     tokio::spawn(sim.run(shutdown_rx));
 
     // API server
@@ -50,9 +55,11 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
         let sg = Arc::clone(&grid);
         let sr = Arc::clone(&registry);
         let stx = event_tx.clone();
+        let sbtx = broadcast_tx;
         let sc = config.server.clone();
+        let st = Arc::clone(&tick_count);
         tokio::spawn(async move {
-            if let Err(e) = api::start_api_server(&sc, sr, sg, stx).await {
+            if let Err(e) = api::start_api_server(&sc, sr, sg, stx, sbtx, st).await {
                 tracing::error!("API server error: {}", e);
             }
         });

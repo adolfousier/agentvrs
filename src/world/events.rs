@@ -1,7 +1,8 @@
 use super::Position;
 use crate::agent::AgentId;
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum WorldEvent {
     AgentSpawned {
         agent_id: AgentId,

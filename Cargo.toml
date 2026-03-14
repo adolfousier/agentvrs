@@ -1,6 +1,6 @@
 [package]
 name = "agentverse"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.91"
 authors = ["Adolfo Usier <adolfo@meetneura.ai>"]
@@ -30,7 +30,9 @@ gtk4 = { version = "0.10", optional = true }
 # HTTP (client for A2A, server for external agents)
 reqwest = { version = "0.12", features = ["json"], default-features = false }
 axum = "0.8"
+tower = { version = "0.5", features = ["util", "limit"] }
 tower-http = { version = "0.6", features = ["cors"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

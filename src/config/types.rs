@@ -30,6 +30,9 @@ pub struct ServerConfig {
     pub port: u16,
     #[serde(default = "default_enabled")]
     pub enabled: bool,
+    /// Optional API key for authentication. If set, all endpoints (except /health) require X-API-Key header.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,6 +109,7 @@ impl Default for ServerConfig {
             host: default_host(),
             port: default_port(),
             enabled: default_enabled(),
+            api_key: None,
         }
     }
 }
