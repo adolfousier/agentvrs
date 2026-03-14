@@ -146,12 +146,14 @@ impl Grid {
             .collect()
     }
 
+    /// Find an adjacent walkable tile, preferring "front" positions in iso view.
+    /// Priority: +y (front-left), +x (front-right), then -y, -x (behind).
     pub fn find_adjacent_floor(&self, pos: Position) -> Option<Position> {
         [
-            Position::new(pos.x + 1, pos.y),
-            Position::new(pos.x.wrapping_sub(1), pos.y),
-            Position::new(pos.x, pos.y + 1),
-            Position::new(pos.x, pos.y.wrapping_sub(1)),
+            Position::new(pos.x, pos.y + 1),           // front-left in iso
+            Position::new(pos.x + 1, pos.y),           // front-right in iso
+            Position::new(pos.x, pos.y.wrapping_sub(1)), // back-right
+            Position::new(pos.x.wrapping_sub(1), pos.y), // back-left
         ]
         .into_iter()
         .find(|p| self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))

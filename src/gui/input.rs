@@ -123,12 +123,19 @@ fn setup_scroll(da: &DrawingArea, state: &Arc<GuiState>) {
 }
 
 fn setup_click(da: &DrawingArea, state: &Arc<GuiState>) {
+    // Make drawing area focusable so it can receive keyboard events
+    da.set_focusable(true);
+    da.set_can_focus(true);
+
     let click = GestureClick::new();
     click.set_button(1); // Left click only for selection
     let state = Arc::clone(state);
     let da_ref = da.clone();
 
     click.connect_released(move |_, _, x, y| {
+        // Grab focus to drawing area so keyboard shortcuts work
+        da_ref.grab_focus();
+
         let w = da_ref.width() as f64;
         let h = da_ref.height() as f64;
 
@@ -179,18 +186,22 @@ fn setup_keyboard(
     sidebar: &Paned,
 ) {
     let key_ctrl = EventControllerKey::new();
+    // Capture phase: intercept keys BEFORE child widgets consume them
+    key_ctrl.set_propagation_phase(gtk4::PropagationPhase::Capture);
     let state = Arc::clone(state);
     let da = da.clone();
     let sidebar = sidebar.clone();
 
     key_ctrl.connect_key_pressed(move |_, key, _, _| match key {
         Key::r | Key::R => {
+            da.grab_focus();
             let mut view = state.view.lock().unwrap();
             view.camera.rotate_cw();
             da.queue_draw();
             gtk4::glib::Propagation::Stop
         }
         Key::h | Key::H => {
+            da.grab_focus();
             let mut view = state.view.lock().unwrap();
             view.sidebar_visible = !view.sidebar_visible;
             let visible = view.sidebar_visible;
@@ -199,6 +210,7 @@ fn setup_keyboard(
             gtk4::glib::Propagation::Stop
         }
         Key::Escape => {
+            da.grab_focus();
             let mut view = state.view.lock().unwrap();
             view.selected_agent = None;
             da.queue_draw();
