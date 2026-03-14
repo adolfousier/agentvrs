@@ -92,13 +92,15 @@ impl Simulation {
         let grid = self.grid.read().unwrap();
         let mut reg = self.registry.write().unwrap();
 
-        let choice: u8 = rand::rng().random_range(0..10);
+        let choice: u8 = rand::rng().random_range(0..12);
         let (tile_type, goal_fn): (Tile, fn(Position) -> AgentGoal) = match choice {
             0..=3 => (Tile::Desk, AgentGoal::GoToDesk),
             4..=5 => (Tile::VendingMachine, AgentGoal::GoToVending),
             6 => (Tile::CoffeeMachine, AgentGoal::GoToCoffee),
             7 => (Tile::PinballMachine, AgentGoal::GoToPinball),
             8 => (Tile::GymTreadmill, AgentGoal::GoToGym),
+            9 => (Tile::WeightBench, AgentGoal::GoToGym),
+            10 => (Tile::YogaMat, AgentGoal::GoToGym),
             _ => {
                 // Wander to random floor
                 if let Some(target) = grid.find_empty_floor()

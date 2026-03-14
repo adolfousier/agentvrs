@@ -25,6 +25,8 @@ pub enum Tile {
     Plant,
     PinballMachine,
     GymTreadmill,
+    WeightBench,
+    YogaMat,
     Whiteboard,
     Rug,
     DoorOpen,

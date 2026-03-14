@@ -1,8 +1,8 @@
 use crate::gui::app::GuiState;
 use crate::gui::{agent_render, iso, tile_render};
 use crate::world::Position;
-use gtk4::prelude::*;
 use gtk4::DrawingArea;
+use gtk4::prelude::*;
 use std::sync::Arc;
 
 pub fn create(state: &Arc<GuiState>) -> DrawingArea {
@@ -22,8 +22,8 @@ fn draw(cr: &gtk4::cairo::Context, width: i32, height: i32, state: &GuiState) {
     let w = width as f64;
     let h = height as f64;
 
-    // Dark background
-    cr.set_source_rgb(0.08, 0.08, 0.10);
+    // Warm dark background
+    cr.set_source_rgb(0.12, 0.10, 0.09);
     cr.rectangle(0.0, 0.0, w, h);
     let _ = cr.fill();
 
@@ -51,7 +51,8 @@ fn draw(cr: &gtk4::cairo::Context, width: i32, height: i32, state: &GuiState) {
 
     // Pass 1: tiles in painter's order
     for &(gx, gy) in &order {
-        let (sx, sy) = iso::grid_to_screen(gx as f64, gy as f64, zoom, rotation, world_cx, world_cy);
+        let (sx, sy) =
+            iso::grid_to_screen(gx as f64, gy as f64, zoom, rotation, world_cx, world_cy);
         let screen_x = sx + center_x;
         let screen_y = sy + center_y;
 

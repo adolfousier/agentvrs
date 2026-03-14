@@ -64,28 +64,32 @@ fn place_door(g: &mut Grid, x: u16, y: u16) {
 fn office_area(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     let room_h = y2 - y1;
 
-    // Desk grid: start 3 tiles from walls, space every 4 tiles horizontally, 4 vertically
-    let start_x = x1 + 4;
-    let start_y = y1 + 3;
+    // Desk grid: generous spacing — 7 tiles horizontal, 5 tiles vertical
+    // Start well away from walls (5 tiles in)
+    let start_x = x1 + 5;
+    let start_y = y1 + 4;
     let mut dy = start_y;
-    while dy < y2 - 3 {
+    while dy < y2 - 4 {
         let mut dx = start_x;
-        while dx < x2 - 3 {
+        while dx < x2 - 4 {
             g.set_tile(Position::new(dx, dy), Tile::Desk);
-            dx += 5; // 5-tile spacing between desks
+            dx += 7; // 7-tile spacing between desks
         }
-        dy += 4; // 4-tile row spacing
+        dy += 5; // 5-tile row spacing
     }
 
-    // Whiteboard — centered on left wall area, well inside
+    // Whiteboard — centered vertically, well inside room
     let wb_y = y1 + room_h / 2;
-    if x1 + 3 < x2 && wb_y < y2 - 2 {
+    if x1 + 3 < x2 && wb_y < y2 - 3 {
         g.set_tile(Position::new(x1 + 3, wb_y), Tile::Whiteboard);
     }
 
-    // Plant in far corner for visual balance
-    if x2 - 4 > x1 && y2 - 3 > y1 {
-        g.set_tile(Position::new(x2 - 4, y2 - 3), Tile::Plant);
+    // Plants — two for visual balance
+    if x2 - 5 > x1 && y2 - 3 > y1 {
+        g.set_tile(Position::new(x2 - 5, y2 - 3), Tile::Plant);
+    }
+    if x1 + 3 < x2 && y1 + 2 < y2 {
+        g.set_tile(Position::new(x1 + 3, y1 + 2), Tile::Plant);
     }
 }
 
@@ -100,36 +104,36 @@ fn break_room(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         }
     }
 
-    // Vending machines along back wall — spaced apart, 4 tiles from top
-    let vend_y = y1 + 4;
-    if x1 + 3 < x2 {
-        g.set_tile(Position::new(x1 + 3, vend_y), Tile::VendingMachine);
+    // Vending machines along back wall — well spaced, 5 tiles from top
+    let vend_y = y1 + 5;
+    if x1 + 4 < x2 {
+        g.set_tile(Position::new(x1 + 4, vend_y), Tile::VendingMachine);
     }
-    if x1 + 7 < x2 {
-        g.set_tile(Position::new(x1 + 7, vend_y), Tile::VendingMachine);
-    }
-
-    // Coffee machine — offset from vending, different row for visual variety
-    if x1 + 5 < x2 && vend_y + 3 < y2 {
-        g.set_tile(Position::new(x1 + 5, vend_y + 3), Tile::CoffeeMachine);
+    if x1 + 9 < x2 {
+        g.set_tile(Position::new(x1 + 9, vend_y), Tile::VendingMachine);
     }
 
-    // Couches — center of room, facing each other
+    // Coffee machine — well offset from vending, different row
+    if x1 + 6 < x2 && vend_y + 4 < y2 {
+        g.set_tile(Position::new(x1 + 6, vend_y + 4), Tile::CoffeeMachine);
+    }
+
+    // Couch — center of room with generous space
     let mid_x = x1 + room_w / 2;
     let mid_y = y1 + room_h * 2 / 3;
-    if mid_x - 2 > x1 && mid_y < y2 - 2 {
-        g.set_tile(Position::new(mid_x - 2, mid_y), Tile::Couch);
+    if mid_x - 3 > x1 && mid_y < y2 - 3 {
+        g.set_tile(Position::new(mid_x - 3, mid_y), Tile::Couch);
     }
-    if mid_x + 2 < x2 && mid_y < y2 - 2 {
-        g.set_tile(Position::new(mid_x + 2, mid_y), Tile::Couch);
+    if mid_x + 3 < x2 && mid_y < y2 - 3 {
+        g.set_tile(Position::new(mid_x + 3, mid_y), Tile::Couch);
     }
 
-    // Plants — corners for framing (diagonal placement)
-    if x2 - 3 > x1 && y2 - 3 > y1 {
-        g.set_tile(Position::new(x2 - 3, y2 - 3), Tile::Plant);
+    // Plants — well inside corners
+    if x2 - 4 > x1 && y2 - 3 > y1 {
+        g.set_tile(Position::new(x2 - 4, y2 - 3), Tile::Plant);
     }
-    if x1 + 2 < x2 && y2 - 3 > y1 {
-        g.set_tile(Position::new(x1 + 2, y2 - 3), Tile::Plant);
+    if x1 + 3 < x2 && y2 - 3 > y1 {
+        g.set_tile(Position::new(x1 + 3, y2 - 3), Tile::Plant);
     }
 }
 
@@ -144,17 +148,18 @@ fn lounge(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         }
     }
 
-    // Couches in an L-shape arrangement, well inside the room
-    let cx = x1 + 4;
+    // Couches in L-shape, generous spacing (5 tiles apart)
+    let cx = x1 + 5;
     let cy = y1 + 3;
-    if cx < x2 && cy < y2 {
+    if cx < x2 - 3 && cy < y2 - 3 {
         g.set_tile(Position::new(cx, cy), Tile::Couch);
     }
-    if cx + 4 < x2 && cy < y2 {
-        g.set_tile(Position::new(cx + 4, cy), Tile::Couch);
+    if cx + 5 < x2 - 3 && cy < y2 - 3 {
+        g.set_tile(Position::new(cx + 5, cy), Tile::Couch);
     }
-    if cx + 8 < x2 && cy < y2 {
-        g.set_tile(Position::new(cx + 8, cy), Tile::Couch);
+    // L-shape vertical arm
+    if cx < x2 - 3 && cy + 4 < y2 - 3 {
+        g.set_tile(Position::new(cx, cy + 4), Tile::Couch);
     }
 
     // Rug in center of room (golden ratio positioning)
@@ -162,18 +167,18 @@ fn lounge(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
     let rug_y = y1 + room_h / 2 + 1;
     for dy in 0..2u16 {
         for dx in 0..4u16 {
-            if rug_x + dx < x2 - 2 && rug_y + dy < y2 - 2 {
+            if rug_x + dx < x2 - 3 && rug_y + dy < y2 - 3 {
                 g.set_tile(Position::new(rug_x + dx, rug_y + dy), Tile::Rug);
             }
         }
     }
 
-    // Plant accents — asymmetric placement
-    if x1 + 3 < x2 && y2 - 3 > y1 {
-        g.set_tile(Position::new(x1 + 3, y2 - 3), Tile::Plant);
+    // Plant accents — asymmetric, well inside
+    if x1 + 4 < x2 && y2 - 3 > y1 {
+        g.set_tile(Position::new(x1 + 4, y2 - 3), Tile::Plant);
     }
-    if x2 - 4 > x1 && y1 + 2 < y2 {
-        g.set_tile(Position::new(x2 - 4, y1 + 2), Tile::Plant);
+    if x2 - 5 > x1 && y1 + 3 < y2 {
+        g.set_tile(Position::new(x2 - 5, y1 + 3), Tile::Plant);
     }
 }
 
@@ -187,27 +192,44 @@ fn gym_arcade(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         }
     }
 
-    // Treadmills — left side of room, spaced 5 apart
+    // ── Gym zone (top half) — varied equipment, well spaced ──
     let gym_y = y1 + 3;
-    if x1 + 4 < x2 && gym_y < y2 - 2 {
+    // Treadmill
+    if x1 + 4 < x2 - 3 && gym_y < y2 - 4 {
         g.set_tile(Position::new(x1 + 4, gym_y), Tile::GymTreadmill);
     }
-    if x1 + 9 < x2 && gym_y < y2 - 2 {
-        g.set_tile(Position::new(x1 + 9, gym_y), Tile::GymTreadmill);
+    // Weight bench
+    if x1 + 4 + 6 < x2 - 3 && gym_y < y2 - 4 {
+        g.set_tile(Position::new(x1 + 4 + 6, gym_y), Tile::WeightBench);
+    }
+    // Second treadmill
+    if x1 + 4 + 12 < x2 - 3 && gym_y < y2 - 4 {
+        g.set_tile(Position::new(x1 + 4 + 12, gym_y), Tile::GymTreadmill);
     }
 
-    // Arcade machines — right/bottom area, spaced apart
-    let arcade_y = y2 - 4;
-    if x1 + 4 < x2 && arcade_y > y1 + 2 {
-        g.set_tile(Position::new(x1 + 4, arcade_y), Tile::PinballMachine);
+    // Yoga mats (row below gym equipment, offset)
+    let mat_y = gym_y + 4;
+    if x1 + 6 < x2 - 3 && mat_y < y2 - 4 {
+        g.set_tile(Position::new(x1 + 6, mat_y), Tile::YogaMat);
     }
-    if x1 + 9 < x2 && arcade_y > y1 + 2 {
-        g.set_tile(Position::new(x1 + 9, arcade_y), Tile::PinballMachine);
+    if x1 + 6 + 5 < x2 - 3 && mat_y < y2 - 4 {
+        g.set_tile(Position::new(x1 + 6 + 5, mat_y), Tile::YogaMat);
     }
 
-    // Plant for visual softening
-    let mid_y = y1 + room_h / 2;
-    if x2 - 4 > x1 && mid_y < y2 {
-        g.set_tile(Position::new(x2 - 4, mid_y), Tile::Plant);
+    // ── Arcade zone (bottom area) — spaced apart ──
+    let arcade_y = y1 + room_h / 2 + 3;
+    if x1 + 5 < x2 - 3 && arcade_y < y2 - 3 {
+        g.set_tile(Position::new(x1 + 5, arcade_y), Tile::PinballMachine);
+    }
+    if x1 + 5 + 8 < x2 - 3 && arcade_y < y2 - 3 {
+        g.set_tile(Position::new(x1 + 5 + 8, arcade_y), Tile::PinballMachine);
+    }
+
+    // Plants for visual softening
+    if x2 - 5 > x1 && y1 + room_h / 2 < y2 {
+        g.set_tile(Position::new(x2 - 5, y1 + room_h / 2), Tile::Plant);
+    }
+    if x1 + 3 < x2 && y2 - 3 > y1 {
+        g.set_tile(Position::new(x1 + 3, y2 - 3), Tile::Plant);
     }
 }

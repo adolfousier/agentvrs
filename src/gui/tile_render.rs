@@ -12,35 +12,43 @@ pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom:
         Tile::DoorOpen => draw_door(cr, sx, sy, zoom),
         Tile::Rug => draw_rug(cr, sx, sy, zoom),
         Tile::Desk => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.65, 0.45, 0.25);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.78, 0.62, 0.42);
             draw_desk(cr, sx, sy, zoom);
         }
         Tile::VendingMachine => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.88, 0.84, 0.78);
             draw_vending(cr, sx, sy, zoom);
         }
         Tile::CoffeeMachine => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.88, 0.84, 0.78);
             draw_coffee(cr, sx, sy, zoom);
         }
         Tile::Couch => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.42, 0.38, 0.50);
             draw_couch(cr, sx, sy, zoom);
         }
         Tile::Plant => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.78, 0.62, 0.42);
             draw_plant(cr, sx, sy, zoom);
         }
         Tile::PinballMachine => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
             draw_arcade(cr, sx, sy, zoom);
         }
         Tile::GymTreadmill => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
             draw_treadmill(cr, sx, sy, zoom);
         }
+        Tile::WeightBench => {
+            draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
+            draw_weight_bench(cr, sx, sy, zoom);
+        }
+        Tile::YogaMat => {
+            draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
+            draw_yoga_mat(cr, sx, sy, zoom);
+        }
         Tile::Whiteboard => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.5, 0.5, 0.52);
+            draw_floor_diamond(cr, sx, sy, zoom, 0.78, 0.62, 0.42);
             draw_whiteboard(cr, sx, sy, zoom);
         }
     }
@@ -50,16 +58,16 @@ pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom:
 
 fn draw_floor(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &FloorKind, zoom: f64) {
     let (r, g, b) = match kind {
-        FloorKind::Wood => (0.72, 0.52, 0.30),
-        FloorKind::Tile => (0.82, 0.82, 0.86),
-        FloorKind::Carpet => (0.30, 0.30, 0.52),
-        FloorKind::Concrete => (0.55, 0.55, 0.57),
+        FloorKind::Wood => (0.78, 0.62, 0.42),    // Warm beige/tan
+        FloorKind::Tile => (0.88, 0.84, 0.78),     // Warm off-white
+        FloorKind::Carpet => (0.42, 0.38, 0.50),   // Muted warm purple
+        FloorKind::Concrete => (0.32, 0.30, 0.30),  // Dark charcoal (gym)
     };
     draw_floor_diamond(cr, sx, sy, zoom, r, g, b);
 
     match kind {
         FloorKind::Wood => {
-            cr.set_source_rgba(0.5, 0.35, 0.18, 0.3);
+            cr.set_source_rgba(0.60, 0.42, 0.22, 0.25);
             cr.set_line_width(0.5 * zoom);
             let hw = TILE_W / 2.0 * zoom;
             for i in 1..4 {
@@ -74,7 +82,7 @@ fn draw_floor(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &FloorKind, zoo
             }
         }
         FloorKind::Tile => {
-            cr.set_source_rgba(0.7, 0.7, 0.74, 0.4);
+            cr.set_source_rgba(0.75, 0.70, 0.64, 0.35);
             cr.set_line_width(0.5 * zoom);
             cr.move_to(sx, sy - TILE_H / 2.0 * zoom);
             cr.line_to(sx, sy + TILE_H / 2.0 * zoom);
@@ -118,8 +126,8 @@ fn draw_wall(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &WallKind, zoom:
     let wh = WALL_HEIGHT * zoom;
 
     let (r, g, b) = match kind {
-        WallKind::Solid => (0.62, 0.60, 0.58),
-        WallKind::Window => (0.60, 0.62, 0.65),
+        WallKind::Solid => (0.55, 0.45, 0.35),  // Warm brown
+        WallKind::Window => (0.52, 0.48, 0.42),  // Warm brown-grey
     };
 
     // Left face
@@ -191,7 +199,7 @@ fn draw_wall(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &WallKind, zoom:
     }
 
     if matches!(kind, WallKind::Solid) {
-        cr.set_source_rgba(0.4, 0.38, 0.36, 0.3);
+        cr.set_source_rgba(0.35, 0.28, 0.20, 0.3);
         cr.set_line_width(0.5 * zoom);
         for i in 1..3 {
             let t = i as f64 / 3.0;
@@ -204,7 +212,7 @@ fn draw_wall(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &WallKind, zoom:
 }
 
 fn draw_door(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
-    draw_floor_diamond(cr, sx, sy, zoom, 0.50, 0.50, 0.52);
+    draw_floor_diamond(cr, sx, sy, zoom, 0.48, 0.40, 0.32);
     let hw = TILE_W / 2.0 * zoom * 0.55;
     let hh = TILE_H / 2.0 * zoom * 0.55;
     cr.move_to(sx, sy - hh);
@@ -212,12 +220,12 @@ fn draw_door(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
     cr.line_to(sx, sy + hh);
     cr.line_to(sx - hw, sy);
     cr.close_path();
-    cr.set_source_rgb(0.42, 0.42, 0.44);
+    cr.set_source_rgb(0.38, 0.32, 0.26);
     let _ = cr.fill();
 }
 
 fn draw_rug(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
-    draw_floor_diamond(cr, sx, sy, zoom, 0.62, 0.16, 0.16);
+    draw_floor_diamond(cr, sx, sy, zoom, 0.55, 0.22, 0.18);
     // Border
     let hw = TILE_W / 2.0 * zoom * 0.85;
     let hh = TILE_H / 2.0 * zoom * 0.85;
@@ -226,7 +234,7 @@ fn draw_rug(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
     cr.line_to(sx, sy + hh);
     cr.line_to(sx - hw, sy);
     cr.close_path();
-    cr.set_source_rgba(0.85, 0.65, 0.15, 0.6);
+    cr.set_source_rgba(0.80, 0.55, 0.18, 0.6);
     cr.set_line_width(2.0 * zoom);
     let _ = cr.stroke();
     // Inner pattern
@@ -237,7 +245,7 @@ fn draw_rug(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
     cr.line_to(sx, sy + hh2);
     cr.line_to(sx - hw2, sy);
     cr.close_path();
-    cr.set_source_rgb(0.78, 0.28, 0.12);
+    cr.set_source_rgb(0.70, 0.30, 0.15);
     let _ = cr.fill();
     // Medallion
     cr.save().unwrap();
@@ -245,7 +253,7 @@ fn draw_rug(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
     cr.scale(1.0, 0.5);
     cr.arc(0.0, 0.0, 5.0 * zoom, 0.0, TAU);
     cr.restore().unwrap();
-    cr.set_source_rgb(0.85, 0.65, 0.15);
+    cr.set_source_rgb(0.80, 0.55, 0.18);
     let _ = cr.fill();
 }
 
@@ -299,140 +307,152 @@ fn iso_block(
 // ─── Furniture (scaled to agent height ~54px) ───
 
 fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Desk legs (4 thin columns, waist height ~24px)
-    let leg_h = 22.0;
-    let hw = TILE_W / 2.0 * z * 0.7;
-    let hh = TILE_H / 2.0 * z * 0.7;
-    let leg_w = 2.0 * z;
-    cr.set_source_rgb(0.40, 0.28, 0.14);
-    for &(lx, ly) in &[
-        (sx - hw + leg_w, sy - hh * 0.3),
-        (sx + hw - leg_w, sy - hh * 0.3),
-        (sx - hw * 0.3, sy + hh - leg_w),
-        (sx + hw * 0.3, sy + hh - leg_w),
-    ] {
-        cr.rectangle(lx - leg_w / 2.0, ly - leg_h * z, leg_w, leg_h * z);
+    let desk_elev = 20.0 * z; // height of desk surface above ground
+    let hw = TILE_W / 2.0 * z * 0.75;
+    let hh = TILE_H / 2.0 * z * 0.55;
+
+    // ── Office chair (behind desk, where person sits facing monitor) ──
+    let ch_x = sx + 14.0 * z;
+    let ch_y = sy + 8.0 * z;
+    // Chair base star
+    cr.save().unwrap();
+    cr.translate(ch_x, ch_y);
+    cr.scale(1.0, 0.45);
+    cr.arc(0.0, 0.0, 6.0 * z, 0.0, TAU);
+    cr.restore().unwrap();
+    cr.set_source_rgb(0.20, 0.20, 0.22);
+    let _ = cr.fill();
+    // Wheels
+    for i in 0..5 {
+        let a = i as f64 * TAU / 5.0;
+        let wx = ch_x + a.cos() * 5.5 * z;
+        let wy = ch_y + a.sin() * 5.5 * z * 0.45;
+        cr.arc(wx, wy, 1.0 * z, 0.0, TAU);
+        cr.set_source_rgb(0.12, 0.12, 0.14);
         let _ = cr.fill();
     }
+    // Post
+    cr.rectangle(ch_x - 1.0 * z, ch_y - 16.0 * z, 2.0 * z, 16.0 * z);
+    cr.set_source_rgb(0.28, 0.28, 0.30);
+    let _ = cr.fill();
+    // Seat (small thin cushion)
+    iso_block(cr, ch_x, ch_y - 14.0 * z, z, 0.28, 0.28, 3.0, 0.18, 0.18, 0.22);
+    // Back (tall rectangle)
+    let cb_top = ch_y - 36.0 * z;
+    cr.move_to(ch_x - 7.0 * z, cb_top);
+    cr.line_to(ch_x + 7.0 * z, cb_top);
+    cr.line_to(ch_x + 6.0 * z, ch_y - 17.0 * z);
+    cr.line_to(ch_x - 6.0 * z, ch_y - 17.0 * z);
+    cr.close_path();
+    cr.set_source_rgb(0.18, 0.18, 0.22);
+    let _ = cr.fill();
+    // Back curve line
+    cr.set_source_rgba(0.30, 0.30, 0.35, 0.5);
+    cr.set_line_width(0.8 * z);
+    cr.move_to(ch_x - 4.0 * z, ch_y - 26.0 * z);
+    cr.curve_to(ch_x, ch_y - 28.0 * z, ch_x, ch_y - 28.0 * z, ch_x + 4.0 * z, ch_y - 26.0 * z);
+    let _ = cr.stroke();
 
-    // Table surface (waist height = ~24px)
-    iso_block(cr, sx, sy, z, 0.75, 0.75, 24.0, 0.58, 0.38, 0.18);
+    // ── Desk legs (4 thin metal legs, visible under the thin surface) ──
+    cr.set_source_rgb(0.38, 0.38, 0.40);
+    let lw = 1.5 * z;
+    // Back-left
+    cr.rectangle(sx - hw + 2.0 * z, sy - desk_elev, lw, desk_elev);
+    let _ = cr.fill();
+    // Back-right
+    cr.rectangle(sx + hw - 3.5 * z, sy - desk_elev, lw, desk_elev);
+    let _ = cr.fill();
+    // Front-left
+    cr.rectangle(sx - hw * 0.5 + 1.0 * z, sy + hh * 0.5 - desk_elev, lw, desk_elev);
+    let _ = cr.fill();
+    // Front-right
+    cr.rectangle(sx + hw * 0.4, sy + hh * 0.5 - desk_elev, lw, desk_elev);
+    let _ = cr.fill();
 
-    let desk_top = sy - 24.0 * z;
+    // ── Desk surface (THIN slab — 3px tall, elevated on legs) ──
+    // We draw the iso_block at an elevated position by adjusting sy
+    let elevated_sy = sy - desk_elev + 3.0 * z;
+    iso_block(cr, sx, elevated_sy, z, 0.75, 0.55, 3.0, 0.62, 0.45, 0.25);
+    let dt = elevated_sy - 3.0 * z; // top of desk surface
 
     // Keyboard
-    let kb_w = 12.0 * z;
-    let kb_h = 3.0 * z;
-    cr.move_to(sx - kb_w / 2.0, desk_top - 0.5 * z);
-    cr.line_to(sx + kb_w / 2.0, desk_top - 0.5 * z);
-    cr.line_to(sx + kb_w / 2.0 - 1.0 * z, desk_top - 0.5 * z - kb_h);
-    cr.line_to(sx - kb_w / 2.0 + 1.0 * z, desk_top - 0.5 * z - kb_h);
+    cr.move_to(sx - 6.0 * z, dt - 0.5 * z);
+    cr.line_to(sx + 6.0 * z, dt - 0.5 * z);
+    cr.line_to(sx + 5.5 * z, dt - 3.0 * z);
+    cr.line_to(sx - 5.5 * z, dt - 3.0 * z);
     cr.close_path();
     cr.set_source_rgb(0.20, 0.20, 0.23);
     let _ = cr.fill();
-    // Keys
-    cr.set_source_rgba(0.40, 0.40, 0.45, 0.7);
+    // Key dots
+    cr.set_source_rgba(0.40, 0.40, 0.45, 0.6);
     for row in 0..2 {
-        for i in 0..6 {
-            let kx = sx - 5.0 * z + i as f64 * 1.8 * z;
-            let ky = desk_top - 1.5 * z - row as f64 * 1.4 * z;
-            cr.rectangle(kx, ky, 1.2 * z, 0.9 * z);
+        for i in 0..5 {
+            let kx = sx - 4.5 * z + i as f64 * 2.0 * z;
+            let ky = dt - 1.2 * z - row as f64 * 1.2 * z;
+            cr.rectangle(kx, ky, 1.0 * z, 0.7 * z);
             let _ = cr.fill();
         }
     }
 
-    // Mouse (right of keyboard)
+    // Mouse
     cr.save().unwrap();
-    cr.translate(sx + 8.0 * z, desk_top - 1.5 * z);
+    cr.translate(sx + 9.0 * z, dt - 1.5 * z);
     cr.scale(1.0, 0.6);
-    cr.arc(0.0, 0.0, 1.8 * z, 0.0, TAU);
+    cr.arc(0.0, 0.0, 1.5 * z, 0.0, TAU);
     cr.restore().unwrap();
     cr.set_source_rgb(0.22, 0.22, 0.25);
     let _ = cr.fill();
 
-    // Monitor stand
-    cr.rectangle(sx - 2.0 * z, desk_top - 8.0 * z, 4.0 * z, 8.0 * z);
-    cr.set_source_rgb(0.25, 0.25, 0.28);
-    let _ = cr.fill();
-    // Stand base
-    cr.save().unwrap();
-    cr.translate(sx, desk_top);
-    cr.scale(1.0, 0.4);
-    cr.arc(0.0, 0.0, 5.0 * z, 0.0, TAU);
-    cr.restore().unwrap();
+    // Monitor arm/stand (thin)
+    cr.rectangle(sx - 1.0 * z, dt - 8.0 * z, 2.0 * z, 8.0 * z);
     cr.set_source_rgb(0.22, 0.22, 0.26);
     let _ = cr.fill();
 
-    // Monitor (24" equivalent: ~24px wide, ~16px tall)
-    let mon_w = 24.0 * z;
-    let mon_h = 16.0 * z;
-    let mon_y = desk_top - 8.0 * z - mon_h;
-
-    // Bezel back shadow
-    cr.rectangle(
-        sx - mon_w / 2.0 - 0.8 * z,
-        mon_y - 0.8 * z,
-        mon_w + 1.6 * z,
-        mon_h + 1.6 * z,
-    );
+    // Monitor
+    let mon_w = 20.0 * z;
+    let mon_h = 13.0 * z;
+    let mon_y = dt - 8.0 * z - mon_h;
+    cr.rectangle(sx - mon_w / 2.0 - 0.5 * z, mon_y - 0.5 * z, mon_w + 1.0 * z, mon_h + 1.0 * z);
     cr.set_source_rgb(0.10, 0.10, 0.12);
     let _ = cr.fill();
-    // Bezel
     cr.rectangle(sx - mon_w / 2.0, mon_y, mon_w, mon_h);
-    cr.set_source_rgb(0.15, 0.15, 0.18);
+    cr.set_source_rgb(0.14, 0.14, 0.17);
     let _ = cr.fill();
 
     // Screen
-    let b = 1.8 * z;
+    let b = 1.2 * z;
     let scr_x = sx - mon_w / 2.0 + b;
     let scr_y = mon_y + b;
     let scr_w = mon_w - b * 2.0;
-    let scr_h = mon_h - b * 2.5;
+    let scr_h = mon_h - b * 2.0;
     cr.rectangle(scr_x, scr_y, scr_w, scr_h);
     cr.set_source_rgb(0.10, 0.14, 0.22);
     let _ = cr.fill();
 
     // IDE code lines
-    cr.set_line_width(1.2 * z);
-    let colors: [(f64, f64, f64, f64); 7] = [
+    cr.set_line_width(1.0 * z);
+    let colors = [
         (0.55, 0.85, 0.55, 0.8),
         (0.85, 0.75, 0.45, 0.8),
         (0.55, 0.70, 0.90, 0.8),
         (0.80, 0.55, 0.80, 0.7),
         (0.55, 0.85, 0.55, 0.6),
-        (0.85, 0.65, 0.45, 0.7),
-        (0.55, 0.70, 0.90, 0.6),
     ];
     for (i, (lr, lg, lb, la)) in colors.iter().enumerate() {
-        let ly = scr_y + 2.0 * z + i as f64 * 2.0 * z;
+        let ly = scr_y + 1.5 * z + i as f64 * 1.8 * z;
         if ly > scr_y + scr_h - 1.0 * z {
             break;
         }
-        let indent = if i % 3 == 1 || i % 3 == 2 {
-            4.0 * z
-        } else {
-            1.5 * z
-        };
-        let lw = scr_w * (0.78 - (i % 4) as f64 * 0.1) - indent;
+        let indent = if i % 3 != 0 { 3.0 * z } else { 1.5 * z };
+        let lw = scr_w * (0.7 - (i % 3) as f64 * 0.1) - indent;
         cr.set_source_rgba(*lr, *lg, *lb, *la);
         cr.move_to(scr_x + indent, ly);
         cr.line_to(scr_x + indent + lw, ly);
         let _ = cr.stroke();
     }
 
-    // Line numbers gutter
-    cr.set_source_rgba(0.4, 0.4, 0.5, 0.4);
-    cr.rectangle(scr_x, scr_y, 3.0 * z, scr_h);
-    let _ = cr.fill();
-
     // Power LED
-    cr.arc(
-        sx + mon_w / 2.0 - 3.0 * z,
-        mon_y + mon_h - 2.0 * z,
-        0.8 * z,
-        0.0,
-        TAU,
-    );
+    cr.arc(sx + mon_w / 2.0 - 2.0 * z, mon_y + mon_h - 1.5 * z, 0.6 * z, 0.0, TAU);
     cr.set_source_rgb(0.1, 0.85, 0.3);
     let _ = cr.fill();
 }
@@ -525,26 +545,23 @@ fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Counter (~waist height, 24px)
-    iso_block(cr, sx, sy, z, 0.65, 0.65, 24.0, 0.52, 0.50, 0.47);
+    // Counter legs
+    cr.set_source_rgb(0.40, 0.35, 0.28);
+    let chw = TILE_W / 2.0 * z * 0.65;
+    for &lx in &[sx - chw + 2.0 * z, sx + chw - 2.0 * z] {
+        cr.rectangle(lx - 1.0 * z, sy - 20.0 * z, 2.0 * z, 20.0 * z);
+        let _ = cr.fill();
+    }
 
-    let counter_top = sy - 24.0 * z;
+    // Counter surface (thin slab at waist height)
+    let counter_sy = sy - 20.0 * z + 4.0 * z;
+    iso_block(cr, sx, counter_sy, z, 0.65, 0.65, 4.0, 0.58, 0.48, 0.38);
+    let counter_top = counter_sy - 4.0 * z;
 
-    // Coffee machine on counter (~20px tall on counter = 44px total)
-    iso_block(
-        cr,
-        sx - 4.0 * z,
-        counter_top + 4.0 * z,
-        z,
-        0.35,
-        0.35,
-        22.0,
-        0.22,
-        0.22,
-        0.25,
-    );
+    // Coffee machine on counter (~18px tall)
+    iso_block(cr, sx - 4.0 * z, counter_top + 2.0 * z, z, 0.30, 0.30, 18.0, 0.22, 0.22, 0.25);
 
-    let machine_top = counter_top + 4.0 * z - 22.0 * z;
+    let machine_top = counter_top + 2.0 * z - 18.0 * z;
 
     // Machine display
     cr.rectangle(sx - 9.0 * z, machine_top + 3.0 * z, 8.0 * z, 4.5 * z);
@@ -615,28 +632,35 @@ fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 }
 
 fn draw_couch(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
-    // Couch legs
-    cr.set_source_rgb(0.25, 0.15, 0.08);
     let hw = TILE_W / 2.0 * z * 0.75;
-    for &lx in &[sx - hw + 2.0 * z, sx + hw - 2.0 * z] {
-        cr.rectangle(lx - 1.0 * z, sy - 4.0 * z, 2.0 * z, 4.0 * z);
+    let seat_elev = 8.0 * z; // low seating height
+
+    // Short wooden legs (4 visible)
+    cr.set_source_rgb(0.30, 0.22, 0.12);
+    for &(lx, ly) in &[
+        (sx - hw + 2.0 * z, sy),
+        (sx + hw - 2.0 * z, sy),
+        (sx - hw * 0.3, sy + 4.0 * z),
+        (sx + hw * 0.3, sy + 4.0 * z),
+    ] {
+        cr.rectangle(lx - 1.0 * z, ly - seat_elev, 2.0 * z, seat_elev);
         let _ = cr.fill();
     }
 
-    // Seat cushion (sitting height ~16px)
-    iso_block(cr, sx, sy, z, 0.75, 0.75, 16.0, 0.58, 0.14, 0.10);
+    // Seat cushion — thin slab elevated on legs, navy/slate
+    let seat_sy = sy - seat_elev + 4.0 * z;
+    iso_block(cr, sx, seat_sy, z, 0.75, 0.75, 4.0, 0.18, 0.22, 0.35);
+    let seat_top = seat_sy - 4.0 * z;
 
-    let seat_top = sy - 16.0 * z;
-
-    // Back rest (~22px above seat = 38px total)
-    let back_h = 22.0 * z;
+    // Back rest — taller than seat, starts from seat level
+    let back_h = 18.0 * z;
     // Left face of back
     cr.move_to(sx - hw, seat_top - back_h);
     cr.line_to(sx - hw, seat_top);
     cr.line_to(sx - hw + 4.0 * z, seat_top);
     cr.line_to(sx - hw + 4.0 * z, seat_top - back_h);
     cr.close_path();
-    cr.set_source_rgb(0.48, 0.10, 0.07);
+    cr.set_source_rgb(0.14, 0.18, 0.30);
     let _ = cr.fill();
 
     // Front face of back
@@ -645,7 +669,7 @@ fn draw_couch(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.line_to(sx + hw, seat_top);
     cr.line_to(sx - hw + 4.0 * z, seat_top);
     cr.close_path();
-    cr.set_source_rgb(0.55, 0.12, 0.09);
+    cr.set_source_rgb(0.18, 0.22, 0.38);
     let _ = cr.fill();
 
     // Top edge of back
@@ -654,23 +678,21 @@ fn draw_couch(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.line_to(sx + hw, seat_top - back_h);
     cr.line_to(sx + hw - 4.0 * z, seat_top - back_h - 2.0 * z);
     cr.close_path();
-    cr.set_source_rgb(0.52, 0.11, 0.08);
+    cr.set_source_rgb(0.16, 0.20, 0.34);
     let _ = cr.fill();
 
-    // Armrests
-    let arm_h = 10.0 * z;
-    let arm_w = 5.0 * z;
-    // Left
+    // Armrests — short blocks on sides
+    let arm_h = 8.0 * z;
+    let arm_w = 4.0 * z;
     cr.rectangle(sx - hw, seat_top - arm_h, arm_w, arm_h);
-    cr.set_source_rgb(0.45, 0.09, 0.06);
+    cr.set_source_rgb(0.12, 0.16, 0.28);
     let _ = cr.fill();
-    // Right
     cr.rectangle(sx + hw - arm_w, seat_top - arm_h, arm_w, arm_h);
-    cr.set_source_rgb(0.50, 0.11, 0.08);
+    cr.set_source_rgb(0.15, 0.19, 0.32);
     let _ = cr.fill();
 
-    // Cushion tufting (stitch lines)
-    cr.set_source_rgba(0.42, 0.08, 0.05, 0.5);
+    // Cushion tufting
+    cr.set_source_rgba(0.10, 0.14, 0.24, 0.5);
     cr.set_line_width(0.8 * z);
     let third = hw * 2.0 / 3.0;
     for i in 1..3 {
@@ -686,7 +708,7 @@ fn draw_couch(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.scale(1.0, 0.6);
     cr.arc(0.0, 0.0, 4.0 * z, 0.0, TAU);
     cr.restore().unwrap();
-    cr.set_source_rgb(0.85, 0.75, 0.25);
+    cr.set_source_rgb(0.85, 0.55, 0.25);
     let _ = cr.fill();
 }
 
@@ -1088,5 +1110,118 @@ fn draw_whiteboard(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
         2.0 * z,
     );
     cr.set_source_rgb(0.9, 0.9, 0.85);
+    let _ = cr.fill();
+}
+
+fn draw_weight_bench(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    // Bench frame (low metal base)
+    let hw = TILE_W / 2.0 * z * 0.6;
+
+    // 4 short legs
+    cr.set_source_rgb(0.35, 0.35, 0.38);
+    for &(lx, ly) in &[
+        (sx - hw + 2.0 * z, sy - 1.0 * z),
+        (sx + hw - 2.0 * z, sy - 1.0 * z),
+        (sx - hw * 0.3, sy + 3.0 * z),
+        (sx + hw * 0.3, sy + 3.0 * z),
+    ] {
+        cr.rectangle(lx - 1.0 * z, ly - 8.0 * z, 2.0 * z, 8.0 * z);
+        let _ = cr.fill();
+    }
+
+    // Bench pad (thin, elevated)
+    let bench_sy = sy - 6.0 * z;
+    iso_block(cr, sx, bench_sy, z, 0.55, 0.3, 3.0, 0.12, 0.12, 0.14);
+
+    // Upright barbell rack (two tall posts)
+    let rack_h = 42.0 * z;
+    cr.set_source_rgb(0.40, 0.40, 0.42);
+    cr.set_line_width(2.5 * z);
+    cr.move_to(sx - 8.0 * z, bench_sy - 3.0 * z);
+    cr.line_to(sx - 8.0 * z, bench_sy - 3.0 * z - rack_h);
+    let _ = cr.stroke();
+    cr.move_to(sx + 8.0 * z, bench_sy - 3.0 * z);
+    cr.line_to(sx + 8.0 * z, bench_sy - 3.0 * z - rack_h);
+    let _ = cr.stroke();
+
+    // Rack hooks
+    cr.set_line_width(2.0 * z);
+    cr.move_to(sx - 8.0 * z, bench_sy - 3.0 * z - rack_h + 4.0 * z);
+    cr.line_to(sx - 5.0 * z, bench_sy - 3.0 * z - rack_h + 4.0 * z);
+    let _ = cr.stroke();
+    cr.move_to(sx + 8.0 * z, bench_sy - 3.0 * z - rack_h + 4.0 * z);
+    cr.line_to(sx + 5.0 * z, bench_sy - 3.0 * z - rack_h + 4.0 * z);
+    let _ = cr.stroke();
+
+    // Barbell (resting on rack)
+    let bar_y = bench_sy - 3.0 * z - rack_h + 3.0 * z;
+    cr.set_source_rgb(0.50, 0.50, 0.52);
+    cr.set_line_width(1.5 * z);
+    cr.move_to(sx - 14.0 * z, bar_y);
+    cr.line_to(sx + 14.0 * z, bar_y);
+    let _ = cr.stroke();
+
+    // Weight plates (circles on each end)
+    for &dx in &[-13.0, -11.0, 11.0, 13.0] {
+        cr.arc(sx + dx * z, bar_y, 3.5 * z, 0.0, TAU);
+        cr.set_source_rgb(0.15, 0.15, 0.18);
+        let _ = cr.fill();
+    }
+}
+
+fn draw_yoga_mat(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    // Flat mat on ground — isometric rectangle, slightly raised
+    let hw = TILE_W / 2.0 * z * 0.7;
+    let hh = TILE_H / 2.0 * z * 0.85;
+
+    // Mat shadow
+    cr.move_to(sx, sy - hh + 1.0 * z);
+    cr.line_to(sx + hw, sy + 1.0 * z);
+    cr.line_to(sx, sy + hh + 1.0 * z);
+    cr.line_to(sx - hw, sy + 1.0 * z);
+    cr.close_path();
+    cr.set_source_rgba(0.0, 0.0, 0.0, 0.15);
+    let _ = cr.fill();
+
+    // Mat surface (bright color — teal/purple alternating via position hash)
+    let color_pick = ((sx * 7.0 + sy * 13.0) as i32).unsigned_abs() % 3;
+    let (mr, mg, mb) = match color_pick {
+        0 => (0.15, 0.65, 0.60), // teal
+        1 => (0.55, 0.30, 0.65), // purple
+        _ => (0.20, 0.55, 0.75), // blue
+    };
+
+    cr.move_to(sx, sy - hh);
+    cr.line_to(sx + hw, sy);
+    cr.line_to(sx, sy + hh);
+    cr.line_to(sx - hw, sy);
+    cr.close_path();
+    cr.set_source_rgb(mr, mg, mb);
+    let _ = cr.fill_preserve();
+    cr.set_source_rgb(mr * 0.7, mg * 0.7, mb * 0.7);
+    cr.set_line_width(0.5);
+    let _ = cr.stroke();
+
+    // Mat texture lines (lengthwise)
+    cr.set_source_rgba(mr * 1.15, mg * 1.15, mb * 1.15, 0.3);
+    cr.set_line_width(0.5 * z);
+    for i in 1..4 {
+        let t = i as f64 / 4.0;
+        let x0 = sx - hw * (1.0 - t);
+        let y0 = sy - hh * (1.0 - t) + hh * t;
+        let x1 = sx + hw * t;
+        let y1 = sy - hh * t + hh * (1.0 - t);
+        cr.move_to(x0, y0);
+        cr.line_to(x1, y1);
+        let _ = cr.stroke();
+    }
+
+    // Rolled end (small cylinder at one end)
+    cr.save().unwrap();
+    cr.translate(sx - hw * 0.8, sy - hh * 0.8);
+    cr.scale(1.0, 0.4);
+    cr.arc(0.0, 0.0, 3.0 * z, 0.0, TAU);
+    cr.restore().unwrap();
+    cr.set_source_rgb(mr * 0.8, mg * 0.8, mb * 0.8);
     let _ = cr.fill();
 }

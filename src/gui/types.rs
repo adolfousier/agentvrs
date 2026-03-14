@@ -39,6 +39,8 @@ pub struct ViewState {
     pub tick_count: u64,
     pub status_message: Option<String>,
     pub sidebar_visible: bool,
+    pub rotate_drag_start: u8,
+    pub rotate_drag_accum: f64,
 }
 
 impl ViewState {
@@ -52,6 +54,8 @@ impl ViewState {
             tick_count: 0,
             status_message: None,
             sidebar_visible: true,
+            rotate_drag_start: 0,
+            rotate_drag_accum: 0.0,
         }
     }
 }

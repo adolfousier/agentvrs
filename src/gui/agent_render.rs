@@ -46,7 +46,11 @@ pub fn draw_agent(
     // Legs (two separate rectangles for walking feel)
     let leg_gap = 2.0 * zoom;
     cr.rectangle(sx - leg_w - leg_gap / 2.0, sy - pants_h, leg_w, pants_h);
-    cr.set_source_rgb(pants_color.0 * 0.8, pants_color.1 * 0.8, pants_color.2 * 0.8);
+    cr.set_source_rgb(
+        pants_color.0 * 0.8,
+        pants_color.1 * 0.8,
+        pants_color.2 * 0.8,
+    );
     let _ = cr.fill();
     cr.rectangle(sx + leg_gap / 2.0, sy - pants_h, leg_w, pants_h);
     cr.set_source_rgb(pants_color.0, pants_color.1, pants_color.2);
@@ -75,7 +79,12 @@ pub fn draw_agent(
     // Arms
     let arm_w = 4.0 * zoom;
     let arm_h = torso_h * 0.8;
-    cr.rectangle(sx - shoulder_w / 2.0 - arm_w, torso_top + 2.0 * zoom, arm_w, arm_h);
+    cr.rectangle(
+        sx - shoulder_w / 2.0 - arm_w,
+        torso_top + 2.0 * zoom,
+        arm_w,
+        arm_h,
+    );
     cr.set_source_rgb(shirt.0 * 0.85, shirt.1 * 0.85, shirt.2 * 0.85);
     let _ = cr.fill();
     cr.rectangle(sx + shoulder_w / 2.0, torso_top + 2.0 * zoom, arm_w, arm_h);
@@ -83,7 +92,12 @@ pub fn draw_agent(
     let _ = cr.fill();
 
     // Neck
-    cr.rectangle(sx - 3.0 * zoom, torso_top - 4.0 * zoom, 6.0 * zoom, 5.0 * zoom);
+    cr.rectangle(
+        sx - 3.0 * zoom,
+        torso_top - 4.0 * zoom,
+        6.0 * zoom,
+        5.0 * zoom,
+    );
     cr.set_source_rgb(skin.0, skin.1, skin.2);
     let _ = cr.fill();
 
@@ -100,49 +114,76 @@ pub fn draw_agent(
     // Hair sides
     cr.rectangle(sx - head_r, head_y - head_r, 2.0 * zoom, head_r);
     let _ = cr.fill();
-    cr.rectangle(sx + head_r - 2.0 * zoom, head_y - head_r, 2.0 * zoom, head_r);
+    cr.rectangle(
+        sx + head_r - 2.0 * zoom,
+        head_y - head_r,
+        2.0 * zoom,
+        head_r,
+    );
     let _ = cr.fill();
 
-    // State indicator
-    draw_state_indicator(cr, sx, head_y - head_r - 6.0 * zoom, &agent.state, zoom);
+    // Name label (dark rounded pill above head)
+    draw_name_label(cr, sx, head_y - head_r - 4.0 * zoom, &agent.name, &agent.state, zoom);
 
     // Speech bubble
     if let Some(ref speech) = agent.speech {
-        draw_speech_bubble(cr, sx, head_y - head_r - 20.0 * zoom, speech, zoom);
+        draw_speech_bubble(cr, sx, head_y - head_r - 22.0 * zoom, speech, zoom);
     }
 }
 
-fn draw_state_indicator(
+fn draw_name_label(
     cr: &gtk4::cairo::Context,
     sx: f64,
     sy: f64,
+    name: &str,
     state: &AgentState,
     zoom: f64,
 ) {
-    let (r, g, b, symbol) = match state {
-        AgentState::Working => (0.2, 0.8, 0.2, "⚙"),
-        AgentState::Thinking => (1.0, 0.9, 0.0, "?"),
-        AgentState::Eating => (1.0, 0.6, 0.0, "🍔"),
-        AgentState::Playing => (0.8, 0.2, 0.8, "🎮"),
-        AgentState::Exercising => (0.0, 0.8, 0.8, "💪"),
-        AgentState::Messaging => (0.0, 0.8, 1.0, "💬"),
-        AgentState::Error => (1.0, 0.0, 0.0, "⚠"),
-        _ => return,
+    let display = if name.len() > 12 {
+        &name[..12]
+    } else {
+        name
     };
 
-    cr.set_source_rgb(r, g, b);
-    cr.set_font_size(14.0 * zoom);
-    let _ = cr.move_to(sx - 5.0 * zoom, sy);
-    let _ = cr.show_text(symbol);
+    cr.set_font_size(9.0 * zoom);
+    let extents = cr.text_extents(display).unwrap();
+    let pad_x = 6.0 * zoom;
+    let pad_y = 3.0 * zoom;
+    let dot_r = 3.0 * zoom;
+    let dot_gap = 4.0 * zoom;
+    let bw = extents.width() + pad_x * 2.0 + dot_r * 2.0 + dot_gap;
+    let bh = extents.height() + pad_y * 2.0;
+    let bx = sx - bw / 2.0;
+    let by = sy - bh;
+
+    // Dark rounded pill background
+    let radius = bh / 2.0;
+    rounded_rect(cr, bx, by, bw, bh, radius);
+    cr.set_source_rgba(0.12, 0.12, 0.14, 0.85);
+    let _ = cr.fill();
+
+    // Status dot
+    let (dr, dg, db) = match state {
+        AgentState::Working => (0.2, 0.8, 0.2),
+        AgentState::Thinking => (1.0, 0.9, 0.0),
+        AgentState::Eating => (1.0, 0.6, 0.0),
+        AgentState::Playing => (0.8, 0.2, 0.8),
+        AgentState::Exercising => (0.0, 0.8, 0.8),
+        AgentState::Messaging => (0.0, 0.8, 1.0),
+        AgentState::Error => (1.0, 0.0, 0.0),
+        _ => (0.5, 0.5, 0.5),
+    };
+    cr.arc(bx + pad_x + dot_r, by + bh / 2.0, dot_r, 0.0, std::f64::consts::TAU);
+    cr.set_source_rgb(dr, dg, db);
+    let _ = cr.fill();
+
+    // Name text
+    cr.set_source_rgb(0.95, 0.95, 0.95);
+    let _ = cr.move_to(bx + pad_x + dot_r * 2.0 + dot_gap, by + bh - pad_y);
+    let _ = cr.show_text(display);
 }
 
-fn draw_speech_bubble(
-    cr: &gtk4::cairo::Context,
-    sx: f64,
-    sy: f64,
-    text: &str,
-    zoom: f64,
-) {
+fn draw_speech_bubble(cr: &gtk4::cairo::Context, sx: f64, sy: f64, text: &str, zoom: f64) {
     let display = if text.len() > 20 {
         format!("{}...", &text[..17])
     } else {
@@ -184,8 +225,20 @@ fn rounded_rect(cr: &gtk4::cairo::Context, x: f64, y: f64, w: f64, h: f64, r: f6
     cr.new_sub_path();
     cr.arc(x + w - r, y + r, r, -std::f64::consts::FRAC_PI_2, 0.0);
     cr.arc(x + w - r, y + h - r, r, 0.0, std::f64::consts::FRAC_PI_2);
-    cr.arc(x + r, y + h - r, r, std::f64::consts::FRAC_PI_2, std::f64::consts::PI);
-    cr.arc(x + r, y + r, r, std::f64::consts::PI, 3.0 * std::f64::consts::FRAC_PI_2);
+    cr.arc(
+        x + r,
+        y + h - r,
+        r,
+        std::f64::consts::FRAC_PI_2,
+        std::f64::consts::PI,
+    );
+    cr.arc(
+        x + r,
+        y + r,
+        r,
+        std::f64::consts::PI,
+        3.0 * std::f64::consts::FRAC_PI_2,
+    );
     cr.close_path();
 }
 
