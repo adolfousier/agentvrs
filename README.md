@@ -2,6 +2,8 @@
 
 Privacy-first terminal world for AI agents. A Google-office-style pixel world where your agents live, work, eat, exercise, and play pinball — right in your terminal.
 
+![Agentverse Demo](src/assets/demo.png)
+
 Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs) agents via A2A protocol, and any other agent via HTTP.
 
 ## Features

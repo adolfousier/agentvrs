@@ -2,8 +2,8 @@ use crate::gui::iso::{TILE_H, TILE_W, WALL_HEIGHT};
 use crate::world::{FloorKind, Tile, WallKind};
 use std::f64::consts::TAU;
 
-/// Agent reference: total height ~54px at zoom=1.
-/// All furniture scaled relative to that (desk=waist, vending=taller than person, etc.)
+// Agent reference: total height ~54px at zoom=1.
+// All furniture scaled relative to that (desk=waist, vending=taller than person, etc.)
 
 pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom: f64) {
     match tile {
@@ -87,7 +87,15 @@ fn draw_floor(cr: &gtk4::cairo::Context, sx: f64, sy: f64, kind: &FloorKind, zoo
     }
 }
 
-fn draw_floor_diamond(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64, r: f64, g: f64, b: f64) {
+fn draw_floor_diamond(
+    cr: &gtk4::cairo::Context,
+    sx: f64,
+    sy: f64,
+    zoom: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+) {
     let hw = TILE_W / 2.0 * zoom;
     let hh = TILE_H / 2.0 * zoom;
     cr.move_to(sx, sy - hh);
@@ -243,7 +251,19 @@ fn draw_rug(cr: &gtk4::cairo::Context, sx: f64, sy: f64, zoom: f64) {
 
 // ─── Isometric block helper ───
 
-fn iso_block(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64, w_ratio: f64, h_ratio: f64, height: f64, r: f64, g: f64, b: f64) {
+#[allow(clippy::too_many_arguments)]
+fn iso_block(
+    cr: &gtk4::cairo::Context,
+    sx: f64,
+    sy: f64,
+    z: f64,
+    w_ratio: f64,
+    h_ratio: f64,
+    height: f64,
+    r: f64,
+    g: f64,
+    b: f64,
+) {
     let hw = TILE_W / 2.0 * z * w_ratio;
     let hh = TILE_H / 2.0 * z * h_ratio;
     let bh = height * z;
@@ -349,7 +369,12 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let mon_y = desk_top - 8.0 * z - mon_h;
 
     // Bezel back shadow
-    cr.rectangle(sx - mon_w / 2.0 - 0.8 * z, mon_y - 0.8 * z, mon_w + 1.6 * z, mon_h + 1.6 * z);
+    cr.rectangle(
+        sx - mon_w / 2.0 - 0.8 * z,
+        mon_y - 0.8 * z,
+        mon_w + 1.6 * z,
+        mon_h + 1.6 * z,
+    );
     cr.set_source_rgb(0.10, 0.10, 0.12);
     let _ = cr.fill();
     // Bezel
@@ -380,8 +405,14 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     ];
     for (i, (lr, lg, lb, la)) in colors.iter().enumerate() {
         let ly = scr_y + 2.0 * z + i as f64 * 2.0 * z;
-        if ly > scr_y + scr_h - 1.0 * z { break; }
-        let indent = if i % 3 == 1 || i % 3 == 2 { 4.0 * z } else { 1.5 * z };
+        if ly > scr_y + scr_h - 1.0 * z {
+            break;
+        }
+        let indent = if i % 3 == 1 || i % 3 == 2 {
+            4.0 * z
+        } else {
+            1.5 * z
+        };
         let lw = scr_w * (0.78 - (i % 4) as f64 * 0.1) - indent;
         cr.set_source_rgba(*lr, *lg, *lb, *la);
         cr.move_to(scr_x + indent, ly);
@@ -395,7 +426,13 @@ fn draw_desk(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let _ = cr.fill();
 
     // Power LED
-    cr.arc(sx + mon_w / 2.0 - 3.0 * z, mon_y + mon_h - 2.0 * z, 0.8 * z, 0.0, TAU);
+    cr.arc(
+        sx + mon_w / 2.0 - 3.0 * z,
+        mon_y + mon_h - 2.0 * z,
+        0.8 * z,
+        0.0,
+        TAU,
+    );
     cr.set_source_rgb(0.1, 0.85, 0.3);
     let _ = cr.fill();
 }
@@ -409,7 +446,12 @@ fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let hw = TILE_W / 2.0 * z * 0.6;
 
     // Brand panel
-    cr.rectangle(sx - hw + 2.0 * z, top + 2.0 * z, hw * 2.0 - 4.0 * z, 6.0 * z);
+    cr.rectangle(
+        sx - hw + 2.0 * z,
+        top + 2.0 * z,
+        hw * 2.0 - 4.0 * z,
+        6.0 * z,
+    );
     cr.set_source_rgb(0.90, 0.18, 0.18);
     let _ = cr.fill();
     cr.set_source_rgb(1.0, 1.0, 1.0);
@@ -418,14 +460,23 @@ fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let _ = cr.show_text("DRINKS");
 
     // Glass panel
-    cr.rectangle(sx - hw + 2.0 * z, top + 10.0 * z, hw * 2.0 - 4.0 * z, 28.0 * z);
+    cr.rectangle(
+        sx - hw + 2.0 * z,
+        top + 10.0 * z,
+        hw * 2.0 - 4.0 * z,
+        28.0 * z,
+    );
     cr.set_source_rgba(0.25, 0.30, 0.35, 0.55);
     let _ = cr.fill();
 
     // Shelves with cans/bottles (5 rows now)
     let can_colors: [(f64, f64, f64); 6] = [
-        (0.9, 0.2, 0.1), (0.1, 0.5, 0.9), (0.1, 0.7, 0.2),
-        (0.9, 0.7, 0.0), (0.6, 0.1, 0.7), (0.9, 0.5, 0.1),
+        (0.9, 0.2, 0.1),
+        (0.1, 0.5, 0.9),
+        (0.1, 0.7, 0.2),
+        (0.9, 0.7, 0.0),
+        (0.6, 0.1, 0.7),
+        (0.9, 0.5, 0.1),
     ];
     for row in 0..5 {
         let ry = top + 11.0 * z + row as f64 * 5.5 * z;
@@ -461,7 +512,13 @@ fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let _ = cr.fill();
     // Selection buttons
     for i in 0..3 {
-        cr.arc(sx + hw - 4.0 * z, top + 46.0 * z + i as f64 * 3.0 * z, 1.0 * z, 0.0, TAU);
+        cr.arc(
+            sx + hw - 4.0 * z,
+            top + 46.0 * z + i as f64 * 3.0 * z,
+            1.0 * z,
+            0.0,
+            TAU,
+        );
         cr.set_source_rgb(0.4, 0.4, 0.42);
         let _ = cr.fill();
     }
@@ -474,7 +531,18 @@ fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let counter_top = sy - 24.0 * z;
 
     // Coffee machine on counter (~20px tall on counter = 44px total)
-    iso_block(cr, sx - 4.0 * z, counter_top + 4.0 * z, z, 0.35, 0.35, 22.0, 0.22, 0.22, 0.25);
+    iso_block(
+        cr,
+        sx - 4.0 * z,
+        counter_top + 4.0 * z,
+        z,
+        0.35,
+        0.35,
+        22.0,
+        0.22,
+        0.22,
+        0.25,
+    );
 
     let machine_top = counter_top + 4.0 * z - 22.0 * z;
 
@@ -520,7 +588,13 @@ fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     // Cup handle
     cr.set_source_rgb(0.88, 0.88, 0.86);
     cr.set_line_width(1.2 * z);
-    cr.arc(cup_x + cup_w / 2.0 + 1.0 * z, counter_top - cup_h / 2.0, 2.0 * z, -1.2, 1.2);
+    cr.arc(
+        cup_x + cup_w / 2.0 + 1.0 * z,
+        counter_top - cup_h / 2.0,
+        2.0 * z,
+        -1.2,
+        1.2,
+    );
     let _ = cr.stroke();
 
     // Steam
@@ -529,9 +603,12 @@ fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     for offset in &[-1.5, 0.0, 1.5] {
         cr.move_to(cup_x + offset * z, counter_top - cup_h - 1.0 * z);
         cr.curve_to(
-            cup_x + offset * z - 2.5 * z, counter_top - cup_h - 6.0 * z,
-            cup_x + offset * z + 2.5 * z, counter_top - cup_h - 11.0 * z,
-            cup_x + offset * z, counter_top - cup_h - 16.0 * z,
+            cup_x + offset * z - 2.5 * z,
+            counter_top - cup_h - 6.0 * z,
+            cup_x + offset * z + 2.5 * z,
+            counter_top - cup_h - 11.0 * z,
+            cup_x + offset * z,
+            counter_top - cup_h - 16.0 * z,
         );
         let _ = cr.stroke();
     }
@@ -660,13 +737,13 @@ fn draw_plant(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
 
     // Foliage (large overlapping spheres for a real tree canopy, ~50px total height)
     let leaves: [(f64, f64, f64, f64); 7] = [
-        (0.0, -42.0, 12.0, 0.85),   // top center
-        (-7.0, -36.0, 9.0, 0.75),   // left mid
-        (8.0, -38.0, 9.0, 0.90),    // right mid
-        (-4.0, -46.0, 8.0, 0.95),   // top left
-        (5.0, -44.0, 8.0, 0.80),    // top right
-        (-9.0, -30.0, 7.0, 0.70),   // lower left
-        (10.0, -32.0, 7.0, 0.82),   // lower right
+        (0.0, -42.0, 12.0, 0.85), // top center
+        (-7.0, -36.0, 9.0, 0.75), // left mid
+        (8.0, -38.0, 9.0, 0.90),  // right mid
+        (-4.0, -46.0, 8.0, 0.95), // top left
+        (5.0, -44.0, 8.0, 0.80),  // top right
+        (-9.0, -30.0, 7.0, 0.70), // lower left
+        (10.0, -32.0, 7.0, 0.82), // lower right
     ];
     for (dx, dy, r, shade) in &leaves {
         cr.arc(sx + dx * z, sy + dy * z, r * z, 0.0, TAU);
@@ -691,7 +768,12 @@ fn draw_arcade(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let hw = TILE_W / 2.0 * z * 0.5;
 
     // Marquee (lit header)
-    cr.rectangle(sx - hw + 1.5 * z, top + 1.5 * z, hw * 2.0 - 3.0 * z, 6.0 * z);
+    cr.rectangle(
+        sx - hw + 1.5 * z,
+        top + 1.5 * z,
+        hw * 2.0 - 3.0 * z,
+        6.0 * z,
+    );
     cr.set_source_rgb(1.0, 0.85, 0.1);
     let _ = cr.fill();
     cr.set_source_rgb(0.12, 0.04, 0.28);
@@ -700,7 +782,12 @@ fn draw_arcade(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let _ = cr.show_text("ARCADE");
 
     // Screen bezel
-    cr.rectangle(sx - hw + 2.0 * z, top + 9.0 * z, hw * 2.0 - 4.0 * z, 18.0 * z);
+    cr.rectangle(
+        sx - hw + 2.0 * z,
+        top + 9.0 * z,
+        hw * 2.0 - 4.0 * z,
+        18.0 * z,
+    );
     cr.set_source_rgb(0.06, 0.06, 0.08);
     let _ = cr.fill();
 
@@ -741,7 +828,12 @@ fn draw_arcade(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     }
 
     // Control panel (angled)
-    cr.rectangle(sx - hw + 2.0 * z, top + 28.0 * z, hw * 2.0 - 4.0 * z, 8.0 * z);
+    cr.rectangle(
+        sx - hw + 2.0 * z,
+        top + 28.0 * z,
+        hw * 2.0 - 4.0 * z,
+        8.0 * z,
+    );
     cr.set_source_rgb(0.18, 0.18, 0.20);
     let _ = cr.fill();
 
@@ -754,7 +846,12 @@ fn draw_arcade(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let _ = cr.fill();
 
     // Buttons
-    let btn_colors = [(1.0, 0.2, 0.2), (0.2, 0.2, 1.0), (0.2, 0.8, 0.2), (0.9, 0.9, 0.1)];
+    let btn_colors = [
+        (1.0, 0.2, 0.2),
+        (0.2, 0.2, 1.0),
+        (0.2, 0.8, 0.2),
+        (0.9, 0.9, 0.1),
+    ];
     for (i, (br, bg, bb)) in btn_colors.iter().enumerate() {
         let bx = sx + 2.0 * z + i as f64 * 3.0 * z;
         cr.arc(bx, top + 32.0 * z, 1.3 * z, 0.0, TAU);
@@ -832,7 +929,12 @@ fn draw_treadmill(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.set_source_rgb(0.12, 0.12, 0.14);
     let _ = cr.fill();
     // Screen
-    cr.rectangle(sx - console_w / 2.0 + 1.0 * z, console_y + 1.0 * z, console_w - 2.0 * z, console_h - 2.0 * z);
+    cr.rectangle(
+        sx - console_w / 2.0 + 1.0 * z,
+        console_y + 1.0 * z,
+        console_w - 2.0 * z,
+        console_h - 2.0 * z,
+    );
     cr.set_source_rgb(0.08, 0.55, 0.28);
     let _ = cr.fill();
     // Speed + distance readout
@@ -887,7 +989,12 @@ fn draw_whiteboard(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let board_y = sy - 48.0 * z;
     let board_w = 32.0 * z;
     let board_h = 22.0 * z;
-    cr.rectangle(board_x - 1.5 * z, board_y - 1.5 * z, board_w + 3.0 * z, board_h + 3.0 * z);
+    cr.rectangle(
+        board_x - 1.5 * z,
+        board_y - 1.5 * z,
+        board_w + 3.0 * z,
+        board_h + 3.0 * z,
+    );
     cr.set_source_rgb(0.48, 0.48, 0.50);
     let _ = cr.fill();
 
@@ -946,20 +1053,40 @@ fn draw_whiteboard(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     let _ = cr.stroke();
 
     // Marker tray
-    cr.rectangle(board_x + 3.0 * z, board_y + board_h + 1.0 * z, board_w - 6.0 * z, 2.5 * z);
+    cr.rectangle(
+        board_x + 3.0 * z,
+        board_y + board_h + 1.0 * z,
+        board_w - 6.0 * z,
+        2.5 * z,
+    );
     cr.set_source_rgb(0.42, 0.42, 0.45);
     let _ = cr.fill();
 
     // Markers
-    let marker_colors = [(0.08, 0.08, 0.75), (0.75, 0.08, 0.08), (0.08, 0.55, 0.08), (0.0, 0.0, 0.0)];
+    let marker_colors = [
+        (0.08, 0.08, 0.75),
+        (0.75, 0.08, 0.08),
+        (0.08, 0.55, 0.08),
+        (0.0, 0.0, 0.0),
+    ];
     for (i, (mr, mg, mb)) in marker_colors.iter().enumerate() {
-        cr.rectangle(board_x + 5.0 * z + i as f64 * 4.0 * z, board_y + board_h + 1.0 * z, 3.0 * z, 2.0 * z);
+        cr.rectangle(
+            board_x + 5.0 * z + i as f64 * 4.0 * z,
+            board_y + board_h + 1.0 * z,
+            3.0 * z,
+            2.0 * z,
+        );
         cr.set_source_rgb(*mr, *mg, *mb);
         let _ = cr.fill();
     }
 
     // Eraser
-    cr.rectangle(board_x + board_w - 10.0 * z, board_y + board_h + 1.0 * z, 5.0 * z, 2.0 * z);
+    cr.rectangle(
+        board_x + board_w - 10.0 * z,
+        board_y + board_h + 1.0 * z,
+        5.0 * z,
+        2.0 * z,
+    );
     cr.set_source_rgb(0.9, 0.9, 0.85);
     let _ = cr.fill();
 }

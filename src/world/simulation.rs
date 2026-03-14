@@ -41,8 +41,24 @@ impl Simulation {
 
         for (id, state, pos) in agents {
             match state {
-                AgentState::Idle => self.assign_random_goal(id),
-                AgentState::Walking => self.step_along_path(id, pos).await,
+                AgentState::Idle => {
+                    // Linger for a while before picking a new goal
+                    let mut reg = self.registry.write().unwrap();
+                    if let Some(agent) = reg.get_mut(&id) {
+                        agent.anim.activity_ticks += 1;
+                        if agent.anim.activity_ticks < 15 {
+                            continue;
+                        }
+                    }
+                    drop(reg);
+                    self.assign_random_goal(id);
+                }
+                AgentState::Walking => {
+                    // Move every 2nd tick for smoother, slower walking
+                    if self.tick_count.is_multiple_of(2) {
+                        self.step_along_path(id, pos).await;
+                    }
+                }
                 AgentState::Working
                 | AgentState::Eating
                 | AgentState::Playing
@@ -186,6 +202,7 @@ impl Simulation {
                 agent.path.clear();
                 agent.goal = None;
                 agent.set_state(AgentState::Idle);
+                agent.anim.activity_ticks = 0;
             }
         }
     }
@@ -206,6 +223,7 @@ impl Simulation {
                 agent.set_state(AgentState::Idle);
                 agent.goal = None;
                 agent.path.clear();
+                agent.anim.activity_ticks = 0;
             }
         }
     }

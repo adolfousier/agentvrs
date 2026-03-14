@@ -39,10 +39,10 @@ pub struct A2aConfig {
 }
 
 fn default_width() -> u16 {
-    32
+    48
 }
 fn default_height() -> u16 {
-    16
+    28
 }
 fn default_tick_ms() -> u64 {
     200

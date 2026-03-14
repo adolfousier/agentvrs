@@ -76,7 +76,12 @@ fn setup_click(da: &DrawingArea, state: &Arc<GuiState>) {
 
         let (offset_x, offset_y, zoom, rotation) = {
             let view = state.view.lock().unwrap();
-            (view.camera.offset_x, view.camera.offset_y, view.camera.zoom, view.camera.rotation)
+            (
+                view.camera.offset_x,
+                view.camera.offset_y,
+                view.camera.zoom,
+                view.camera.rotation,
+            )
         };
 
         let grid = state.grid.read().unwrap();
@@ -86,7 +91,12 @@ fn setup_click(da: &DrawingArea, state: &Arc<GuiState>) {
         let center_y = h / 2.0 + offset_y;
 
         let (gx, gy) = iso::screen_to_grid(
-            x - center_x, y - center_y, zoom, rotation, world_cx, world_cy,
+            x - center_x,
+            y - center_y,
+            zoom,
+            rotation,
+            world_cx,
+            world_cy,
         );
 
         let gx = gx.round() as i32;
@@ -104,7 +114,12 @@ fn setup_click(da: &DrawingArea, state: &Arc<GuiState>) {
     da.add_controller(click);
 }
 
-fn setup_keyboard(window: &ApplicationWindow, state: &Arc<GuiState>, da: &DrawingArea, sidebar: &Paned) {
+fn setup_keyboard(
+    window: &ApplicationWindow,
+    state: &Arc<GuiState>,
+    da: &DrawingArea,
+    sidebar: &Paned,
+) {
     let key_ctrl = EventControllerKey::new();
     let state = Arc::clone(state);
     let da = da.clone();

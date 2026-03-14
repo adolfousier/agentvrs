@@ -191,7 +191,10 @@ fn update_detail(state: &GuiState, title: &Label, info_box: &GtkBox, activity: &
 
     let fields = [
         ("State", agent.state.label().to_string()),
-        ("Position", format!("({}, {})", agent.position.x, agent.position.y)),
+        (
+            "Position",
+            format!("({}, {})", agent.position.x, agent.position.y),
+        ),
         ("Kind", format!("{:?}", agent.kind)),
         ("Tasks", agent.task_count.to_string()),
     ];
