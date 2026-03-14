@@ -116,13 +116,45 @@ impl Simulation {
             }
         };
 
-        let targets = grid.find_tiles(&tile_type);
-        if targets.is_empty() {
+        // Count how many agents already target each position
+        let other_targets: Vec<Position> = reg
+            .agents()
+            .filter(|a| a.id != id)
+            .filter_map(|a| a.goal.as_ref().map(|g| g.target()))
+            .collect();
+
+        // Capacity per tile type: ping pong = 2 (one per side), everything else = 1
+        let capacity: usize = match tile_type {
+            Tile::PingPongTableLeft | Tile::PingPongTableRight => 2,
+            _ => 1,
+        };
+
+        let all_targets = grid.find_tiles(&tile_type);
+        // Filter to furniture that still has capacity
+        let available: Vec<Position> = all_targets
+            .into_iter()
+            .filter(|t| {
+                let count = other_targets.iter().filter(|ot| *ot == t).count();
+                count < capacity
+            })
+            .collect();
+        if available.is_empty() {
             return;
         }
-        let target = targets[rand::rng().random_range(0..targets.len())];
+        let target = available[rand::rng().random_range(0..available.len())];
 
-        if let Some(adj) = grid.find_adjacent_floor(target)
+        // Find where other agents heading to same target will stand, so we pick a different spot
+        let taken_spots: Vec<Position> = reg
+            .agents()
+            .filter(|a| a.id != id)
+            .filter(|a| a.goal.as_ref().map(|g| g.target()) == Some(target))
+            .map(|a| {
+                // Their destination is the last step on their path, or their current position
+                a.path.last().copied().unwrap_or(a.position)
+            })
+            .collect();
+
+        if let Some(adj) = grid.find_adjacent_floor_avoiding(target, &taken_spots)
             && let Some(agent) = reg.get_mut(&id)
             && let Some(path) = find_path(&grid, agent.position, adj)
         {
@@ -160,9 +192,13 @@ impl Simulation {
                     _ => AgentState::Idle,
                 };
                 // Face toward the target furniture
+                // Agent typically at -x from furniture (to see LEFT face detail)
+                // Furniture is at +x → face Right (toward top-right on screen)
                 if let Some(goal) = &agent.goal {
                     let target = goal.target();
-                    agent.anim.facing = if target.x >= agent.position.x {
+                    let dx = target.x as i32 - agent.position.x as i32;
+                    let dy = target.y as i32 - agent.position.y as i32;
+                    agent.anim.facing = if dx + dy > 0 {
                         Facing::Right
                     } else {
                         Facing::Left
@@ -174,11 +210,13 @@ impl Simulation {
             return;
         };
 
-        // Update facing direction
+        // Update facing direction based on iso movement
         {
             let mut reg = self.registry.write().unwrap();
             if let Some(agent) = reg.get_mut(&id) {
-                agent.anim.facing = if next_pos.x > pos.x {
+                let dx = next_pos.x as i32 - pos.x as i32;
+                let dy = next_pos.y as i32 - pos.y as i32;
+                agent.anim.facing = if dx + dy > 0 {
                     Facing::Right
                 } else {
                     Facing::Left
@@ -208,13 +246,37 @@ impl Simulation {
                 })
                 .await;
         } else {
-            // Path blocked — go idle and retry next tick
-            let mut reg = self.registry.write().unwrap();
-            if let Some(agent) = reg.get_mut(&id) {
-                agent.path.clear();
-                agent.goal = None;
-                agent.set_state(AgentState::Idle);
-                agent.anim.activity_ticks = 0;
+            // Path blocked — try to repath, only go idle if that also fails
+            let goal_target = {
+                let reg = self.registry.read().unwrap();
+                reg.get(&id).and_then(|a| a.goal.as_ref().map(|g| g.target()))
+            };
+            let repath_ok = if let Some(target) = goal_target {
+                let grid = self.grid.read().unwrap();
+                if let Some(adj) = grid.find_adjacent_floor(target) {
+                    if let Some(new_path) = find_path(&grid, pos, adj) {
+                        let mut reg = self.registry.write().unwrap();
+                        if let Some(agent) = reg.get_mut(&id) {
+                            agent.path = new_path;
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+            if !repath_ok {
+                let mut reg = self.registry.write().unwrap();
+                if let Some(agent) = reg.get_mut(&id) {
+                    agent.path.clear();
+                    agent.goal = None;
+                    agent.set_state(AgentState::Idle);
+                    agent.anim.activity_ticks = 0;
+                }
             }
         }
     }

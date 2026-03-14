@@ -573,12 +573,12 @@ fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     draw_ground_shadow(cr, sx, sy, z, wr, hr);
     iso_solid(cr, sx, sy, z, wr, hr, h, 0.78, 0.16, 0.16);
 
-    // Glass panel — on RIGHT face (front-facing in iso)
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.06, 0.65, 0.06, 0.94, 0.18, 0.22, 0.30);
+    // Glass panel — on LEFT face (faces down-left toward viewer)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.06, 0.65, 0.06, 0.94, 0.18, 0.22, 0.30);
     // Shelf lines
     for row in 0..4 {
         let y_frac = 0.08 + row as f64 * 0.14;
-        right_face_rect(cr, sx, sy, z, wr, hr, h, y_frac, y_frac + 0.01, 0.08, 0.92, 0.40, 0.40, 0.45);
+        left_face_rect(cr, sx, sy, z, wr, hr, h, y_frac, y_frac + 0.01, 0.08, 0.92, 0.40, 0.40, 0.45);
     }
     // Cans
     let can_colors = [(0.92, 0.28, 0.18), (0.18, 0.58, 0.92), (0.18, 0.75, 0.28), (0.95, 0.75, 0.08)];
@@ -588,17 +588,17 @@ fn draw_vending(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
             let x_left = 0.14 + col as f64 * 0.26;
             let ci = (row * 3 + col) as usize % can_colors.len();
             let (cr2, cg, cb) = can_colors[ci];
-            right_face_rect(cr, sx, sy, z, wr, hr, h, y_top, y_top + 0.10, x_left, x_left + 0.18, cr2, cg, cb);
+            left_face_rect(cr, sx, sy, z, wr, hr, h, y_top, y_top + 0.10, x_left, x_left + 0.18, cr2, cg, cb);
         }
     }
     // Dispensing slot
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.70, 0.80, 0.22, 0.78, 0.05, 0.05, 0.08);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.70, 0.80, 0.22, 0.78, 0.05, 0.05, 0.08);
     // Price display
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.85, 0.92, 0.30, 0.70, 0.02, 0.02, 0.04);
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.86, 0.91, 0.32, 0.68, 0.08, 0.65, 0.12);
-    // Side panel — on LEFT face (back-facing)
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.10, 0.06, 0.94, 0.95, 0.22, 0.22);
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.15, 0.85, 0.10, 0.90, 0.68, 0.12, 0.12);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.85, 0.92, 0.30, 0.70, 0.02, 0.02, 0.04);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.86, 0.91, 0.32, 0.68, 0.08, 0.65, 0.12);
+    // Side panel — on RIGHT face
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.10, 0.06, 0.94, 0.95, 0.22, 0.22);
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.15, 0.85, 0.10, 0.90, 0.68, 0.12, 0.12);
 }
 
 // ─── Coffee Machine (on counter) ───
@@ -625,11 +625,11 @@ fn draw_coffee(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     // Coffee machine on counter — small box
     let surface = top - 1.0 * z;
     iso_solid(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.88, 0.88, 0.86);
-    // Display — on RIGHT face (front-facing)
-    right_face_rect(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.10, 0.28, 0.10, 0.90, 0.02, 0.02, 0.04);
-    right_face_rect(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.13, 0.25, 0.15, 0.85, 0.10, 0.72, 0.18);
+    // Display — on LEFT face (faces down toward viewer)
+    left_face_rect(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.10, 0.28, 0.10, 0.90, 0.02, 0.02, 0.04);
+    left_face_rect(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.13, 0.25, 0.15, 0.85, 0.10, 0.72, 0.18);
     // Drip area
-    right_face_rect(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.45, 0.78, 0.18, 0.82, 0.12, 0.12, 0.15);
+    left_face_rect(cr, sx, surface, z, 0.35, 0.35, 18.0, 0.45, 0.78, 0.18, 0.82, 0.12, 0.12, 0.15);
 
     // Coffee cup — just a tiny shape
     let cup_y = surface - 1.0 * z;
@@ -695,34 +695,34 @@ fn draw_arcade(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     draw_ground_shadow(cr, sx, sy, z, wr, hr);
     iso_solid(cr, sx, sy, z, wr, hr, h, 0.50, 0.15, 0.62);
 
-    // Marquee — on RIGHT face (front-facing)
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.10, 0.05, 0.95, 1.0, 0.90, 0.15);
+    // Marquee — on LEFT face (faces down toward viewer)
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.02, 0.10, 0.05, 0.95, 1.0, 0.90, 0.15);
     // Screen bezel
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.12, 0.50, 0.05, 0.95, 0.04, 0.04, 0.06);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.12, 0.50, 0.05, 0.95, 0.04, 0.04, 0.06);
     // Screen
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.14, 0.48, 0.09, 0.91, 0.02, 0.18, 0.02);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.14, 0.48, 0.09, 0.91, 0.02, 0.18, 0.02);
     // Game graphics
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.18, 0.26, 0.25, 0.75, 0.25, 0.85, 0.25);
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.30, 0.38, 0.15, 0.55, 0.85, 0.85, 0.15);
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.40, 0.46, 0.40, 0.80, 0.85, 0.30, 0.15);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.18, 0.26, 0.25, 0.75, 0.25, 0.85, 0.25);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.30, 0.38, 0.15, 0.55, 0.85, 0.85, 0.15);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.40, 0.46, 0.40, 0.80, 0.85, 0.30, 0.15);
     // Control panel
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.54, 0.66, 0.06, 0.94, 0.24, 0.24, 0.28);
-    // Buttons — on right face
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.54, 0.66, 0.06, 0.94, 0.24, 0.24, 0.28);
+    // Buttons — on left face
     let hw = TILE_W / 2.0 * z * wr;
     let hh = TILE_H / 2.0 * z * hr;
     let bh = h * z;
     let btns = [(0.28, (0.90, 0.15, 0.15)), (0.50, (0.15, 0.15, 0.90)), (0.72, (0.15, 0.85, 0.15))];
     for (t, (br, bg, bb)) in btns {
-        let bx = sx + t * hw;
-        let by = sy - bh + 0.61 * bh + hh * (1.0 - t);
+        let bx = sx - hw + t * hw;
+        let by = sy - bh + 0.61 * bh + t * hh;
         cr.arc(bx, by, 1.8 * z, 0.0, TAU);
         cr.set_source_rgb(br, bg, bb);
         let _ = cr.fill();
     }
     // Coin slot
-    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.72, 0.76, 0.35, 0.65, 0.65, 0.60, 0.15);
-    // Side art — on LEFT face (back)
-    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.10, 0.88, 0.08, 0.92, 0.42, 0.12, 0.55);
+    left_face_rect(cr, sx, sy, z, wr, hr, h, 0.72, 0.76, 0.35, 0.65, 0.65, 0.60, 0.15);
+    // Side art — on RIGHT face
+    right_face_rect(cr, sx, sy, z, wr, hr, h, 0.10, 0.88, 0.08, 0.92, 0.42, 0.12, 0.55);
 }
 
 // ─── Treadmill — flat base + uprights ───

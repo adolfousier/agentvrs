@@ -213,9 +213,19 @@ fn update_detail(state: &GuiState, title: &Label, info_box: &GtkBox, activity: &
     }
 
     if let Some(ref speech) = agent.speech {
-        let buf = activity.buffer();
-        let text = format!("[{}] says: \"{}\"\n", agent.name, speech);
-        buf.insert(&mut buf.end_iter(), &text);
+        let current = (agent_id, speech.clone());
+        let mut view = state.view.lock().unwrap();
+        let already_logged = view
+            .last_logged_speech
+            .as_ref()
+            .map(|prev| prev.0 == current.0 && prev.1 == current.1)
+            .unwrap_or(false);
+        if !already_logged {
+            let buf = activity.buffer();
+            let text = format!("[{}] says: \"{}\"\n", agent.name, speech);
+            buf.insert(&mut buf.end_iter(), &text);
+            view.last_logged_speech = Some(current);
+        }
     }
 }
 

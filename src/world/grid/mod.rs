@@ -146,17 +146,35 @@ impl Grid {
             .collect()
     }
 
-    /// Find an adjacent walkable tile, preferring "front" positions in iso view.
-    /// Priority: +y (front-left), +x (front-right), then -y, -x (behind).
+    /// Find an adjacent walkable tile, preferring front of LEFT face (detail face).
     pub fn find_adjacent_floor(&self, pos: Position) -> Option<Position> {
-        [
-            Position::new(pos.x, pos.y + 1),           // front-left in iso
-            Position::new(pos.x + 1, pos.y),           // front-right in iso
-            Position::new(pos.x, pos.y.wrapping_sub(1)), // back-right
-            Position::new(pos.x.wrapping_sub(1), pos.y), // back-left
-        ]
-        .into_iter()
-        .find(|p| self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))
+        self.find_adjacent_floor_avoiding(pos, &[])
+    }
+
+    pub fn find_adjacent_floor_avoiding(&self, pos: Position, avoid: &[Position]) -> Option<Position> {
+        // LEFT face normal points toward -x (bottom-left on screen).
+        // Agent at (x-1, y) looks toward +x and sees the LEFT face (detail face).
+        let candidates = [
+            Position::new(pos.x.wrapping_sub(1), pos.y), // sees LEFT face (detail face)
+            Position::new(pos.x, pos.y + 1),             // sees RIGHT face
+            Position::new(pos.x + 1, pos.y),             // behind (back)
+            Position::new(pos.x, pos.y.wrapping_sub(1)), // behind (back)
+        ];
+        // First try spots not in avoid list
+        candidates
+            .iter()
+            .copied()
+            .find(|p| {
+                !avoid.contains(p)
+                    && self.get(*p).map(|c| c.is_walkable()).unwrap_or(false)
+            })
+            // Fallback: any walkable spot
+            .or_else(|| {
+                candidates
+                    .iter()
+                    .copied()
+                    .find(|p| self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))
+            })
     }
 
     pub fn bounds(&self) -> (u16, u16) {

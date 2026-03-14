@@ -41,6 +41,8 @@ pub struct ViewState {
     pub sidebar_visible: bool,
     pub rotate_drag_start: u8,
     pub rotate_drag_accum: f64,
+    /// Track last speech logged to avoid duplicate log entries
+    pub last_logged_speech: Option<(AgentId, String)>,
 }
 
 impl ViewState {
@@ -56,6 +58,7 @@ impl ViewState {
             sidebar_visible: true,
             rotate_drag_start: 0,
             rotate_drag_accum: 0.0,
+            last_logged_speech: None,
         }
     }
 }
