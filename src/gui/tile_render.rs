@@ -60,6 +60,10 @@ pub fn draw_tile(cr: &gtk4::cairo::Context, sx: f64, sy: f64, tile: &Tile, zoom:
             draw_floor_diamond(cr, sx, sy, zoom, 0.78, 0.62, 0.42);
             draw_whiteboard(cr, sx, sy, zoom);
         }
+        Tile::KitchenCounter => {
+            draw_floor_diamond(cr, sx, sy, zoom, 0.88, 0.84, 0.78);
+            draw_kitchen_counter(cr, sx, sy, zoom);
+        }
     }
 }
 
@@ -960,4 +964,67 @@ fn draw_small_armchair(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.close_path();
     cr.set_source_rgba(0.65, 0.28, 0.10, 0.4);
     let _ = cr.fill();
+}
+
+fn draw_kitchen_counter(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
+    let wr = 0.98;
+    let hr = 0.85;
+
+    // Dark charcoal cabinet (fills tile edge-to-edge for continuous look)
+    iso_block(cr, sx, sy, z, wr, hr, 26.0, 0.28, 0.28, 0.32);
+
+    // Cabinet doors on left face
+    left_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.05, 0.92, 0.04, 0.46, 0.22, 0.22, 0.26);
+    left_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.05, 0.92, 0.54, 0.96, 0.22, 0.22, 0.26);
+    // Handles
+    left_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.44, 0.50, 0.38, 0.46, 0.62, 0.62, 0.68);
+    left_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.44, 0.50, 0.86, 0.94, 0.62, 0.62, 0.68);
+
+    // Cabinet doors on right face
+    right_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.05, 0.92, 0.04, 0.46, 0.25, 0.25, 0.30);
+    right_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.05, 0.92, 0.54, 0.96, 0.25, 0.25, 0.30);
+    right_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.44, 0.50, 0.38, 0.46, 0.62, 0.62, 0.68);
+    right_face_rect(cr, sx, sy, z, wr, hr, 26.0, 0.44, 0.50, 0.86, 0.94, 0.62, 0.62, 0.68);
+
+    // Countertop
+    let top = sy - 26.0 * z;
+    iso_block(cr, sx, top, z, 1.0, 0.88, 2.5, 0.62, 0.58, 0.52);
+    let surface = top - 2.5 * z;
+
+    // Pseudo-random appliance on top based on position
+    let variant = ((sx * 7.3 + sy * 13.7) as i32).unsigned_abs() % 5;
+    match variant {
+        0 => {
+            // Microwave — white box with dark door
+            iso_block(cr, sx, surface, z, 0.45, 0.40, 12.0, 0.88, 0.88, 0.86);
+            left_face_rect(cr, sx, surface, z, 0.45, 0.40, 12.0, 0.08, 0.85, 0.08, 0.92, 0.10, 0.10, 0.14);
+            // Handle
+            right_face_rect(cr, sx, surface, z, 0.45, 0.40, 12.0, 0.20, 0.70, 0.80, 0.88, 0.70, 0.70, 0.72);
+        }
+        1 => {
+            // Toaster — small dark block
+            iso_block(cr, sx, surface, z, 0.25, 0.25, 8.0, 0.40, 0.40, 0.42);
+            // Slots on top
+            let t_top = surface - 8.0 * z;
+            let t_hw = TILE_W / 2.0 * z * 0.20;
+            cr.set_source_rgb(0.15, 0.15, 0.18);
+            cr.set_line_width(1.5 * z);
+            cr.move_to(sx - t_hw * 0.3, t_top);
+            cr.line_to(sx + t_hw * 0.3, t_top);
+            let _ = cr.stroke();
+        }
+        2 => {
+            // Blender — tall narrow block
+            iso_block(cr, sx, surface, z, 0.15, 0.15, 16.0, 0.75, 0.75, 0.78);
+            // Jar (transparent look)
+            iso_block(cr, sx, surface - 6.0 * z, z, 0.12, 0.12, 10.0, 0.82, 0.88, 0.85);
+        }
+        3 => {
+            // Cutting board + knife (flat items)
+            iso_block(cr, sx, surface, z, 0.35, 0.25, 1.5, 0.70, 0.52, 0.30);
+        }
+        _ => {
+            // Empty counter — just the countertop visible
+        }
+    }
 }

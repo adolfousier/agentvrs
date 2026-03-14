@@ -106,17 +106,15 @@ fn kitchen_break(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         }
     }
 
-    // Kitchen counter along the top third — coffee machines evenly spaced
-    let counter_y = y1 + 2 + rh / 4;
-    let counter_start = x1 + 2;
-    let counter_end = x2 - 2;
-    let counter_count = ((counter_end - counter_start) / 3).min(4);
-    let counter_offset = (counter_end - counter_start - counter_count * 3) / 2;
-    for i in 0..counter_count {
-        let cx = counter_start + counter_offset + i * 3;
-        if cx < x2 - 1 && counter_y < y2 - 1 {
-            g.set_tile(Position::new(cx, counter_y), Tile::CoffeeMachine);
-        }
+    // Kitchen counter built into the back wall (like reference)
+    // Runs along y1+1 (right against the top wall)
+    let counter_y = y1 + 1;
+    for cx in (x1 + 1)..(x2 - 1) {
+        g.set_tile(Position::new(cx, counter_y), Tile::KitchenCounter);
+    }
+    // One coffee machine at the end of the counter
+    if x2 - 2 > x1 {
+        g.set_tile(Position::new(x2 - 2, counter_y), Tile::CoffeeMachine);
     }
 
     // Vending machines — spaced along the side

@@ -33,6 +33,7 @@ pub enum Tile {
     Whiteboard,
     Rug,
     DoorOpen,
+    KitchenCounter,
 }
 
 impl Tile {
