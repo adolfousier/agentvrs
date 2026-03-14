@@ -101,7 +101,7 @@ impl Simulation {
             8 => (Tile::GymTreadmill, AgentGoal::GoToGym),
             9 => (Tile::WeightBench, AgentGoal::GoToGym),
             10 => (Tile::YogaMat, AgentGoal::GoToGym),
-            11 => (Tile::PingPongTable, AgentGoal::GoToPinball),
+            11 => (Tile::PingPongTableLeft, AgentGoal::GoToPinball),
             _ => {
                 // Wander to random floor
                 if let Some(target) = grid.find_empty_floor()

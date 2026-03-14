@@ -59,21 +59,12 @@ fn office_area(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         y += 2;
     }
 
-    // Plant in corner
-    if y2 - 2 > y1 && x2 - 2 > x1 {
-        g.set_tile(Position::new(x2 - 2, y2 - 2), Tile::Plant);
-    }
-
     // Whiteboard on left wall
     let wb_y = y1 + (y2 - y1) / 2;
     if wb_y < y2 {
         g.set_tile(Position::new(x1, wb_y), Tile::Whiteboard);
     }
 
-    // Floor lamp
-    if x1 + 2 < x2 && y1 + 2 < y2 {
-        g.set_tile(Position::new(x1 + 2, y1 + 2), Tile::FloorLamp);
-    }
 }
 
 fn kitchen_break(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
@@ -109,9 +100,9 @@ fn kitchen_break(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         g.set_tile(Position::new(mid_x + 2, seat_y), Tile::SmallArmchair);
     }
 
-    // Plant
-    if x2 - 1 > x1 && y2 - 2 > y1 {
-        g.set_tile(Position::new(x2 - 1, y2 - 2), Tile::Plant);
+    // Plant — away from wall
+    if x2 - 2 > x1 && y2 - 2 > y1 {
+        g.set_tile(Position::new(x2 - 2, y2 - 2), Tile::Plant);
     }
 }
 
@@ -150,11 +141,12 @@ fn lounge(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         g.set_tile(Position::new(x1 + 5, y1 + 2), Tile::SmallArmchair);
     }
 
-    // Ping pong — right side
-    let pp_x = x2 - 4;
+    // Ping pong — two tiles side by side for rectangular table
+    let pp_x = x2 - 5;
     let pp_y = y1 + (y2 - y1) / 2;
-    if pp_x > x1 && pp_y < y2 {
-        g.set_tile(Position::new(pp_x, pp_y), Tile::PingPongTable);
+    if pp_x > x1 && pp_x + 1 < x2 && pp_y < y2 {
+        g.set_tile(Position::new(pp_x, pp_y), Tile::PingPongTableLeft);
+        g.set_tile(Position::new(pp_x + 1, pp_y), Tile::PingPongTableRight);
     }
 
     // Floor lamp + plant
@@ -205,8 +197,4 @@ fn gym_arcade(g: &mut Grid, x1: u16, y1: u16, x2: u16, y2: u16) {
         }
     }
 
-    // Plant
-    if x2 - 2 > x1 && y2 - 2 > y1 {
-        g.set_tile(Position::new(x2 - 2, y1 + 1), Tile::Plant);
-    }
 }
