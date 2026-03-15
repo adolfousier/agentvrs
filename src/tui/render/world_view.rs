@@ -23,17 +23,23 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Show the entire world — no camera, auto-fit
+    // Show the entire world centered in the terminal area
     let tiles_x = (area.width / TILE_W).min(grid.width);
     let tiles_y = (area.height / TILE_H).min(grid.height);
+
+    // Center the grid in the available area
+    let grid_pixel_w = tiles_x * TILE_W;
+    let grid_pixel_h = tiles_y * TILE_H;
+    let ox = area.x + (area.width.saturating_sub(grid_pixel_w)) / 2;
+    let oy = area.y + (area.height.saturating_sub(grid_pixel_h)) / 2;
 
     // Pass 1: tiles
     for gy in 0..tiles_y {
         for gx in 0..tiles_x {
             let pos = Position::new(gx, gy);
             if let Some(cell) = grid.get(pos) {
-                let sx = area.x + gx * TILE_W;
-                let sy = area.y + gy * TILE_H;
+                let sx = ox + gx * TILE_W;
+                let sy = oy + gy * TILE_H;
                 let sprite = tile_sprite(&cell.tile, gx, gy);
                 render_sprite(buf, sx, sy, &sprite, area);
             }
@@ -45,10 +51,8 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         let gx = agent.position.x;
         let gy = agent.position.y;
         if gx < tiles_x && gy < tiles_y {
-            // Center the 8x6 agent on its tile position
-            let sx = area.x + gx * TILE_W;
-            let sy = area.y + gy * TILE_H;
-            // Offset so the agent is centered: shift left by 2, up by 1.5 (round to 1)
+            let sx = ox + gx * TILE_W;
+            let sy = oy + gy * TILE_H;
             let ax = sx.saturating_sub(2);
             let ay = sy.saturating_sub(2);
             let sprite = agent_sprite(
@@ -67,8 +71,8 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             let gx = agent.position.x;
             let gy = agent.position.y;
             if gx < tiles_x && gy < tiles_y {
-                let sx = area.x + gx * TILE_W;
-                let sy = area.y + gy * TILE_H;
+                let sx = ox + gx * TILE_W;
+                let sy = oy + gy * TILE_H;
                 render_speech(buf, sx, sy.saturating_sub(3), speech, area);
             }
         }

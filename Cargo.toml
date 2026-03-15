@@ -11,7 +11,7 @@ keywords = ["ai", "agents", "bevy", "a2a", "tui"]
 categories = ["command-line-utilities"]
 
 [features]
-default = []
+default = ["bevy3d"]
 gui = ["gtk4"]
 bevy3d = ["dep:bevy"]
 

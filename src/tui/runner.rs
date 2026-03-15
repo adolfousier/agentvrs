@@ -14,17 +14,10 @@ use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use std::io;
 
-const SIDEBAR_WIDTH: u16 = 28;
-const STATUS_HEIGHT: u16 = 3;
-const TILE_W: u16 = 4;
-const TILE_H: u16 = 3;
-
 pub async fn run(config: AppConfig) -> Result<()> {
-    let (term_w, term_h) = crossterm::terminal::size()?;
-    let world_cols = term_w.saturating_sub(SIDEBAR_WIDTH + 2);
-    let world_rows = term_h.saturating_sub(STATUS_HEIGHT);
-    let world_w = (world_cols / TILE_W).max(16);
-    let world_h = (world_rows / TILE_H).max(8);
+    // Use config dimensions for a compact, dense grid (default 10x8)
+    let world_w = config.world.width;
+    let world_h = config.world.height;
 
     let rt = runner::setup(&config, world_w, world_h).await?;
 
@@ -42,7 +35,6 @@ pub async fn run(config: AppConfig) -> Result<()> {
 
         match events.next()? {
             TuiEvent::Key(key) if key.kind == KeyEventKind::Press => handle_key(&mut app, key),
-            TuiEvent::Resize(_, _) => {}
             _ => {}
         }
 

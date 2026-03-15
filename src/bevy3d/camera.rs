@@ -149,10 +149,10 @@ pub fn camera_pan(
             cam_state.last_cursor = Some(cursor_pos);
 
             // Mark as dragged if moved more than 5px from start
-            if let Some(start) = cam_state.drag_start {
-                if (cursor_pos - start).length() > 5.0 {
-                    cam_state.dragged = true;
-                }
+            if let Some(start) = cam_state.drag_start
+                && (cursor_pos - start).length() > 5.0
+            {
+                cam_state.dragged = true;
             }
         }
         cam_state.panning = true;

@@ -13,18 +13,11 @@ async fn main() -> Result<()> {
         .with_target(false)
         .init();
 
+    let use_tui = std::env::args().any(|a| a == "--tui");
     let use_gui = std::env::args().any(|a| a == "--gui");
-    let use_bevy = std::env::args().any(|a| a == "--bevy");
 
-    if use_bevy {
-        #[cfg(feature = "bevy3d")]
-        {
-            agentverse::bevy3d::run(config).await
-        }
-        #[cfg(not(feature = "bevy3d"))]
-        {
-            anyhow::bail!("Bevy 3D not available. Rebuild with: cargo build --features bevy3d")
-        }
+    if use_tui {
+        agentverse::tui::run(config).await
     } else if use_gui {
         #[cfg(feature = "gui")]
         {
@@ -35,6 +28,14 @@ async fn main() -> Result<()> {
             anyhow::bail!("GUI not available. Rebuild with: cargo build --features gui")
         }
     } else {
-        agentverse::tui::run(config).await
+        #[cfg(feature = "bevy3d")]
+        {
+            agentverse::bevy3d::run(config).await
+        }
+        #[cfg(not(feature = "bevy3d"))]
+        {
+            // Fallback to TUI when bevy3d feature is not compiled in
+            agentverse::tui::run(config).await
+        }
     }
 }

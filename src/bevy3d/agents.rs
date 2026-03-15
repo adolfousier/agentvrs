@@ -27,7 +27,7 @@ pub fn spawn_agent(
     let shadow_mat = mat_lib.shadow.clone();
 
     // Spawn root entity (invisible transform anchor at ground level)
-    let root = commands
+    commands
         .spawn((
             Transform::from_xyz(x, 0.0, z),
             Visibility::default(),
@@ -115,7 +115,5 @@ pub fn spawn_agent(
                 Transform::from_xyz(0.0, 0.505, 0.0),
             ));
         })
-        .id();
-
-    root
+        .id()
 }
