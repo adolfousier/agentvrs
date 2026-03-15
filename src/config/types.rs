@@ -90,10 +90,10 @@ impl Default for GuiConfig {
 }
 
 fn default_width() -> u16 {
-    28
+    10
 }
 fn default_height() -> u16 {
-    20
+    8
 }
 fn default_tick_ms() -> u64 {
     200

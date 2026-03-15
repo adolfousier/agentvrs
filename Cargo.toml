@@ -13,6 +13,7 @@ categories = ["command-line-utilities"]
 [features]
 default = []
 gui = ["gtk4"]
+bevy3d = ["dep:bevy"]
 
 [dependencies]
 # Async Runtime
@@ -26,6 +27,22 @@ crossterm = { version = "0.29", features = ["event-stream"] }
 
 # GUI (optional)
 gtk4 = { version = "0.10", optional = true }
+
+# 3D GUI (optional)
+bevy = { version = "0.15", optional = true, default-features = false, features = [
+    "bevy_asset",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_winit",
+    "bevy_picking",
+    "x11",
+    "wayland",
+    "tonemapping_luts",
+    "default_font",
+] }
 
 # HTTP (client for A2A, server for external agents)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
@@ -62,6 +79,9 @@ tempfile = "3.25"
 [profile.dev]
 opt-level = 0
 debug = true
+
+[profile.dev.package."*"]
+opt-level = 1
 
 [profile.release]
 opt-level = 3
