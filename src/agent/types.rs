@@ -75,6 +75,8 @@ pub struct AnimState {
     pub facing: Facing,
     pub frame: u8,
     pub activity_ticks: u32,
+    /// How many consecutive ticks the agent has been blocked during walking.
+    pub blocked_ticks: u32,
 }
 
 impl Default for AnimState {
@@ -83,6 +85,7 @@ impl Default for AnimState {
             facing: Facing::Right,
             frame: 0,
             activity_ticks: 0,
+            blocked_ticks: 0,
         }
     }
 }

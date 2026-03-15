@@ -106,14 +106,15 @@ impl Grid {
         if from == to {
             return true;
         }
-        if !self.get(to).map(|c| c.is_walkable()).unwrap_or(false) {
+        // Only block on solid tiles (walls/furniture). Agents can share floor tiles.
+        if !self.get(to).map(|c| !c.tile.is_solid()).unwrap_or(false) {
             return false;
         }
         let agent_id = self.get_mut(from).and_then(|c| c.occupant.take());
-        if let Some(id) = agent_id
-            && let Some(cell) = self.get_mut(to)
-        {
-            cell.occupant = Some(id);
+        if let Some(id) = agent_id {
+            if let Some(cell) = self.get_mut(to) {
+                cell.occupant = Some(id);
+            }
             return true;
         }
         false
@@ -164,18 +165,17 @@ impl Grid {
             Position::new(pos.x + 1, pos.y),             // behind (back)
             Position::new(pos.x, pos.y.wrapping_sub(1)), // behind (back)
         ];
+        // Check tile is a floor type (ignore occupants — agents move around)
+        let is_floor = |p: &Position| {
+            self.get(*p).map(|c| !c.tile.is_solid()).unwrap_or(false)
+        };
         // First try spots not in avoid list
         candidates
             .iter()
             .copied()
-            .find(|p| !avoid.contains(p) && self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))
-            // Fallback: any walkable spot
-            .or_else(|| {
-                candidates
-                    .iter()
-                    .copied()
-                    .find(|p| self.get(*p).map(|c| c.is_walkable()).unwrap_or(false))
-            })
+            .find(|p| !avoid.contains(p) && is_floor(p))
+            // Fallback: any floor spot
+            .or_else(|| candidates.iter().copied().find(|p| is_floor(p)))
     }
 
     pub fn bounds(&self) -> (u16, u16) {

@@ -43,8 +43,10 @@ pub struct MeshLib {
     pub lamp_shade: Handle<Mesh>,
     // Ping pong
     pub table_half: Handle<Mesh>,
+    pub table_full: Handle<Mesh>,
     pub table_leg: Handle<Mesh>,
     pub net_post: Handle<Mesh>,
+    pub net_mesh: Handle<Mesh>,
     // Armchair
     pub armchair_seat: Handle<Mesh>,
     pub armchair_back: Handle<Mesh>,
@@ -135,8 +137,10 @@ pub fn setup_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
         // Ping pong table
         table_half: meshes.add(Cuboid::new(0.75, 0.04, 0.85)),
+        table_full: meshes.add(Cuboid::new(1.80, 0.04, 0.85)),
         table_leg: meshes.add(Cuboid::new(0.04, 0.30, 0.04)),
         net_post: meshes.add(Cuboid::new(0.02, 0.08, 0.02)),
+        net_mesh: meshes.add(Cuboid::new(0.01, 0.06, 0.80)),
 
         // Armchair
         armchair_seat: meshes.add(Cuboid::new(0.45, 0.12, 0.45)),

@@ -37,12 +37,10 @@ pub fn find_path(grid: &Grid, from: Position, to: Position) -> Option<Vec<Positi
             if came_from.contains_key(&next) {
                 continue;
             }
-            // Allow walking to the target even if occupied (agent will arrive)
-            let walkable = if next == to {
-                grid.get(next).map(|c| !c.tile.is_solid()).unwrap_or(false)
-            } else {
-                grid.get(next).map(|c| c.is_walkable()).unwrap_or(false)
-            };
+            // Pathfinding ignores occupants — only checks tile solidity.
+            // Actual collision is handled at move time by move_agent().
+            // This prevents agents from permanently blocking each other's paths.
+            let walkable = grid.get(next).map(|c| !c.tile.is_solid()).unwrap_or(false);
             if walkable {
                 came_from.insert(next, current);
                 queue.push_back(next);

@@ -517,65 +517,67 @@ fn spawn_tile_entity(
             Some(entity)
         }
         Tile::PingPongTableLeft => {
-            // Floor
+            // Floor for both tiles
             commands.spawn((
                 Mesh3d(mesh_lib.floor_quad.clone()),
                 MeshMaterial3d(mat_lib.floor_carpet.clone()),
                 Transform::from_xyz(x, 0.0, z),
             ));
-            // Table half
+            commands.spawn((
+                Mesh3d(mesh_lib.floor_quad.clone()),
+                MeshMaterial3d(mat_lib.floor_carpet.clone()),
+                Transform::from_xyz(x + 1.0, 0.0, z),
+            ));
+            // Full table spanning both tiles (centered between left and right tile)
+            let cx = x + 0.5;
             let entity = commands
                 .spawn((
-                    Mesh3d(mesh_lib.table_half.clone()),
+                    Mesh3d(mesh_lib.table_full.clone()),
                     MeshMaterial3d(mat_lib.table_green.clone()),
-                    Transform::from_xyz(x, 0.32, z - 0.05),
+                    Transform::from_xyz(cx, 0.32, z),
                     TileMarker {
                         pos: Position::new(_gx, _gy),
                     },
                 ))
                 .id();
-            // Legs
-            for (lx, lz) in &[(-0.30, -0.35), (0.30, -0.35), (-0.30, 0.20), (0.30, 0.20)] {
+            // 4 legs at corners
+            for (lx, lz) in &[(-0.82, -0.35), (0.82, -0.35), (-0.82, 0.35), (0.82, 0.35)] {
                 commands.spawn((
                     Mesh3d(mesh_lib.table_leg.clone()),
                     MeshMaterial3d(mat_lib.whiteboard_frame.clone()),
-                    Transform::from_xyz(x + lx, 0.15, z + lz),
+                    Transform::from_xyz(cx + lx, 0.15, z + lz),
                 ));
             }
-            // Net post
+            // Net in the center
             commands.spawn((
                 Mesh3d(mesh_lib.net_post.clone()),
                 MeshMaterial3d(mat_lib.table_white.clone()),
-                Transform::from_xyz(x, 0.38, z + 0.40),
+                Transform::from_xyz(cx, 0.38, z - 0.40),
+            ));
+            commands.spawn((
+                Mesh3d(mesh_lib.net_mesh.clone()),
+                MeshMaterial3d(mat_lib.table_white.clone()),
+                Transform::from_xyz(cx, 0.37, z),
+            ));
+            commands.spawn((
+                Mesh3d(mesh_lib.net_post.clone()),
+                MeshMaterial3d(mat_lib.table_white.clone()),
+                Transform::from_xyz(cx, 0.38, z + 0.40),
             ));
             Some(entity)
         }
         Tile::PingPongTableRight => {
-            // Floor
-            commands.spawn((
-                Mesh3d(mesh_lib.floor_quad.clone()),
-                MeshMaterial3d(mat_lib.floor_carpet.clone()),
-                Transform::from_xyz(x, 0.0, z),
-            ));
-            // Table half
+            // Floor only — the full table is rendered by PingPongTableLeft
             let entity = commands
                 .spawn((
-                    Mesh3d(mesh_lib.table_half.clone()),
-                    MeshMaterial3d(mat_lib.table_green.clone()),
-                    Transform::from_xyz(x, 0.32, z + 0.05),
+                    Mesh3d(mesh_lib.floor_quad.clone()),
+                    MeshMaterial3d(mat_lib.floor_carpet.clone()),
+                    Transform::from_xyz(x, 0.0, z),
                     TileMarker {
                         pos: Position::new(_gx, _gy),
                     },
                 ))
                 .id();
-            // Legs
-            for (lx, lz) in &[(-0.30, -0.20), (0.30, -0.20), (-0.30, 0.35), (0.30, 0.35)] {
-                commands.spawn((
-                    Mesh3d(mesh_lib.table_leg.clone()),
-                    MeshMaterial3d(mat_lib.whiteboard_frame.clone()),
-                    Transform::from_xyz(x + lx, 0.15, z + lz),
-                ));
-            }
             Some(entity)
         }
         Tile::SmallArmchair => {
@@ -706,7 +708,7 @@ pub fn sync_agents(
         .collect();
     for id in stale {
         if let Some(entity) = sync.agent_entities.remove(&id) {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 
@@ -724,23 +726,29 @@ pub fn sync_agents(
                 let new_xz = Vec2::new(target.x, target.z);
                 let dist = (old_xz - new_xz).length();
 
-                // Smooth lerp toward target
-                let lerped = transform.translation.lerp(target, 0.12);
+                // Smooth lerp toward target (faster to reduce sliding feel)
+                let lerp_factor = if dist > 0.5 { 0.25 } else { 0.18 };
+                let lerped = transform.translation.lerp(target, lerp_factor);
 
-                // Walking bob: bounce up/down when moving
-                let bob = if dist > 0.02 {
-                    (t * 12.0).sin().abs() * 0.04
+                // Walking animation when moving
+                let (bob, tilt) = if dist > 0.02 {
+                    // Pronounced bounce
+                    let bounce = (t * 14.0).sin().abs() * 0.06;
+                    // Slight forward lean while walking
+                    let lean = 0.05;
+                    (bounce, lean)
                 } else {
-                    0.0
+                    (0.0, 0.0)
                 };
 
                 transform.translation = Vec3::new(lerped.x, bob, lerped.z);
 
-                // Face movement direction
+                // Face movement direction with slight forward tilt
                 if dist > 0.02 {
                     let dir = new_xz - old_xz;
                     let angle = dir.x.atan2(dir.y);
-                    transform.rotation = Quat::from_rotation_y(angle);
+                    transform.rotation =
+                        Quat::from_rotation_y(angle) * Quat::from_rotation_x(tilt);
                 }
             }
         } else {

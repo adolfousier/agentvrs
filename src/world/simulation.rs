@@ -64,7 +64,7 @@ impl Simulation {
                     let mut reg = self.registry.write().unwrap();
                     if let Some(agent) = reg.get_mut(&id) {
                         agent.anim.activity_ticks += 1;
-                        if agent.anim.activity_ticks < 40 {
+                        if agent.anim.activity_ticks < 15 {
                             continue;
                         }
                     }
@@ -263,6 +263,7 @@ impl Simulation {
                 if let Some(agent) = reg.get_mut(&id) {
                     agent.position = next_pos;
                     agent.path.remove(0);
+                    agent.anim.blocked_ticks = 0;
                 }
             }
             self.emit(WorldEvent::AgentMoved {
@@ -272,38 +273,14 @@ impl Simulation {
             })
             .await;
         } else {
-            // Path blocked — try to repath, only go idle if that also fails
-            let goal_target = {
-                let reg = self.registry.read().unwrap();
-                reg.get(&id)
-                    .and_then(|a| a.goal.as_ref().map(|g| g.target()))
-            };
-            let repath_ok = if let Some(target) = goal_target {
-                let grid = self.grid.read().unwrap();
-                if let Some(adj) = grid.find_adjacent_floor(target) {
-                    if let Some(new_path) = find_path(&grid, pos, adj) {
-                        let mut reg = self.registry.write().unwrap();
-                        if let Some(agent) = reg.get_mut(&id) {
-                            agent.path = new_path;
-                        }
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-            if !repath_ok {
-                let mut reg = self.registry.write().unwrap();
-                if let Some(agent) = reg.get_mut(&id) {
-                    agent.path.clear();
-                    agent.goal = None;
-                    agent.set_state(AgentState::Idle);
-                    agent.anim.activity_ticks = 0;
-                }
+            // Path hit a solid tile (furniture/wall) — repath or give up
+            let mut reg = self.registry.write().unwrap();
+            if let Some(agent) = reg.get_mut(&id) {
+                agent.path.clear();
+                agent.goal = None;
+                agent.set_state(AgentState::Idle);
+                agent.anim.activity_ticks = 0;
+                agent.anim.blocked_ticks = 0;
             }
         }
     }

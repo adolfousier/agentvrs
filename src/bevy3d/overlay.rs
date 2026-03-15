@@ -75,7 +75,7 @@ pub fn setup_ui(mut commands: Commands) {
                 StatusBarZoom,
             ));
             bar.spawn((
-                Text::new("r:rotate  scroll:zoom  shift+drag:pan  click:select  h:sidebar"),
+                Text::new("r:rotate  scroll:zoom  drag:pan  click:select  h:sidebar  esc:deselect"),
                 TextFont { font_size: 11.0, ..default() },
                 TextColor(Color::srgb(0.45, 0.45, 0.45)),
                 Node {
@@ -179,7 +179,7 @@ pub fn update_sidebar(
     mut commands: Commands,
     bridge: Res<WorldBridge>,
     selected: Res<SelectedAgent>,
-    list_q: Query<(Entity, &Children), With<AgentListContainer>>,
+    list_q: Query<Entity, With<AgentListContainer>>,
     mut title_q: Query<&mut Text, (With<DetailTitle>, Without<DetailInfo>)>,
     mut info_q: Query<&mut Text, (With<DetailInfo>, Without<DetailTitle>)>,
     entry_q: Query<Entity, With<AgentListEntry>>,
@@ -189,11 +189,11 @@ pub fn update_sidebar(
     // ── Rebuild agent list ──────────────────────────────────────────────
     // Remove old entries
     for entity in entry_q.iter() {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
 
     // Add current agents
-    if let Ok((list_entity, _)) = list_q.get_single() {
+    if let Ok(list_entity) = list_q.get_single() {
         for agent in registry.agents() {
             let is_selected = selected.agent_id == Some(agent.id);
             let dot_color = state_color(&agent.state);
@@ -384,6 +384,12 @@ pub fn update_agent_labels(
                     position_type: PositionType::Absolute,
                     left: Val::Px(viewport_pos.x - 50.0),
                     top: Val::Px(viewport_pos.y - 20.0),
+                    padding: UiRect::new(
+                        Val::Px(8.0),
+                        Val::Px(8.0),
+                        Val::Px(3.0),
+                        Val::Px(3.0),
+                    ),
                     ..default()
                 },
                 BackgroundColor(Color::srgba(0.1, 0.1, 0.12, 0.80)),
@@ -397,7 +403,7 @@ pub fn update_agent_labels(
 
     // Remove stale labels
     for (_, entity) in existing_labels {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
 }
 
