@@ -45,7 +45,6 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
     }
     p(&mut g, w, h, 0, hy, Tile::ServerRack);
     p(&mut g, w, h, 2, hy, Tile::ServerRack);
-    p(&mut g, w, h, 1, hy + 1, Tile::FileCabinet);
     p(&mut g, w, h, 3, hy, Tile::FileCabinet);
     if hy + 2 < h {
         p(&mut g, w, h, 0, hy + 2, Tile::FileCabinet);

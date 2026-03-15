@@ -50,15 +50,14 @@ pub async fn run(config: AppConfig) -> Result<()> {
 
     // Detect system dark/light mode
     let is_dark = detect_system_dark_mode();
-    let clear_color = if is_dark {
-        Color::srgb(0.12, 0.10, 0.09)
-    } else {
-        Color::srgb(0.85, 0.88, 0.92)
-    };
 
     // Resources
     app.insert_resource(bevy::pbr::DirectionalLightShadowMap { size: 2048 });
-    app.insert_resource(ClearColor(clear_color));
+    app.insert_resource(ClearColor(theme_clear_color(is_dark)));
+    app.insert_resource(ThemeState {
+        is_dark,
+        last_check: std::time::Instant::now(),
+    });
     app.insert_resource(WorldBridge { grid, registry });
     app.insert_resource(cam_state);
     app.insert_resource(SyncState::default());
@@ -101,6 +100,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::overlay::update_status_bar,
             super::overlay::toggle_sidebar,
             super::overlay::handle_message_input,
+            poll_system_theme,
         )
             .chain()
             .run_if(resource_exists::<super::materials::MaterialLib>),
@@ -109,6 +109,63 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.run();
 
     Ok(())
+}
+
+/// Bevy resource tracking the current OS theme.
+#[derive(Resource)]
+struct ThemeState {
+    is_dark: bool,
+    last_check: std::time::Instant,
+}
+
+/// Returns the background clear color for the given theme.
+fn theme_clear_color(is_dark: bool) -> Color {
+    if is_dark {
+        Color::srgb(0.12, 0.12, 0.14) // dark background
+    } else {
+        Color::srgb(0.85, 0.87, 0.90) // light background
+    }
+}
+
+/// Polls OS dark/light mode every 2 seconds and updates ClearColor + AmbientLight.
+fn poll_system_theme(
+    mut theme: ResMut<ThemeState>,
+    mut clear: ResMut<ClearColor>,
+    mut ambient: ResMut<AmbientLight>,
+    mut lights: Query<&mut DirectionalLight>,
+) {
+    let now = std::time::Instant::now();
+    if now.duration_since(theme.last_check).as_secs() < 2 {
+        return;
+    }
+    theme.last_check = now;
+
+    let is_dark = detect_system_dark_mode();
+    if is_dark == theme.is_dark {
+        return;
+    }
+    theme.is_dark = is_dark;
+
+    // Update clear color
+    clear.0 = theme_clear_color(is_dark);
+
+    // Update ambient light
+    if is_dark {
+        ambient.color = Color::srgb(0.85, 0.87, 0.95);
+        ambient.brightness = 300.0;
+    } else {
+        ambient.color = Color::srgb(1.0, 0.98, 0.95);
+        ambient.brightness = 800.0;
+    }
+
+    // Update directional light
+    for mut light in lights.iter_mut() {
+        if is_dark {
+            light.illuminance = 8000.0;
+        } else {
+            light.illuminance = 15000.0;
+        }
+    }
 }
 
 /// Detect system dark/light mode preference.
