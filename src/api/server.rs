@@ -52,7 +52,10 @@ pub fn build_router(
         .route("/agents/{id}/dashboard", get(routes::get_agent_dashboard))
         // Agent inbox
         .route("/agents/{id}/messages", get(routes::get_agent_messages))
-        .route("/agents/{id}/messages/ack", post(routes::ack_agent_messages))
+        .route(
+            "/agents/{id}/messages/ack",
+            post(routes::ack_agent_messages),
+        )
         // World
         .route("/world", get(routes::world_snapshot))
         .route("/world/tiles", get(routes::world_tiles))

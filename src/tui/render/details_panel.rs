@@ -76,12 +76,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             ]));
         } else {
             lines.push(Line::raw(""));
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("  Inbox ({}):", agent.inbox.len()),
-                    Style::default().fg(Color::Cyan),
-                ),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                format!("  Inbox ({}):", agent.inbox.len()),
+                Style::default().fg(Color::Cyan),
+            )]));
             // Show most recent 10 messages
             for msg in agent.inbox.iter().rev().take(10) {
                 let sender_name = registry

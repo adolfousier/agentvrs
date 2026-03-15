@@ -575,7 +575,9 @@ async fn test_inbox_cap_at_500() {
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), 512_000).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 512_000)
+        .await
+        .unwrap();
     let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
     assert_eq!(inbox.count, 500);
     // Oldest messages should be dropped — first message should be msg-5
@@ -637,7 +639,11 @@ async fn test_inbox_multiple_senders() {
     assert!(texts.contains(&"from B"));
 
     // Verify sender names
-    let names: Vec<&str> = inbox.messages.iter().map(|m| m.from_name.as_str()).collect();
+    let names: Vec<&str> = inbox
+        .messages
+        .iter()
+        .map(|m| m.from_name.as_str())
+        .collect();
     assert!(names.contains(&"agent-a"));
     assert!(names.contains(&"agent-b"));
 }

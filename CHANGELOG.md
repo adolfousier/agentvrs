@@ -1,11 +1,13 @@
 # Changelog
 
-## [0.1.1] - 2026-03-14
+## [0.1.1] - 2026-03-15
 
 ### Added
 
 **Production-Ready API**
-- API key authentication via `X-API-Key` header middleware
+- API key authentication via `X-API-Key` header — required for all endpoints except `/health`
+- API key redacted from all debug output and logs (`[REDACTED]`)
+- Server refuses to start without `api_key` configured
 - Rate limiting with `ConcurrencyLimitLayer`
 - JSON error responses (`ApiError` enum → `{"error":"...","message":"..."}`)
 - SSE real-time event streaming (`GET /events`)
@@ -13,6 +15,15 @@
 - Agent disconnect endpoint (`DELETE /agents/{id}`)
 - World tile map endpoint (`GET /world/tiles`)
 - Agent ID prefix matching for convenience
+- Crate-level documentation for crates.io landing page
+
+**Agent Inbox & Messaging**
+- In-memory inbox per agent (`VecDeque<AgentMessage>`, capped at 500 messages)
+- `GET /agents/{id}/messages` — poll inbox for received messages (with `?limit=N`)
+- `POST /agents/{id}/messages/ack` — clear inbox after reading
+- Webhook push delivery — messages auto-POST to agent's registered endpoint
+- TUI detail panel shows inbox messages when agent is selected
+- Messages include sender ID, sender name, text, and timestamp
 
 **Observability & Control Plane**
 - `AgentObserver` with ring-buffered activity logs, heartbeat tracking, task history
@@ -32,10 +43,12 @@
 - Window size and sidebar state persist across restarts via config file
 
 **Testing & Docs**
-- 177 tests across 8 modules (api, observability, world, agent, a2a, simulation, tui, config)
+- 184 tests across 8 modules (api, observability, world, agent, a2a, simulation, tui, config)
+- 8 inbox tests: empty, receives, multiple messages, limit, ack, self-message, 500 cap, multiple senders
 - Agent integration guides: OpenCrabs (Rust), OpenClaws (Python), Hermes (TypeScript), generic HTTP
 - Multi-machine setup documentation
 - TESTING.md with full coverage breakdown
+- README with badges, table of contents, full API docs with auth examples
 
 ### Changed
 - Compact world layout: 28x20 grid with thin walls and no wasted space
@@ -44,6 +57,8 @@
 - Agents front-face furniture when stopped at activity locations
 - Messaging agents auto-transition back to Idle after 30 ticks
 - Shared atomic tick counter between simulation and API for accurate world snapshots
+- `api_key` changed from optional to required in `ServerConfig`
+- `reqwest` uses `rustls-tls` for crates.io compatibility
 
 ### Fixed
 - Kitchen furniture flickering during pan (switched from screen coords to grid coords for variant hashing)
