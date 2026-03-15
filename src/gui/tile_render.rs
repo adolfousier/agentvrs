@@ -56,13 +56,10 @@ pub fn draw_tile(
             draw_floor_diamond(cr, sx, sy, zoom, 0.78, 0.62, 0.42);
             draw_floor_lamp(cr, sx, sy, zoom);
         }
-        Tile::PingPongTableLeft => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
-            draw_ping_pong_half(cr, sx, sy, zoom, true);
-        }
-        Tile::PingPongTableRight => {
-            draw_floor_diamond(cr, sx, sy, zoom, 0.32, 0.30, 0.30);
-            draw_ping_pong_half(cr, sx, sy, zoom, false);
+        Tile::MeetingTable => {
+            draw_floor_diamond(cr, sx, sy, zoom, 0.42, 0.38, 0.50);
+            // Simple round table representation
+            iso_diamond(cr, sx, sy, zoom, 0.55, 0.55, 12.0, 0.70, 0.52, 0.32);
         }
         Tile::SmallArmchair => {
             draw_floor_diamond(cr, sx, sy, zoom, 0.42, 0.38, 0.50);
@@ -1348,134 +1345,6 @@ fn draw_floor_lamp(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64) {
     cr.restore().unwrap();
     cr.set_source_rgba(1.0, 0.92, 0.65, 0.08);
     let _ = cr.fill();
-}
-
-// ─── Ping pong table ───
-
-/// Each half fills its own tile. Left = back half (x), Right = front half (x+1).
-/// Together they form one rectangular ping pong table spanning 2 tiles.
-fn draw_ping_pong_half(cr: &gtk4::cairo::Context, sx: f64, sy: f64, z: f64, is_left: bool) {
-    let wr = 0.96;
-    let hr = 0.96;
-    let table_h = 14.0;
-    let slab = 2.0;
-
-    draw_ground_shadow(cr, sx, sy, z, wr, hr);
-
-    let hw = TILE_W / 2.0 * z * wr;
-    let hh = TILE_H / 2.0 * z * hr;
-
-    // 2 legs per half — back and front corners on the outer side
-    cr.set_source_rgb(0.36, 0.36, 0.38);
-    cr.set_line_width(2.0 * z);
-    let ins = 0.75;
-    if is_left {
-        // Left half: legs on left (outer) side
-        let legs = [
-            (sx - hw * ins, sy), // left corner
-            (sx, sy - hh * ins), // back corner
-        ];
-        for &(lx, ly) in &legs {
-            cr.move_to(lx, ly);
-            cr.line_to(lx, ly - table_h * z);
-            let _ = cr.stroke();
-        }
-    } else {
-        // Right half: legs on right (outer) side
-        let legs = [
-            (sx + hw * ins, sy), // right corner
-            (sx, sy + hh * ins), // front corner
-        ];
-        for &(lx, ly) in &legs {
-            cr.move_to(lx, ly);
-            cr.line_to(lx, ly - table_h * z);
-            let _ = cr.stroke();
-        }
-    }
-
-    // Table surface — thin slab filling the tile
-    iso_left_face(
-        cr,
-        sx,
-        sy,
-        z,
-        wr,
-        hr,
-        table_h + slab,
-        table_h,
-        0.14 * 0.40,
-        0.55 * 0.40,
-        0.22 * 0.40,
-    );
-    iso_right_face(
-        cr,
-        sx,
-        sy,
-        z,
-        wr,
-        hr,
-        table_h + slab,
-        table_h,
-        0.14 * 0.65,
-        0.55 * 0.65,
-        0.22 * 0.65,
-    );
-    iso_diamond(cr, sx, sy, z, wr, hr, table_h + slab, 0.14, 0.58, 0.24);
-
-    // White border on outer edges only
-    let tt = sy - (table_h + slab) * z;
-    let bw = hw * 0.94;
-    let bh = hh * 0.94;
-    cr.set_source_rgb(0.95, 0.95, 0.95);
-    cr.set_line_width(1.0 * z);
-    if is_left {
-        // Border on back, left, front — NOT on the right edge (shared with other half)
-        cr.move_to(sx + bw, tt); // right (shared edge start)
-        cr.line_to(sx, tt - bh); // back
-        cr.line_to(sx - bw, tt); // left
-        cr.line_to(sx, tt + bh); // front
-        cr.line_to(sx + bw, tt); // back to shared edge
-        let _ = cr.stroke();
-    } else {
-        // Border on back, right, front — NOT on the left edge (shared with other half)
-        cr.move_to(sx - bw, tt); // left (shared edge start)
-        cr.line_to(sx, tt - bh); // back
-        cr.line_to(sx + bw, tt); // right
-        cr.line_to(sx, tt + bh); // front
-        cr.line_to(sx - bw, tt); // back to shared edge
-        let _ = cr.stroke();
-    }
-
-    // Net on the shared edge (between left and right halves)
-    // The shared edge is on the RIGHT side of Left half, LEFT side of Right half
-    let net_h = 5.0 * z;
-    if is_left {
-        // Net post at right edge (back corner of shared edge)
-        cr.set_source_rgba(0.70, 0.70, 0.70, 0.85);
-        cr.set_line_width(1.5 * z);
-        cr.move_to(sx + bw, tt);
-        cr.line_to(sx + bw, tt - net_h);
-        let _ = cr.stroke();
-        // Net extends toward front
-        cr.set_source_rgba(0.80, 0.80, 0.80, 0.5);
-        cr.set_line_width(0.6 * z);
-        cr.move_to(sx + bw, tt - net_h);
-        cr.line_to(sx, tt + bh - net_h);
-        let _ = cr.stroke();
-    } else {
-        // Net post at left edge (front corner of shared edge)
-        cr.set_source_rgba(0.70, 0.70, 0.70, 0.85);
-        cr.set_line_width(1.5 * z);
-        cr.move_to(sx - bw, tt);
-        cr.line_to(sx - bw, tt - net_h);
-        let _ = cr.stroke();
-        // Net extends toward back
-        cr.set_source_rgba(0.80, 0.80, 0.80, 0.5);
-        cr.set_line_width(0.6 * z);
-        cr.move_to(sx - bw, tt - net_h);
-        cr.line_to(sx, tt - bh - net_h);
-        let _ = cr.stroke();
-    }
 }
 
 // ─── Kitchen counter ───

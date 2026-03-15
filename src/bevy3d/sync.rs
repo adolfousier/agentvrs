@@ -9,9 +9,7 @@ use std::collections::HashMap;
 
 /// Marker for a tile entity in the world.
 #[derive(Component)]
-pub struct TileMarker {
-    pub pos: Position,
-}
+pub struct TileMarker;
 
 /// Tracks which tiles have been spawned so we only create them once.
 #[derive(Resource, Default)]
@@ -86,9 +84,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.floor_quad.clone()),
                     MeshMaterial3d(mat_lib.floor_material(kind)),
                     Transform::from_xyz(x, 0.0, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             Some(entity)
@@ -99,9 +95,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.wall_box.clone()),
                     MeshMaterial3d(mat_lib.wall_material(kind)),
                     Transform::from_xyz(x, 0.3, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
 
@@ -123,9 +117,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.floor_quad.clone()),
                     MeshMaterial3d(mat_lib.floor_wood.clone()),
                     Transform::from_xyz(x, 0.0, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             Some(entity)
@@ -143,9 +135,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.rug.clone()),
                     MeshMaterial3d(mat_lib.rug.clone()),
                     Transform::from_xyz(x, 0.003, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             Some(entity)
@@ -163,9 +153,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.desk_top.clone()),
                     MeshMaterial3d(mat_lib.desk_wood.clone()),
                     Transform::from_xyz(x, 0.30, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Legs
@@ -209,9 +197,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.couch_seat.clone()),
                     MeshMaterial3d(mat_lib.couch_fabric.clone()),
                     Transform::from_xyz(x, 0.10, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Back
@@ -252,9 +238,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.plant_leaf_sphere.clone()),
                     MeshMaterial3d(mat_lib.plant_leaves.clone()),
                     Transform::from_xyz(x, 0.30, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             Some(entity)
@@ -273,9 +257,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.vending_body.clone()),
                     MeshMaterial3d(mat_lib.vending_body.clone()),
                     Transform::from_xyz(x, 0.40, z).with_rotation(rot),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Glass front (faces +z toward camera)
@@ -335,9 +317,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.coffee_counter.clone()),
                     MeshMaterial3d(mat_lib.coffee_counter.clone()),
                     Transform::from_xyz(x, 0.175, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Machine on top
@@ -362,9 +342,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.arcade_cabinet.clone()),
                     MeshMaterial3d(mat_lib.arcade_body.clone()),
                     Transform::from_xyz(x, 0.375, z).with_rotation(rot),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Glowing marquee on top
@@ -423,9 +401,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.treadmill_base.clone()),
                     MeshMaterial3d(mat_lib.treadmill_belt.clone()),
                     Transform::from_xyz(x, 0.05, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Uprights
@@ -454,9 +430,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.bench_base.clone()),
                     MeshMaterial3d(mat_lib.bench_pad.clone()),
                     Transform::from_xyz(x, 0.12, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Bar
@@ -481,9 +455,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.yoga_mat.clone()),
                     MeshMaterial3d(mat_lib.yoga_mat.clone()),
                     Transform::from_xyz(x, 0.006, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             Some(entity)
@@ -507,9 +479,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.lamp_shade.clone()),
                     MeshMaterial3d(mat_lib.lamp_shade.clone()),
                     Transform::from_xyz(x, 0.72, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Point light for warm glow
@@ -525,68 +495,55 @@ fn spawn_tile_entity(
             ));
             Some(entity)
         }
-        Tile::PingPongTableLeft => {
-            // Floor for both tiles
+        Tile::MeetingTable => {
+            // Carpet floor
             commands.spawn((
                 Mesh3d(mesh_lib.floor_quad.clone()),
                 MeshMaterial3d(mat_lib.floor_carpet.clone()),
                 Transform::from_xyz(x, 0.0, z),
             ));
-            commands.spawn((
-                Mesh3d(mesh_lib.floor_quad.clone()),
-                MeshMaterial3d(mat_lib.floor_carpet.clone()),
-                Transform::from_xyz(x + 1.0, 0.0, z),
-            ));
-            // Full table spanning both tiles (centered between left and right tile)
-            let cx = x + 0.5;
+            // Round table top
             let entity = commands
                 .spawn((
-                    Mesh3d(mesh_lib.table_full.clone()),
-                    MeshMaterial3d(mat_lib.table_green.clone()),
-                    Transform::from_xyz(cx, 0.32, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    Mesh3d(mesh_lib.meeting_table_top.clone()),
+                    MeshMaterial3d(mat_lib.meeting_table.clone()),
+                    Transform::from_xyz(x, 0.30, z),
+                    TileMarker,
                 ))
                 .id();
-            // 4 legs at corners
-            for (lx, lz) in &[(-0.82, -0.35), (0.82, -0.35), (-0.82, 0.35), (0.82, 0.35)] {
+            // 4 table legs at diagonal positions
+            for (lx, lz) in &[(0.18, 0.18), (-0.18, 0.18), (0.18, -0.18), (-0.18, -0.18)] {
                 commands.spawn((
-                    Mesh3d(mesh_lib.table_leg.clone()),
-                    MeshMaterial3d(mat_lib.whiteboard_frame.clone()),
-                    Transform::from_xyz(cx + lx, 0.15, z + lz),
+                    Mesh3d(mesh_lib.meeting_table_leg.clone()),
+                    MeshMaterial3d(mat_lib.meeting_table.clone()),
+                    Transform::from_xyz(x + lx, 0.14, z + lz),
                 ));
             }
-            // Net in the center
-            commands.spawn((
-                Mesh3d(mesh_lib.net_post.clone()),
-                MeshMaterial3d(mat_lib.table_white.clone()),
-                Transform::from_xyz(cx, 0.38, z - 0.40),
-            ));
-            commands.spawn((
-                Mesh3d(mesh_lib.net_mesh.clone()),
-                MeshMaterial3d(mat_lib.table_white.clone()),
-                Transform::from_xyz(cx, 0.37, z),
-            ));
-            commands.spawn((
-                Mesh3d(mesh_lib.net_post.clone()),
-                MeshMaterial3d(mat_lib.table_white.clone()),
-                Transform::from_xyz(cx, 0.38, z + 0.40),
-            ));
-            Some(entity)
-        }
-        Tile::PingPongTableRight => {
-            // Floor only — the full table is rendered by PingPongTableLeft
-            let entity = commands
-                .spawn((
-                    Mesh3d(mesh_lib.floor_quad.clone()),
-                    MeshMaterial3d(mat_lib.floor_carpet.clone()),
-                    Transform::from_xyz(x, 0.0, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
-                ))
-                .id();
+            // 4 chairs at cardinal directions
+            let chair_offsets = [
+                (0.45_f32, 0.0_f32, 0.0_f32),   // +x
+                (-0.45, 0.0, std::f32::consts::PI), // -x
+                (0.0, 0.45, std::f32::consts::FRAC_PI_2), // +z
+                (0.0, -0.45, -std::f32::consts::FRAC_PI_2), // -z
+            ];
+            for (cx, cz, rot_y) in &chair_offsets {
+                // Chair seat
+                commands.spawn((
+                    Mesh3d(mesh_lib.meeting_chair_seat.clone()),
+                    MeshMaterial3d(mat_lib.meeting_chair.clone()),
+                    Transform::from_xyz(x + cx, 0.18, z + cz),
+                ));
+                // Chair back (offset away from table center)
+                let back_dist = 0.08;
+                let back_x = cx + back_dist * rot_y.sin();
+                let back_z = cz + back_dist * rot_y.cos();
+                commands.spawn((
+                    Mesh3d(mesh_lib.meeting_chair_back.clone()),
+                    MeshMaterial3d(mat_lib.meeting_chair.clone()),
+                    Transform::from_xyz(x + back_x, 0.27, z + back_z)
+                        .with_rotation(Quat::from_rotation_y(*rot_y)),
+                ));
+            }
             Some(entity)
         }
         Tile::SmallArmchair => {
@@ -602,9 +559,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.armchair_seat.clone()),
                     MeshMaterial3d(mat_lib.armchair_fabric.clone()),
                     Transform::from_xyz(x, 0.10, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Back
@@ -650,9 +605,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.wb_board.clone()),
                     MeshMaterial3d(mat_lib.whiteboard_surface.clone()),
                     Transform::from_xyz(x, 0.45, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             Some(entity)
@@ -670,9 +623,7 @@ fn spawn_tile_entity(
                     Mesh3d(mesh_lib.kitchen_counter.clone()),
                     MeshMaterial3d(mat_lib.kitchen_counter.clone()),
                     Transform::from_xyz(x, 0.175, z),
-                    TileMarker {
-                        pos: Position::new(_gx, _gy),
-                    },
+                    TileMarker,
                 ))
                 .id();
             // Countertop

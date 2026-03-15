@@ -211,7 +211,7 @@ POST /agents/{id}/move
 # Body: {"x":10,"y":5}
 # Response: {"status":"moving","target":{"x":10,"y":5}}
 
-# Set agent goal (desk, vending, coffee, pinball, gym, weights, yoga, pingpong, couch, wander)
+# Set agent goal (desk, vending, coffee, pinball, gym, weights, yoga, meeting, couch, wander)
 POST /agents/{id}/goal
 # Body: {"goal":"desk"}
 # Response: {"status":"heading_to_goal","goal":"desk","target":{"x":4,"y":3}}

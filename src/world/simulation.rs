@@ -120,6 +120,7 @@ impl Simulation {
                                             AgentGoal::GoToVending(_) | AgentGoal::GoToCoffee(_),
                                         ) => AgentState::Eating,
                                         Some(AgentGoal::GoToPinball(_)) => AgentState::Playing,
+                                        Some(AgentGoal::GoToMeeting(_)) => AgentState::Working,
                                         Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,
                                         _ => AgentState::Idle,
                                     };
@@ -222,7 +223,7 @@ impl Simulation {
             8 => (Tile::GymTreadmill, AgentGoal::GoToGym),
             9 => (Tile::WeightBench, AgentGoal::GoToGym),
             10 => (Tile::YogaMat, AgentGoal::GoToGym),
-            11 => (Tile::PingPongTableLeft, AgentGoal::GoToPinball),
+            11 => (Tile::MeetingTable, AgentGoal::GoToMeeting),
             _ => {
                 // Wander to random floor
                 if let Some(target) = grid.find_empty_floor()
@@ -244,9 +245,9 @@ impl Simulation {
             .filter_map(|a| a.goal.as_ref().map(|g| g.target()))
             .collect();
 
-        // Capacity per tile type: ping pong = 2 (one per side), everything else = 1
+        // Capacity per tile type: meeting table = 4 (one per adjacent tile), everything else = 1
         let capacity: usize = match tile_type {
-            Tile::PingPongTableLeft | Tile::PingPongTableRight => 2,
+            Tile::MeetingTable => 4,
             _ => 1,
         };
 

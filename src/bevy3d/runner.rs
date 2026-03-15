@@ -17,7 +17,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
 
     let grid = rt.grid;
     let registry = rt.registry;
-    let shutdown_tx = rt.shutdown_tx;
+    let _shutdown_tx = rt.shutdown_tx;
     let sim_state = SimState {
         tick_count: 0,
         tick_ms,
@@ -54,7 +54,6 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.insert_resource(WorldBridge {
         grid,
         registry,
-        shutdown_tx,
     });
     app.insert_resource(cam_state);
     app.insert_resource(SyncState::default());

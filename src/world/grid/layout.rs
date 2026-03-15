@@ -51,8 +51,7 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
     p(&mut g, w, h, 3, hy, Tile::SmallArmchair);
     if hy + 2 < h {
         p(&mut g, w, h, 0, hy + 2, Tile::Plant);
-        p(&mut g, w, h, 2, hy + 2, Tile::PingPongTableLeft);
-        p(&mut g, w, h, 3, hy + 2, Tile::PingPongTableRight);
+        p(&mut g, w, h, 3, hy + 2, Tile::MeetingTable);
     }
 
     // ── Bottom-right: Gym/arcade (concrete) ─────────────────────────

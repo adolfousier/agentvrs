@@ -1,4 +1,4 @@
-use crate::agent::{AgentId, AgentState};
+use crate::agent::AgentState;
 use crate::bevy3d::agents::AgentMarker;
 use crate::bevy3d::bridge::WorldBridge;
 use crate::bevy3d::camera::MainCamera;
@@ -14,7 +14,7 @@ pub struct SidebarRoot;
 pub struct AgentListContainer;
 
 #[derive(Component)]
-pub struct AgentListEntry(pub AgentId);
+pub struct AgentListEntry;
 
 #[derive(Component)]
 pub struct DetailTitle;
@@ -32,9 +32,7 @@ pub struct StatusBarAgents;
 pub struct StatusBarZoom;
 
 #[derive(Component)]
-pub struct AgentLabel {
-    pub agent_id: AgentId,
-}
+pub struct AgentLabel;
 
 #[derive(Component)]
 pub struct MessageInputText;
@@ -265,7 +263,7 @@ pub fn update_sidebar(
                         ..default()
                     },
                     BackgroundColor(row_bg),
-                    AgentListEntry(agent.id),
+                    AgentListEntry,
                 ))
                 .with_children(|row| {
                     // Status dot
@@ -426,9 +424,7 @@ pub fn update_agent_labels(
                 },
                 BackgroundColor(Color::srgba(0.1, 0.1, 0.12, 0.80)),
                 BorderRadius::all(Val::Px(8.0)),
-                AgentLabel {
-                    agent_id: marker.agent_id,
-                },
+                AgentLabel,
             ))
             .with_children(|label| {
                 // Colored status dot

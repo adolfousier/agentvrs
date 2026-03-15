@@ -149,7 +149,7 @@ impl Grid {
         avoid: &[Position],
     ) -> Option<Position> {
         // Ordered: +y (front), -y (back/opposite side), +x, -x
-        // This gives opposite-side placement for second agent (e.g. ping pong)
+        // This gives spread placement for multi-agent furniture (e.g. meeting table)
         let candidates = [
             Position::new(pos.x, pos.y + 1),
             Position::new(pos.x, pos.y.wrapping_sub(1)),

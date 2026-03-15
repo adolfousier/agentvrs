@@ -299,8 +299,7 @@ fn test_tile_is_solid_furniture() {
     assert!(Tile::WeightBench.is_solid());
     assert!(Tile::YogaMat.is_solid());
     assert!(Tile::FloorLamp.is_solid());
-    assert!(Tile::PingPongTableLeft.is_solid());
-    assert!(Tile::PingPongTableRight.is_solid());
+    assert!(Tile::MeetingTable.is_solid());
     assert!(Tile::SmallArmchair.is_solid());
     assert!(Tile::Whiteboard.is_solid());
     assert!(Tile::KitchenCounter.is_solid());
@@ -526,17 +525,10 @@ fn test_office_world_has_walkable_space() {
 }
 
 #[test]
-fn test_office_world_has_ping_pong() {
+fn test_office_world_has_meeting_table() {
     let grid = build_office_world(28, 20);
-    let left = grid.find_tiles(&Tile::PingPongTableLeft);
-    let right = grid.find_tiles(&Tile::PingPongTableRight);
-    assert_eq!(left.len(), 1);
-    assert_eq!(right.len(), 1);
-    // Should be adjacent
-    let l = left[0];
-    let r = right[0];
-    assert_eq!(l.y, r.y);
-    assert_eq!(r.x - l.x, 1);
+    let tables = grid.find_tiles(&Tile::MeetingTable);
+    assert_eq!(tables.len(), 1);
 }
 
 // ─── World Events Serialization ─────────────────────────────

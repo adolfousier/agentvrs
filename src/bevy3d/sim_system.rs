@@ -103,6 +103,7 @@ pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
                                         AgentGoal::GoToVending(_) | AgentGoal::GoToCoffee(_),
                                     ) => AgentState::Eating,
                                     Some(AgentGoal::GoToPinball(_)) => AgentState::Playing,
+                                    Some(AgentGoal::GoToMeeting(_)) => AgentState::Working,
                                     Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,
                                     _ => AgentState::Idle,
                                 };
@@ -206,7 +207,7 @@ fn assign_random_goal(
         8 => (Tile::GymTreadmill, AgentGoal::GoToGym),
         9 => (Tile::WeightBench, AgentGoal::GoToGym),
         10 => (Tile::YogaMat, AgentGoal::GoToGym),
-        11 => (Tile::PingPongTableLeft, AgentGoal::GoToPinball),
+        11 => (Tile::MeetingTable, AgentGoal::GoToMeeting),
         _ => {
             // Wander to random floor
             if let Some(target) = grid.find_empty_floor()
@@ -228,7 +229,7 @@ fn assign_random_goal(
         .collect();
 
     let capacity: usize = match tile_type {
-        Tile::PingPongTableLeft | Tile::PingPongTableRight => 2,
+        Tile::MeetingTable => 4,
         _ => 1,
     };
 

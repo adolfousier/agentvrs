@@ -331,7 +331,7 @@ pub async fn set_agent_goal(
         "gym" | "treadmill" => Tile::GymTreadmill,
         "weights" => Tile::WeightBench,
         "yoga" => Tile::YogaMat,
-        "pingpong" => Tile::PingPongTableLeft,
+        "meeting" => Tile::MeetingTable,
         "couch" => Tile::Couch,
         "wander" => {
             // Wander to random floor
@@ -360,7 +360,7 @@ pub async fn set_agent_goal(
         }
         other => {
             return Err(ApiError::BadRequest(format!(
-                "unknown goal '{}'. Valid: desk, vending, coffee, pinball, gym, treadmill, weights, yoga, pingpong, couch, wander",
+                "unknown goal '{}'. Valid: desk, vending, coffee, pinball, gym, treadmill, weights, yoga, meeting, couch, wander",
                 other
             )));
         }
@@ -370,7 +370,8 @@ pub async fn set_agent_goal(
         "desk" => AgentGoal::GoToDesk,
         "vending" => AgentGoal::GoToVending,
         "coffee" => AgentGoal::GoToCoffee,
-        "pinball" | "pingpong" => AgentGoal::GoToPinball,
+        "pinball" => AgentGoal::GoToPinball,
+        "meeting" => AgentGoal::GoToMeeting,
         "gym" | "treadmill" | "weights" | "yoga" => AgentGoal::GoToGym,
         "couch" => AgentGoal::GoToCouch,
         _ => unreachable!(),

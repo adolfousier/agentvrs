@@ -7,7 +7,6 @@ pub struct MeshLib {
     pub floor_quad: Handle<Mesh>,
     // Walls
     pub wall_box: Handle<Mesh>,
-    pub wall_window_frame: Handle<Mesh>,
     pub wall_window_glass: Handle<Mesh>,
     // Desk parts
     pub desk_top: Handle<Mesh>,
@@ -42,12 +41,11 @@ pub struct MeshLib {
     // Floor lamp
     pub lamp_pole: Handle<Mesh>,
     pub lamp_shade: Handle<Mesh>,
-    // Ping pong
-    pub table_half: Handle<Mesh>,
-    pub table_full: Handle<Mesh>,
-    pub table_leg: Handle<Mesh>,
-    pub net_post: Handle<Mesh>,
-    pub net_mesh: Handle<Mesh>,
+    // Meeting table
+    pub meeting_table_top: Handle<Mesh>,
+    pub meeting_table_leg: Handle<Mesh>,
+    pub meeting_chair_seat: Handle<Mesh>,
+    pub meeting_chair_back: Handle<Mesh>,
     // Armchair
     pub armchair_seat: Handle<Mesh>,
     pub armchair_back: Handle<Mesh>,
@@ -60,8 +58,6 @@ pub struct MeshLib {
     // Kitchen
     pub kitchen_counter: Handle<Mesh>,
     pub kitchen_top: Handle<Mesh>,
-    // Door
-    pub door_frame: Handle<Mesh>,
     // Vending machine details
     pub vending_shelf: Handle<Mesh>,
     pub vending_can: Handle<Mesh>,
@@ -91,7 +87,6 @@ pub fn setup_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
         // Wall: box 1 wide, 0.6 tall, 0.15 deep
         wall_box: meshes.add(Cuboid::new(1.0, 0.6, 0.15)),
-        wall_window_frame: meshes.add(Cuboid::new(1.0, 0.6, 0.15)),
         wall_window_glass: meshes.add(Cuboid::new(0.7, 0.3, 0.05)),
 
         // Desk
@@ -137,12 +132,11 @@ pub fn setup_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         lamp_pole: meshes.add(Cylinder::new(0.015, 0.7)),
         lamp_shade: meshes.add(Cylinder::new(0.10, 0.08)),
 
-        // Ping pong table
-        table_half: meshes.add(Cuboid::new(0.75, 0.04, 0.85)),
-        table_full: meshes.add(Cuboid::new(1.80, 0.04, 0.85)),
-        table_leg: meshes.add(Cuboid::new(0.04, 0.30, 0.04)),
-        net_post: meshes.add(Cuboid::new(0.02, 0.08, 0.02)),
-        net_mesh: meshes.add(Cuboid::new(0.01, 0.06, 0.80)),
+        // Meeting table
+        meeting_table_top: meshes.add(Cylinder::new(0.35, 0.02)),
+        meeting_table_leg: meshes.add(Cuboid::new(0.03, 0.25, 0.03)),
+        meeting_chair_seat: meshes.add(Cuboid::new(0.12, 0.06, 0.12)),
+        meeting_chair_back: meshes.add(Cuboid::new(0.12, 0.12, 0.02)),
 
         // Armchair
         armchair_seat: meshes.add(Cuboid::new(0.45, 0.12, 0.45)),
@@ -159,9 +153,6 @@ pub fn setup_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         // Kitchen
         kitchen_counter: meshes.add(Cuboid::new(0.8, 0.35, 0.45)),
         kitchen_top: meshes.add(Cuboid::new(0.82, 0.03, 0.47)),
-
-        // Door
-        door_frame: meshes.add(Cuboid::new(0.08, 0.6, 0.6)),
 
         // Vending machine details
         vending_shelf: meshes.add(Cuboid::new(0.42, 0.01, 0.30)),
