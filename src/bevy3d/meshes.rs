@@ -68,6 +68,13 @@ pub struct MeshLib {
     pub arcade_panel: Handle<Mesh>,
     pub arcade_button: Handle<Mesh>,
     pub arcade_coin_slot: Handle<Mesh>,
+    // Server room
+    pub server_rack_body: Handle<Mesh>,
+    pub server_unit: Handle<Mesh>,
+    pub server_led: Handle<Mesh>,
+    pub file_cabinet_body: Handle<Mesh>,
+    pub file_cabinet_drawer: Handle<Mesh>,
+    pub file_cabinet_handle: Handle<Mesh>,
     // Agent eyes
     pub agent_eye_white: Handle<Mesh>,
     pub agent_eye_pupil: Handle<Mesh>,
@@ -164,6 +171,13 @@ pub fn setup_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         arcade_panel: meshes.add(Cuboid::new(0.40, 0.06, 0.25)),
         arcade_button: meshes.add(Cylinder::new(0.02, 0.015)),
         arcade_coin_slot: meshes.add(Cuboid::new(0.04, 0.06, 0.02)),
+        // Server room
+        server_rack_body: meshes.add(Cuboid::new(0.45, 0.85, 0.35)),
+        server_unit: meshes.add(Cuboid::new(0.38, 0.08, 0.30)),
+        server_led: meshes.add(Cuboid::new(0.02, 0.02, 0.005)),
+        file_cabinet_body: meshes.add(Cuboid::new(0.40, 0.50, 0.35)),
+        file_cabinet_drawer: meshes.add(Cuboid::new(0.36, 0.10, 0.02)),
+        file_cabinet_handle: meshes.add(Cuboid::new(0.08, 0.015, 0.015)),
         // Agent eyes
         agent_eye_white: meshes.add(Cuboid::new(0.04, 0.035, 0.01)),
         agent_eye_pupil: meshes.add(Cuboid::new(0.02, 0.02, 0.005)),

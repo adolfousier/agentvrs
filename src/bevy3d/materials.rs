@@ -58,6 +58,14 @@ pub struct MaterialLib {
     pub arcade_btn_blue: Handle<StandardMaterial>,
     pub arcade_btn_green: Handle<StandardMaterial>,
     pub arcade_coin_slot: Handle<StandardMaterial>,
+    // Server room
+    pub server_rack: Handle<StandardMaterial>,
+    pub server_unit: Handle<StandardMaterial>,
+    pub server_led_green: Handle<StandardMaterial>,
+    pub server_led_blue: Handle<StandardMaterial>,
+    pub cabinet_body: Handle<StandardMaterial>,
+    pub cabinet_drawer: Handle<StandardMaterial>,
+    pub cabinet_handle: Handle<StandardMaterial>,
     // Agents
     pub eye_white: Handle<StandardMaterial>,
     pub eye_pupil: Handle<StandardMaterial>,
@@ -166,6 +174,14 @@ pub fn setup_materials(mut commands: Commands, mut mats: ResMut<Assets<StandardM
         arcade_btn_blue: mat_emissive(&mut mats, 0.1, 0.3, 0.9, 2.0),
         arcade_btn_green: mat_emissive(&mut mats, 0.1, 0.8, 0.2, 2.0),
         arcade_coin_slot: mat(&mut mats, 0.60, 0.55, 0.10),
+        // Server room
+        server_rack: mat(&mut mats, 0.20, 0.20, 0.22),
+        server_unit: mat(&mut mats, 0.12, 0.12, 0.14),
+        server_led_green: mat_emissive(&mut mats, 0.1, 0.9, 0.1, 4.0),
+        server_led_blue: mat_emissive(&mut mats, 0.1, 0.4, 0.9, 3.0),
+        cabinet_body: mat(&mut mats, 0.55, 0.52, 0.48),
+        cabinet_drawer: mat(&mut mats, 0.50, 0.47, 0.43),
+        cabinet_handle: mat(&mut mats, 0.60, 0.58, 0.50),
         // Agents
         eye_white: mat(&mut mats, 0.95, 0.95, 0.95),
         eye_pupil: mat(&mut mats, 0.05, 0.05, 0.08),

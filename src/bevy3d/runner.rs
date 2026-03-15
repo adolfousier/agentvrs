@@ -48,9 +48,17 @@ pub async fn run(config: AppConfig) -> Result<()> {
             .disable::<bevy::log::LogPlugin>(),
     );
 
+    // Detect system dark/light mode
+    let is_dark = detect_system_dark_mode();
+    let clear_color = if is_dark {
+        Color::srgb(0.12, 0.10, 0.09)
+    } else {
+        Color::srgb(0.85, 0.88, 0.92)
+    };
+
     // Resources
     app.insert_resource(bevy::pbr::DirectionalLightShadowMap { size: 2048 });
-    app.insert_resource(ClearColor(Color::srgb(0.12, 0.10, 0.09)));
+    app.insert_resource(ClearColor(clear_color));
     app.insert_resource(WorldBridge { grid, registry });
     app.insert_resource(cam_state);
     app.insert_resource(SyncState::default());
@@ -101,4 +109,40 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.run();
 
     Ok(())
+}
+
+/// Detect system dark/light mode preference.
+/// Returns true for dark mode (default), false for light mode.
+fn detect_system_dark_mode() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: `defaults read -g AppleInterfaceStyle` returns "Dark" in dark mode
+        std::process::Command::new("defaults")
+            .args(["read", "-g", "AppleInterfaceStyle"])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(true)
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // Windows: registry key AppsUseLightTheme = 0 means dark mode
+        std::process::Command::new("reg")
+            .args([
+                "query",
+                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "/v",
+                "AppsUseLightTheme",
+            ])
+            .output()
+            .map(|o| {
+                let out = String::from_utf8_lossy(&o.stdout);
+                out.contains("0x0")
+            })
+            .unwrap_or(true)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        // Linux/other: default to dark
+        true
+    }
 }

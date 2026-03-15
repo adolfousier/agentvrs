@@ -104,6 +104,7 @@ pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
                                     }
                                     Some(AgentGoal::GoToPinball(_)) => AgentState::Playing,
                                     Some(AgentGoal::GoToMeeting(_)) => AgentState::Working,
+                                    Some(AgentGoal::GoToServer(_)) => AgentState::Thinking,
                                     Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,
                                     _ => AgentState::Idle,
                                 };
@@ -126,7 +127,8 @@ pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
                 AgentState::Working
                 | AgentState::Eating
                 | AgentState::Playing
-                | AgentState::Exercising => {
+                | AgentState::Exercising
+                | AgentState::Thinking => {
                     if let Some(agent) = reg.get_mut(&id) {
                         agent.anim.activity_ticks += 1;
                         let min_ticks = match agent.state {
@@ -134,6 +136,7 @@ pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
                             AgentState::Eating => 20,
                             AgentState::Playing => 30,
                             AgentState::Exercising => 35,
+                            AgentState::Thinking => 25,
                             _ => 25,
                         };
                         if agent.anim.activity_ticks > min_ticks
@@ -198,7 +201,7 @@ fn assign_random_goal(
         agent.anim.activity_ticks = 0;
     }
 
-    let choice: u8 = rand::rng().random_range(0..13);
+    let choice: u8 = rand::rng().random_range(0..15);
     let (tile_type, goal_fn): (Tile, fn(Position) -> AgentGoal) = match choice {
         0..=3 => (Tile::Desk, AgentGoal::GoToDesk),
         4..=5 => (Tile::VendingMachine, AgentGoal::GoToVending),
@@ -208,6 +211,7 @@ fn assign_random_goal(
         9 => (Tile::WeightBench, AgentGoal::GoToGym),
         10 => (Tile::YogaMat, AgentGoal::GoToGym),
         11 => (Tile::MeetingTable, AgentGoal::GoToMeeting),
+        12..=13 => (Tile::ServerRack, AgentGoal::GoToServer),
         _ => {
             // Wander to random floor
             if let Some(target) = grid.find_empty_floor()

@@ -34,6 +34,8 @@ pub enum Tile {
     Rug,
     DoorOpen,
     KitchenCounter,
+    ServerRack,
+    FileCabinet,
 }
 
 impl Tile {

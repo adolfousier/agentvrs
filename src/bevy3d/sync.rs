@@ -633,6 +633,81 @@ fn spawn_tile_entity(
             ));
             Some(entity)
         }
+        Tile::ServerRack => {
+            // Floor
+            commands.spawn((
+                Mesh3d(mesh_lib.floor_quad.clone()),
+                MeshMaterial3d(mat_lib.floor_tile.clone()),
+                Transform::from_xyz(x, 0.0, z),
+            ));
+            // Rack body (tall dark cabinet, no rotation — front face is +z toward camera)
+            let entity = commands
+                .spawn((
+                    Mesh3d(mesh_lib.server_rack_body.clone()),
+                    MeshMaterial3d(mat_lib.server_rack.clone()),
+                    Transform::from_xyz(x, 0.425, z),
+                    TileMarker,
+                ))
+                .id();
+            // Server units stacked on front face (+z)
+            for i in 0..4 {
+                let unit_y = 0.12 + i as f32 * 0.18;
+                commands.spawn((
+                    Mesh3d(mesh_lib.server_unit.clone()),
+                    MeshMaterial3d(mat_lib.server_unit.clone()),
+                    Transform::from_xyz(x, unit_y, z + 0.01),
+                ));
+                // LED indicators on front face (+z)
+                for j in 0..3 {
+                    let led_z = z + 0.18;
+                    let led_x = x - 0.12 + j as f32 * 0.12;
+                    let led_mat = if j % 2 == 0 {
+                        mat_lib.server_led_green.clone()
+                    } else {
+                        mat_lib.server_led_blue.clone()
+                    };
+                    commands.spawn((
+                        Mesh3d(mesh_lib.server_led.clone()),
+                        MeshMaterial3d(led_mat),
+                        Transform::from_xyz(led_x, unit_y + 0.02, led_z),
+                    ));
+                }
+            }
+            Some(entity)
+        }
+        Tile::FileCabinet => {
+            // Floor
+            commands.spawn((
+                Mesh3d(mesh_lib.floor_quad.clone()),
+                MeshMaterial3d(mat_lib.floor_tile.clone()),
+                Transform::from_xyz(x, 0.0, z),
+            ));
+            // Cabinet body
+            let entity = commands
+                .spawn((
+                    Mesh3d(mesh_lib.file_cabinet_body.clone()),
+                    MeshMaterial3d(mat_lib.cabinet_body.clone()),
+                    Transform::from_xyz(x, 0.25, z),
+                    TileMarker,
+                ))
+                .id();
+            // 3 drawer fronts facing camera (+z)
+            for i in 0..3 {
+                let drawer_y = 0.10 + i as f32 * 0.15;
+                commands.spawn((
+                    Mesh3d(mesh_lib.file_cabinet_drawer.clone()),
+                    MeshMaterial3d(mat_lib.cabinet_drawer.clone()),
+                    Transform::from_xyz(x, drawer_y, z + 0.17),
+                ));
+                // Handle
+                commands.spawn((
+                    Mesh3d(mesh_lib.file_cabinet_handle.clone()),
+                    MeshMaterial3d(mat_lib.cabinet_handle.clone()),
+                    Transform::from_xyz(x, drawer_y + 0.03, z + 0.185),
+                ));
+            }
+            Some(entity)
+        }
     }
 }
 

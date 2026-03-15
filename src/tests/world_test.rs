@@ -301,6 +301,8 @@ fn test_tile_is_solid_furniture() {
     assert!(Tile::YogaMat.is_solid());
     assert!(Tile::FloorLamp.is_solid());
     assert!(Tile::MeetingTable.is_solid());
+    assert!(Tile::ServerRack.is_solid());
+    assert!(Tile::FileCabinet.is_solid());
     assert!(Tile::SmallArmchair.is_solid());
     assert!(Tile::Whiteboard.is_solid());
     assert!(Tile::KitchenCounter.is_solid());
@@ -525,10 +527,10 @@ fn test_office_world_has_walkable_space() {
 }
 
 #[test]
-fn test_office_world_has_meeting_table() {
+fn test_office_world_has_server_racks() {
     let grid = build_office_world(28, 20);
-    let tables = grid.find_tiles(&Tile::MeetingTable);
-    assert_eq!(tables.len(), 1);
+    let racks = grid.find_tiles(&Tile::ServerRack);
+    assert!(racks.len() >= 2);
 }
 
 // ─── World Events Serialization ─────────────────────────────

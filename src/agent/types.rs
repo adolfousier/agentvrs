@@ -99,6 +99,7 @@ pub enum AgentGoal {
     GoToMeeting(Position),
     GoToGym(Position),
     GoToCouch(Position),
+    GoToServer(Position),
     Wander(Position),
 }
 
@@ -112,6 +113,7 @@ impl AgentGoal {
             | AgentGoal::GoToMeeting(p)
             | AgentGoal::GoToGym(p)
             | AgentGoal::GoToCouch(p)
+            | AgentGoal::GoToServer(p)
             | AgentGoal::Wander(p) => *p,
         }
     }

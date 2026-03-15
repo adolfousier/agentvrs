@@ -132,6 +132,7 @@ async fn test_simulation_idle_agent_gets_goal() {
                 | AgentState::Eating
                 | AgentState::Playing
                 | AgentState::Exercising
+                | AgentState::Thinking
         ),
         "Expected an active state, got {:?}",
         agent.state

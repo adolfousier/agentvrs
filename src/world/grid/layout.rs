@@ -37,21 +37,19 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
         p(&mut g, w, h, hx + 2, 2, Tile::Plant);
     }
 
-    // ── Bottom-left: Lounge (carpet) ────────────────────────────────
+    // ── Bottom-left: Server/Archive room (tile floor) ───────────────
     for y in hy..h {
         for x in 0..hx {
-            p(&mut g, w, h, x, y, Tile::Floor(FloorKind::Carpet));
+            p(&mut g, w, h, x, y, Tile::Floor(FloorKind::Tile));
         }
     }
-    p(&mut g, w, h, 0, hy, Tile::FloorLamp);
-    p(&mut g, w, h, 1, hy, Tile::Couch);
-    p(&mut g, w, h, 2, hy, Tile::Couch);
-    p(&mut g, w, h, 0, hy + 1, Tile::Rug);
-    p(&mut g, w, h, 1, hy + 1, Tile::Rug);
-    p(&mut g, w, h, 3, hy, Tile::SmallArmchair);
+    p(&mut g, w, h, 0, hy, Tile::ServerRack);
+    p(&mut g, w, h, 2, hy, Tile::ServerRack);
+    p(&mut g, w, h, 1, hy + 1, Tile::FileCabinet);
+    p(&mut g, w, h, 3, hy, Tile::FileCabinet);
     if hy + 2 < h {
-        p(&mut g, w, h, 0, hy + 2, Tile::Plant);
-        p(&mut g, w, h, 3, hy + 2, Tile::MeetingTable);
+        p(&mut g, w, h, 0, hy + 2, Tile::FileCabinet);
+        p(&mut g, w, h, 3, hy + 2, Tile::Plant);
     }
 
     // ── Bottom-right: Gym/arcade (concrete) ─────────────────────────
