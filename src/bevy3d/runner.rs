@@ -51,10 +51,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
     // Resources
     app.insert_resource(bevy::pbr::DirectionalLightShadowMap { size: 2048 });
     app.insert_resource(ClearColor(Color::srgb(0.12, 0.10, 0.09)));
-    app.insert_resource(WorldBridge {
-        grid,
-        registry,
-    });
+    app.insert_resource(WorldBridge { grid, registry });
     app.insert_resource(cam_state);
     app.insert_resource(SyncState::default());
     app.insert_resource(SelectedAgent::default());

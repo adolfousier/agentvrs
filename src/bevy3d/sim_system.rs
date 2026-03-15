@@ -99,9 +99,9 @@ pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
                             if let Some(agent) = reg.get_mut(&id) {
                                 let new_state = match &agent.goal {
                                     Some(AgentGoal::GoToDesk(_)) => AgentState::Working,
-                                    Some(
-                                        AgentGoal::GoToVending(_) | AgentGoal::GoToCoffee(_),
-                                    ) => AgentState::Eating,
+                                    Some(AgentGoal::GoToVending(_) | AgentGoal::GoToCoffee(_)) => {
+                                        AgentState::Eating
+                                    }
                                     Some(AgentGoal::GoToPinball(_)) => AgentState::Playing,
                                     Some(AgentGoal::GoToMeeting(_)) => AgentState::Working,
                                     Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,

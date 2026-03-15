@@ -24,11 +24,7 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
 }
 
 /// When `spawn_sim` is false, the simulation is NOT spawned on tokio (Bevy runs it in-process).
-pub async fn setup_no_sim(
-    config: &AppConfig,
-    world_w: u16,
-    world_h: u16,
-) -> Result<WorldRuntime> {
+pub async fn setup_no_sim(config: &AppConfig, world_w: u16, world_h: u16) -> Result<WorldRuntime> {
     setup_inner(config, world_w, world_h, false).await
 }
 

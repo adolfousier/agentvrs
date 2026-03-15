@@ -66,25 +66,37 @@ pub fn setup_ui(mut commands: Commands) {
         .with_children(|bar| {
             bar.spawn((
                 Text::new("tick: 0"),
-                TextFont { font_size: 12.0, ..default() },
+                TextFont {
+                    font_size: 12.0,
+                    ..default()
+                },
                 TextColor(Color::srgb(0.7, 0.7, 0.7)),
                 StatusBarTick,
             ));
             bar.spawn((
                 Text::new("agents: 0"),
-                TextFont { font_size: 12.0, ..default() },
+                TextFont {
+                    font_size: 12.0,
+                    ..default()
+                },
                 TextColor(Color::srgb(0.7, 0.7, 0.7)),
                 StatusBarAgents,
             ));
             bar.spawn((
                 Text::new("zoom: 100%"),
-                TextFont { font_size: 12.0, ..default() },
+                TextFont {
+                    font_size: 12.0,
+                    ..default()
+                },
                 TextColor(Color::srgb(0.7, 0.7, 0.7)),
                 StatusBarZoom,
             ));
             bar.spawn((
                 Text::new("r:rotate  scroll:zoom  drag:pan  click:select  h:sidebar  esc:deselect"),
-                TextFont { font_size: 11.0, ..default() },
+                TextFont {
+                    font_size: 11.0,
+                    ..default()
+                },
                 TextColor(Color::srgb(0.45, 0.45, 0.45)),
                 Node {
                     flex_grow: 1.0,
@@ -340,9 +352,30 @@ pub fn update_sidebar(
 pub fn update_status_bar(
     bridge: Res<WorldBridge>,
     cam_state: Res<super::camera::CameraState>,
-    mut tick_q: Query<&mut Text, (With<StatusBarTick>, Without<StatusBarAgents>, Without<StatusBarZoom>)>,
-    mut agents_q: Query<&mut Text, (With<StatusBarAgents>, Without<StatusBarTick>, Without<StatusBarZoom>)>,
-    mut zoom_q: Query<&mut Text, (With<StatusBarZoom>, Without<StatusBarTick>, Without<StatusBarAgents>)>,
+    mut tick_q: Query<
+        &mut Text,
+        (
+            With<StatusBarTick>,
+            Without<StatusBarAgents>,
+            Without<StatusBarZoom>,
+        ),
+    >,
+    mut agents_q: Query<
+        &mut Text,
+        (
+            With<StatusBarAgents>,
+            Without<StatusBarTick>,
+            Without<StatusBarZoom>,
+        ),
+    >,
+    mut zoom_q: Query<
+        &mut Text,
+        (
+            With<StatusBarZoom>,
+            Without<StatusBarTick>,
+            Without<StatusBarAgents>,
+        ),
+    >,
 ) {
     let count = bridge.registry.read().unwrap().count();
 
@@ -412,12 +445,7 @@ pub fn update_agent_labels(
                     position_type: PositionType::Absolute,
                     left: Val::Px(viewport_pos.x - 50.0),
                     top: Val::Px(viewport_pos.y - 20.0),
-                    padding: UiRect::new(
-                        Val::Px(8.0),
-                        Val::Px(8.0),
-                        Val::Px(4.0),
-                        Val::Px(4.0),
-                    ),
+                    padding: UiRect::new(Val::Px(8.0), Val::Px(8.0), Val::Px(4.0), Val::Px(4.0)),
                     column_gap: Val::Px(6.0),
                     align_items: AlignItems::Center,
                     ..default()
@@ -546,4 +574,3 @@ fn state_color(state: &AgentState) -> Color {
         _ => Color::srgb(0.5, 0.5, 0.5),
     }
 }
-

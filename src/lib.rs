@@ -61,12 +61,12 @@ pub mod a2a;
 pub mod agent;
 pub mod api;
 pub mod avatar;
+#[cfg(feature = "bevy3d")]
+pub mod bevy3d;
 pub mod config;
 pub mod error;
 #[cfg(feature = "gui")]
 pub mod gui;
-#[cfg(feature = "bevy3d")]
-pub mod bevy3d;
 pub mod runner;
 pub mod tui;
 pub mod world;

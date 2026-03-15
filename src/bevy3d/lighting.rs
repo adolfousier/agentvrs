@@ -13,7 +13,7 @@ pub fn setup_lighting(mut commands: Commands) {
         Transform::from_rotation(Quat::from_euler(
             EulerRot::XYZ,
             -std::f32::consts::FRAC_PI_4 * 1.2, // tilt down ~54 degrees
-            std::f32::consts::FRAC_PI_4,         // 45 degrees around Y
+            std::f32::consts::FRAC_PI_4,        // 45 degrees around Y
             0.0,
         )),
     ));

@@ -3,8 +3,8 @@ use crate::config::*;
 #[test]
 fn test_default_config() {
     let config = AppConfig::default();
-    assert_eq!(config.world.width, 28);
-    assert_eq!(config.world.height, 20);
+    assert_eq!(config.world.width, 10);
+    assert_eq!(config.world.height, 8);
     assert_eq!(config.world.tick_ms, 200);
     assert_eq!(config.server.host, "127.0.0.1");
     assert_eq!(config.server.port, 18800);
@@ -27,7 +27,7 @@ fn test_gui_config_defaults() {
 fn test_config_from_toml_minimal() {
     let toml_str = "";
     let config: AppConfig = toml::from_str(toml_str).unwrap();
-    assert_eq!(config.world.width, 28);
+    assert_eq!(config.world.width, 10);
     assert_eq!(config.server.port, 18800);
 }
 

@@ -361,8 +361,7 @@ fn spawn_tile_entity(
             commands.spawn((
                 Mesh3d(mesh_lib.arcade_panel.clone()),
                 MeshMaterial3d(mat_lib.arcade_panel.clone()),
-                Transform::from_xyz(x, 0.30, z + 0.26)
-                    .with_rotation(Quat::from_rotation_x(0.3)),
+                Transform::from_xyz(x, 0.30, z + 0.26).with_rotation(Quat::from_rotation_x(0.3)),
             ));
             // Buttons on control panel (red, blue, green)
             for (i, btn_mat) in [
@@ -521,9 +520,9 @@ fn spawn_tile_entity(
             }
             // 4 chairs at cardinal directions
             let chair_offsets = [
-                (0.45_f32, 0.0_f32, 0.0_f32),   // +x
-                (-0.45, 0.0, std::f32::consts::PI), // -x
-                (0.0, 0.45, std::f32::consts::FRAC_PI_2), // +z
+                (0.45_f32, 0.0_f32, 0.0_f32),               // +x
+                (-0.45, 0.0, std::f32::consts::PI),         // -x
+                (0.0, 0.45, std::f32::consts::FRAC_PI_2),   // +z
                 (0.0, -0.45, -std::f32::consts::FRAC_PI_2), // -z
             ];
             for (cx, cz, rot_y) in &chair_offsets {
@@ -707,8 +706,7 @@ pub fn sync_agents(
                     // Face movement direction while walking
                     let dir = new_xz - old_xz;
                     let angle = dir.x.atan2(dir.y);
-                    transform.rotation =
-                        Quat::from_rotation_y(angle) * Quat::from_rotation_x(tilt);
+                    transform.rotation = Quat::from_rotation_y(angle) * Quat::from_rotation_x(tilt);
                 } else if let Some(furniture_pos) = goal_target {
                     // Stationary — face toward the furniture being used
                     let fx = furniture_pos.x as f32 - cx;

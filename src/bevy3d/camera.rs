@@ -39,8 +39,7 @@ impl Default for CameraState {
 
 /// Spawn an orthographic isometric camera.
 pub fn setup_camera(mut commands: Commands, cam_state: Res<CameraState>) {
-    let (pos, look_at) =
-        camera_transform(cam_state.rotation_step, cam_state.zoom, cam_state.focus);
+    let (pos, look_at) = camera_transform(cam_state.rotation_step, cam_state.zoom, cam_state.focus);
 
     commands.spawn((
         Camera3d::default(),
@@ -62,8 +61,7 @@ fn camera_transform(_rotation_step: u8, _zoom: f32, focus: Vec3) -> (Vec3, Vec3)
     let dist = 50.0;
 
     // Base angle: 45 degrees + 90 per rotation step
-    let angle_y = std::f32::consts::FRAC_PI_4
-        + std::f32::consts::FRAC_PI_2 * _rotation_step as f32;
+    let angle_y = std::f32::consts::FRAC_PI_4 + std::f32::consts::FRAC_PI_2 * _rotation_step as f32;
 
     // Isometric tilt: arctan(sin(45°)) ≈ 35.264 degrees from horizontal
     // This gives the classic isometric 2:1 diamond ratio
@@ -124,8 +122,7 @@ pub fn camera_pan(
     mut camera_q: Query<(&mut Transform, &mut Projection), With<MainCamera>>,
     windows: Query<&Window>,
 ) {
-    let panning =
-        mouse_btn.pressed(MouseButton::Left) || mouse_btn.pressed(MouseButton::Middle);
+    let panning = mouse_btn.pressed(MouseButton::Left) || mouse_btn.pressed(MouseButton::Middle);
 
     if panning {
         if let Ok(window) = windows.get_single()
@@ -170,8 +167,7 @@ fn update_camera_transform(
     cam_state: &CameraState,
     camera_q: &mut Query<(&mut Transform, &mut Projection), With<MainCamera>>,
 ) {
-    let (pos, look_at) =
-        camera_transform(cam_state.rotation_step, cam_state.zoom, cam_state.focus);
+    let (pos, look_at) = camera_transform(cam_state.rotation_step, cam_state.zoom, cam_state.focus);
     for (mut transform, _) in camera_q.iter_mut() {
         *transform = Transform::from_translation(pos).looking_at(look_at, Vec3::Y);
     }

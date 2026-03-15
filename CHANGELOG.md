@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.1.2] - 2026-03-15
+
+### Added
+
+**Bevy 3D Renderer**
+- Full 3D world renderer using Bevy 0.15 (`--bevy` flag, `bevy3d` feature)
+- Isometric camera with orbit controls (right-click drag to rotate, scroll to zoom)
+- 3D furniture: desks with monitors and keyboards, vending machines, arcade cabinets, coffee machines, couches, armchairs, plants, floor lamps, whiteboards, kitchen counters, gym equipment
+- Voxel-style 3D agents with body, head, hair, arms, legs, eyes, and shadow
+- Agent color coding and floating name labels
+- Walking animation with arm/leg swing and body bob
+- Activity animations: typing (working), eating motion, exercise bounce, playing
+- Click-to-select agents with highlight ring
+- Sidebar overlay with agent list and detail panel
+- Message input box for sending messages to selected agents
+- Real-time sync between simulation state and 3D scene
+
+**Meeting Table**
+- Round meeting table with 4 chairs at cardinal positions
+- Capacity system: meeting table supports 4 simultaneous agents
+- `GoToMeeting` agent goal for meeting table destinations
+
+### Changed
+- Simulation runs inside Bevy's game loop as a chained system (eliminates lock contention between render and sim threads)
+- Furniture faces camera (+z direction) for proper isometric viewing
+- Desk monitors face camera with keyboard in front
+- Agent adjacency placement prefers front-facing positions at furniture
+- README updated from GTK4 2D to Bevy 3D throughout
+- Crate description updated for crates.io
+
+### Fixed
+- Lock starvation causing agents to permanently freeze (moved sim into Bevy game loop)
+- Agent movement deadlocks from multiple competing write locks
+- Furniture orientation: vending machines, arcade cabinets now face camera
+- Agents no longer stop at sides of desks (improved adjacent floor placement)
+- Floating agent labels use colored dots instead of emoji (cross-platform compatibility)
+- Sidebar ghost text artifacts cleared
+- Removed all dead code warnings (unused struct fields, dead ping pong rendering)
+
+### Removed
+- Ping pong table (replaced by meeting table)
+- `PingPongTableLeft`/`PingPongTableRight` tile variants
+
 ## [0.1.1] - 2026-03-15
 
 ### Added

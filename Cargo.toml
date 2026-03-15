@@ -1,13 +1,13 @@
 [package]
 name = "agentverse"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.91"
 authors = ["Adolfo Usier <adolfo@meetneura.ai>"]
 license = "MIT"
-description = "Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API. TUI + GTK4 GUI."
+description = "Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API. TUI + Bevy 3D."
 repository = "https://github.com/adolfousier/agentvrs"
-keywords = ["ai", "agents", "terminal", "a2a", "tui"]
+keywords = ["ai", "agents", "bevy", "a2a", "tui"]
 categories = ["command-line-utilities"]
 
 [features]

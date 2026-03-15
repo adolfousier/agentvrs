@@ -122,11 +122,18 @@ async fn test_simulation_idle_agent_gets_goal() {
 
     let reg = registry.read().unwrap();
     let agent = reg.get(&id).unwrap();
-    // Agent should either be walking or still idle (randomness may delay)
-    // After 40+ ticks it should have tried to assign a goal
+    // Agent should have been assigned a goal and may be walking, doing an activity, or back to idle
     assert!(
-        agent.state == AgentState::Walking || agent.state == AgentState::Idle,
-        "Expected Walking or Idle, got {:?}",
+        matches!(
+            agent.state,
+            AgentState::Walking
+                | AgentState::Idle
+                | AgentState::Working
+                | AgentState::Eating
+                | AgentState::Playing
+                | AgentState::Exercising
+        ),
+        "Expected an active state, got {:?}",
         agent.state
     );
 }

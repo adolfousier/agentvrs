@@ -10,10 +10,7 @@ pub struct SelectedAgent {
 }
 
 /// System: click to select agents, Escape to deselect.
-pub fn handle_selection(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut selected: ResMut<SelectedAgent>,
-) {
+pub fn handle_selection(keys: Res<ButtonInput<KeyCode>>, mut selected: ResMut<SelectedAgent>) {
     if keys.just_pressed(KeyCode::Escape) {
         selected.agent_id = None;
     }

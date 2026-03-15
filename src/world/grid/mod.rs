@@ -156,9 +156,7 @@ impl Grid {
             Position::new(pos.x + 1, pos.y),
             Position::new(pos.x.wrapping_sub(1), pos.y),
         ];
-        let is_floor = |p: &Position| {
-            self.get(*p).map(|c| !c.tile.is_solid()).unwrap_or(false)
-        };
+        let is_floor = |p: &Position| self.get(*p).map(|c| !c.tile.is_solid()).unwrap_or(false);
 
         // 1st: not avoided, walkable (order already prefers front)
         candidates
