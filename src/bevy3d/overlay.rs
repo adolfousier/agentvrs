@@ -326,17 +326,19 @@ pub fn update_agent_labels(
     bridge: Res<WorldBridge>,
     agent_q: Query<(&GlobalTransform, &AgentMarker)>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    mut label_q: Query<(Entity, &AgentLabel, &mut Node, &mut Text)>,
+    label_q: Query<Entity, With<AgentLabel>>,
     selected: Res<SelectedAgent>,
 ) {
     let Ok((camera, cam_gt)) = camera_q.get_single() else {
         return;
     };
 
-    let registry = bridge.registry.read().unwrap();
+    // Remove all existing labels (recreated each frame with proper dot nodes)
+    for entity in label_q.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
 
-    let mut existing_labels: std::collections::HashMap<AgentId, Entity> =
-        label_q.iter().map(|(e, l, _, _)| (l.agent_id, e)).collect();
+    let registry = bridge.registry.read().unwrap();
 
     for (agent_gt, marker) in agent_q.iter() {
         let agent_pos = agent_gt.translation() + Vec3::Y * 0.65;
@@ -357,29 +359,16 @@ pub fn update_agent_labels(
             agent.name.clone()
         };
 
-        let dot = state_dot(&agent.state);
-        let label_text = format!("{} {}", dot, display_name);
-
         let text_color = if is_selected {
             Color::srgb(0.4, 0.9, 1.0)
         } else {
             Color::srgb(0.95, 0.95, 0.95)
         };
 
-        if let Some(label_entity) = existing_labels.remove(&marker.agent_id) {
-            if let Ok((_, _, mut node, mut text)) = label_q.get_mut(label_entity) {
-                node.left = Val::Px(viewport_pos.x - 50.0);
-                node.top = Val::Px(viewport_pos.y - 20.0);
-                **text = label_text;
-            }
-        } else {
-            commands.spawn((
-                Text::new(label_text),
-                TextFont {
-                    font_size: 12.0,
-                    ..default()
-                },
-                TextColor(text_color),
+        let dot_color = state_color(&agent.state);
+
+        commands
+            .spawn((
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(viewport_pos.x - 50.0),
@@ -387,9 +376,11 @@ pub fn update_agent_labels(
                     padding: UiRect::new(
                         Val::Px(8.0),
                         Val::Px(8.0),
-                        Val::Px(3.0),
-                        Val::Px(3.0),
+                        Val::Px(4.0),
+                        Val::Px(4.0),
                     ),
+                    column_gap: Val::Px(6.0),
+                    align_items: AlignItems::Center,
                     ..default()
                 },
                 BackgroundColor(Color::srgba(0.1, 0.1, 0.12, 0.80)),
@@ -397,13 +388,28 @@ pub fn update_agent_labels(
                 AgentLabel {
                     agent_id: marker.agent_id,
                 },
-            ));
-        }
-    }
-
-    // Remove stale labels
-    for (_, entity) in existing_labels {
-        commands.entity(entity).despawn_recursive();
+            ))
+            .with_children(|label| {
+                // Colored status dot
+                label.spawn((
+                    Node {
+                        width: Val::Px(7.0),
+                        height: Val::Px(7.0),
+                        ..default()
+                    },
+                    BackgroundColor(dot_color),
+                    BorderRadius::all(Val::Px(4.0)),
+                ));
+                // Agent name
+                label.spawn((
+                    Text::new(display_name),
+                    TextFont {
+                        font_size: 12.0,
+                        ..default()
+                    },
+                    TextColor(text_color),
+                ));
+            });
     }
 }
 
@@ -440,16 +446,3 @@ fn state_color(state: &AgentState) -> Color {
     }
 }
 
-fn state_dot(state: &AgentState) -> &'static str {
-    match state {
-        AgentState::Working => "\u{1F7E2}",
-        AgentState::Thinking => "\u{1F7E1}",
-        AgentState::Eating => "\u{1F7E0}",
-        AgentState::Playing => "\u{1F7E3}",
-        AgentState::Exercising => "\u{1F535}",
-        AgentState::Messaging => "\u{1F535}",
-        AgentState::Error => "\u{1F534}",
-        AgentState::Walking => "\u{26AA}",
-        _ => "\u{26AB}",
-    }
-}
