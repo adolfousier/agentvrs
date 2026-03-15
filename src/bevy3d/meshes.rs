@@ -14,6 +14,7 @@ pub struct MeshLib {
     pub desk_leg: Handle<Mesh>,
     pub monitor_base: Handle<Mesh>,
     pub monitor_screen: Handle<Mesh>,
+    pub keyboard: Handle<Mesh>,
     // Couch
     pub couch_seat: Handle<Mesh>,
     pub couch_back: Handle<Mesh>,
@@ -98,6 +99,7 @@ pub fn setup_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         desk_leg: meshes.add(Cuboid::new(0.04, 0.28, 0.04)),
         monitor_base: meshes.add(Cuboid::new(0.02, 0.18, 0.14)),
         monitor_screen: meshes.add(Cuboid::new(0.01, 0.15, 0.22)),
+        keyboard: meshes.add(Cuboid::new(0.18, 0.01, 0.07)),
 
         // Couch
         couch_seat: meshes.add(Cuboid::new(0.8, 0.15, 0.45)),

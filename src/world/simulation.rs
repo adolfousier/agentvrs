@@ -46,69 +46,157 @@ impl Simulation {
     }
 
     pub async fn tick(&mut self) {
+        use rand::Rng;
+
         self.tick_count += 1;
         self.shared_tick
             .store(self.tick_count, std::sync::atomic::Ordering::Relaxed);
 
-        let agents: Vec<(AgentId, AgentState, Position)> = {
-            let reg = self.registry.read().unwrap();
-            reg.agents()
-                .map(|a| (a.id, a.state.clone(), a.position))
-                .collect()
-        };
+        let mut needs_goal: Vec<AgentId> = Vec::new();
+        let mut events: Vec<WorldEvent> = Vec::new();
 
-        for (id, state, pos) in agents {
-            match state {
-                AgentState::Idle => {
-                    // Linger for a while before picking a new goal
-                    let mut reg = self.registry.write().unwrap();
-                    if let Some(agent) = reg.get_mut(&id) {
-                        agent.anim.activity_ticks += 1;
-                        if agent.anim.activity_ticks < 15 {
-                            continue;
-                        }
-                    }
-                    drop(reg);
-                    self.assign_random_goal(id);
-                }
-                AgentState::Walking => {
-                    // Move every 2nd tick for smoother, slower walking
-                    if self.tick_count.is_multiple_of(2) {
-                        self.step_along_path(id, pos).await;
-                    }
-                }
-                AgentState::Working
-                | AgentState::Eating
-                | AgentState::Playing
-                | AgentState::Exercising => self.maybe_finish(id),
-                AgentState::Messaging => {
-                    // Auto-transition back to Idle after 30 ticks
-                    let mut reg = self.registry.write().unwrap();
-                    if let Some(agent) = reg.get_mut(&id) {
-                        agent.anim.activity_ticks += 1;
-                        if agent.anim.activity_ticks >= 30 {
-                            agent.set_state(AgentState::Idle);
-                            agent.clear_speech();
-                            agent.anim.activity_ticks = 0;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // Toggle walk animation frames
-        if self.tick_count.is_multiple_of(3) {
+        // Single lock scope: grid.read + registry.write for all agent processing
+        {
+            let grid = self.grid.read().unwrap();
             let mut reg = self.registry.write().unwrap();
-            for id in reg.ids() {
-                if let Some(a) = reg.get_mut(&id)
-                    && a.state == AgentState::Walking
-                {
-                    a.anim.frame = (a.anim.frame + 1) % 2;
+
+            let agent_data: Vec<(AgentId, AgentState, Position)> = reg
+                .agents()
+                .map(|a| (a.id, a.state.clone(), a.position))
+                .collect();
+
+            for (id, state, pos) in agent_data {
+                match state {
+                    AgentState::Idle => {
+                        if let Some(agent) = reg.get_mut(&id) {
+                            agent.anim.activity_ticks += 1;
+                            if agent.anim.activity_ticks >= 15 {
+                                needs_goal.push(id);
+                            }
+                        }
+                    }
+                    AgentState::Walking => {
+                        if self.tick_count.is_multiple_of(2) {
+                            let next = reg.get(&id).and_then(|a| a.path.first().copied());
+                            if let Some(next_pos) = next {
+                                let can_move = grid
+                                    .get(next_pos)
+                                    .map(|c| !c.tile.is_solid())
+                                    .unwrap_or(false);
+                                if can_move {
+                                    if let Some(agent) = reg.get_mut(&id) {
+                                        let dx = next_pos.x as i32 - pos.x as i32;
+                                        let dy = next_pos.y as i32 - pos.y as i32;
+                                        agent.anim.facing = if dx + dy > 0 {
+                                            Facing::Right
+                                        } else {
+                                            Facing::Left
+                                        };
+                                        agent.position = next_pos;
+                                        agent.path.remove(0);
+                                        agent.anim.blocked_ticks = 0;
+                                    }
+                                    events.push(WorldEvent::AgentMoved {
+                                        agent_id: id,
+                                        from: pos,
+                                        to: next_pos,
+                                    });
+                                } else {
+                                    // Hit a solid tile — give up
+                                    if let Some(agent) = reg.get_mut(&id) {
+                                        agent.path.clear();
+                                        agent.goal = None;
+                                        agent.set_state(AgentState::Idle);
+                                        agent.anim.activity_ticks = 0;
+                                        agent.anim.blocked_ticks = 0;
+                                    }
+                                }
+                            } else {
+                                // Arrived — transition to activity
+                                if let Some(agent) = reg.get_mut(&id) {
+                                    let new_state = match &agent.goal {
+                                        Some(AgentGoal::GoToDesk(_)) => AgentState::Working,
+                                        Some(
+                                            AgentGoal::GoToVending(_) | AgentGoal::GoToCoffee(_),
+                                        ) => AgentState::Eating,
+                                        Some(AgentGoal::GoToPinball(_)) => AgentState::Playing,
+                                        Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,
+                                        _ => AgentState::Idle,
+                                    };
+                                    if let Some(goal) = &agent.goal {
+                                        let target = goal.target();
+                                        let dx = target.x as i32 - agent.position.x as i32;
+                                        let dy = target.y as i32 - agent.position.y as i32;
+                                        agent.anim.facing = if dx + dy > 0 {
+                                            Facing::Right
+                                        } else {
+                                            Facing::Left
+                                        };
+                                    }
+                                    agent.set_state(new_state);
+                                    agent.anim.activity_ticks = 0;
+                                }
+                            }
+                        }
+                    }
+                    AgentState::Working
+                    | AgentState::Eating
+                    | AgentState::Playing
+                    | AgentState::Exercising => {
+                        if let Some(agent) = reg.get_mut(&id) {
+                            agent.anim.activity_ticks += 1;
+                            let min_ticks = match agent.state {
+                                AgentState::Working => 40,
+                                AgentState::Eating => 20,
+                                AgentState::Playing => 30,
+                                AgentState::Exercising => 35,
+                                _ => 25,
+                            };
+                            if agent.anim.activity_ticks > min_ticks
+                                && rand::rng().random_range(0..10u8) < 2
+                            {
+                                agent.set_state(AgentState::Idle);
+                                agent.goal = None;
+                                agent.path.clear();
+                                agent.anim.activity_ticks = 0;
+                            }
+                        }
+                    }
+                    AgentState::Messaging => {
+                        if let Some(agent) = reg.get_mut(&id) {
+                            agent.anim.activity_ticks += 1;
+                            if agent.anim.activity_ticks >= 30 {
+                                agent.set_state(AgentState::Idle);
+                                agent.clear_speech();
+                                agent.anim.activity_ticks = 0;
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
+
+            // Toggle walk animation frames
+            if self.tick_count.is_multiple_of(3) {
+                for id in reg.ids() {
+                    if let Some(a) = reg.get_mut(&id)
+                        && a.state == AgentState::Walking
+                    {
+                        a.anim.frame = (a.anim.frame + 1) % 2;
+                    }
+                }
+            }
+        } // All locks dropped here
+
+        // Goal assignment for idle agents (acquires its own locks briefly)
+        for id in needs_goal {
+            self.assign_random_goal(id);
         }
 
+        // Emit events without holding any locks
+        for event in events {
+            self.emit(event).await;
+        }
         self.emit(WorldEvent::Tick {
             count: self.tick_count,
         })
@@ -119,6 +207,11 @@ impl Simulation {
         use rand::Rng;
         let grid = self.grid.read().unwrap();
         let mut reg = self.registry.write().unwrap();
+
+        // Reset activity_ticks so we don't retry every tick if assignment fails
+        if let Some(agent) = reg.get_mut(&id) {
+            agent.anim.activity_ticks = 0;
+        }
 
         let choice: u8 = rand::rng().random_range(0..13);
         let (tile_type, goal_fn): (Tile, fn(Position) -> AgentGoal) = match choice {
@@ -166,143 +259,38 @@ impl Simulation {
                 count < capacity
             })
             .collect();
-        if available.is_empty() {
-            return;
+        if !available.is_empty() {
+            let target = available[rand::rng().random_range(0..available.len())];
+
+            // Find where other agents heading to same target will stand
+            let taken_spots: Vec<Position> = reg
+                .agents()
+                .filter(|a| a.id != id)
+                .filter(|a| a.goal.as_ref().map(|g| g.target()) == Some(target))
+                .map(|a| a.path.last().copied().unwrap_or(a.position))
+                .collect();
+
+            if let Some(adj) = grid.find_adjacent_floor_avoiding(target, &taken_spots)
+                && let Some(agent) = reg.get_mut(&id)
+                && let Some(path) = find_path(&grid, agent.position, adj)
+            {
+                agent.goal = Some(goal_fn(target));
+                agent.path = path;
+                agent.set_state(AgentState::Walking);
+                agent.anim.activity_ticks = 0;
+                return;
+            }
         }
-        let target = available[rand::rng().random_range(0..available.len())];
 
-        // Find where other agents heading to same target will stand, so we pick a different spot
-        let taken_spots: Vec<Position> = reg
-            .agents()
-            .filter(|a| a.id != id)
-            .filter(|a| a.goal.as_ref().map(|g| g.target()) == Some(target))
-            .map(|a| {
-                // Their destination is the last step on their path, or their current position
-                a.path.last().copied().unwrap_or(a.position)
-            })
-            .collect();
-
-        if let Some(adj) = grid.find_adjacent_floor_avoiding(target, &taken_spots)
+        // Fallback: wander to any random floor tile (guarantees agent keeps moving)
+        if let Some(target) = grid.find_empty_floor()
             && let Some(agent) = reg.get_mut(&id)
-            && let Some(path) = find_path(&grid, agent.position, adj)
+            && let Some(path) = find_path(&grid, agent.position, target)
         {
-            agent.goal = Some(goal_fn(target));
+            agent.goal = Some(AgentGoal::Wander(target));
             agent.path = path;
             agent.set_state(AgentState::Walking);
             agent.anim.activity_ticks = 0;
-        }
-
-        drop(reg);
-        drop(grid);
-    }
-
-    async fn step_along_path(&self, id: AgentId, pos: Position) {
-        let next = {
-            let reg = self.registry.read().unwrap();
-            let agent = match reg.get(&id) {
-                Some(a) => a,
-                None => return,
-            };
-            agent.path.first().copied()
-        };
-
-        let Some(next_pos) = next else {
-            // Arrived — transition to activity and face the target furniture
-            let mut reg = self.registry.write().unwrap();
-            if let Some(agent) = reg.get_mut(&id) {
-                let new_state = match &agent.goal {
-                    Some(AgentGoal::GoToDesk(_)) => AgentState::Working,
-                    Some(AgentGoal::GoToVending(_) | AgentGoal::GoToCoffee(_)) => {
-                        AgentState::Eating
-                    }
-                    Some(AgentGoal::GoToPinball(_)) => AgentState::Playing,
-                    Some(AgentGoal::GoToGym(_)) => AgentState::Exercising,
-                    _ => AgentState::Idle,
-                };
-                // Face toward the target furniture
-                // Agent typically at -x from furniture (to see LEFT face detail)
-                // Furniture is at +x → face Right (toward top-right on screen)
-                if let Some(goal) = &agent.goal {
-                    let target = goal.target();
-                    let dx = target.x as i32 - agent.position.x as i32;
-                    let dy = target.y as i32 - agent.position.y as i32;
-                    agent.anim.facing = if dx + dy > 0 {
-                        Facing::Right
-                    } else {
-                        Facing::Left
-                    };
-                }
-                agent.set_state(new_state);
-                agent.anim.activity_ticks = 0;
-            }
-            return;
-        };
-
-        // Update facing direction based on iso movement
-        {
-            let mut reg = self.registry.write().unwrap();
-            if let Some(agent) = reg.get_mut(&id) {
-                let dx = next_pos.x as i32 - pos.x as i32;
-                let dy = next_pos.y as i32 - pos.y as i32;
-                agent.anim.facing = if dx + dy > 0 {
-                    Facing::Right
-                } else {
-                    Facing::Left
-                };
-            }
-        }
-
-        let moved = {
-            let mut grid = self.grid.write().unwrap();
-            grid.move_agent(pos, next_pos)
-        };
-
-        if moved {
-            {
-                let mut reg = self.registry.write().unwrap();
-                if let Some(agent) = reg.get_mut(&id) {
-                    agent.position = next_pos;
-                    agent.path.remove(0);
-                    agent.anim.blocked_ticks = 0;
-                }
-            }
-            self.emit(WorldEvent::AgentMoved {
-                agent_id: id,
-                from: pos,
-                to: next_pos,
-            })
-            .await;
-        } else {
-            // Path hit a solid tile (furniture/wall) — repath or give up
-            let mut reg = self.registry.write().unwrap();
-            if let Some(agent) = reg.get_mut(&id) {
-                agent.path.clear();
-                agent.goal = None;
-                agent.set_state(AgentState::Idle);
-                agent.anim.activity_ticks = 0;
-                agent.anim.blocked_ticks = 0;
-            }
-        }
-    }
-
-    fn maybe_finish(&self, id: AgentId) {
-        use rand::Rng;
-        let mut reg = self.registry.write().unwrap();
-        if let Some(agent) = reg.get_mut(&id) {
-            agent.anim.activity_ticks += 1;
-            let min_ticks = match agent.state {
-                AgentState::Working => 40,
-                AgentState::Eating => 20,
-                AgentState::Playing => 30,
-                AgentState::Exercising => 35,
-                _ => 25,
-            };
-            if agent.anim.activity_ticks > min_ticks && rand::rng().random_range(0..10) < 2 {
-                agent.set_state(AgentState::Idle);
-                agent.goal = None;
-                agent.path.clear();
-                agent.anim.activity_ticks = 0;
-            }
         }
     }
 

@@ -8,7 +8,7 @@
 
 **Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API.**
 
-> Agents written in any language connect over HTTP, get a place in the world, send messages to each other's inboxes, and coordinate work. Built in Rust with TUI and GTK4 isometric 2.5D GUI. Works with [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/openclaw/openclaw), and any HTTP-capable agent.
+> Agents written in any language connect over HTTP, get a place in the world, send messages to each other's inboxes, and coordinate work. Built in Rust with TUI and Bevy 3D isometric renderer. Works with [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/openclaw/openclaw), and any HTTP-capable agent.
 
 ![Agentverse Demo](src/assets/demo.png)
 
@@ -24,7 +24,7 @@
 - [Configuration](#configuration)
 - [Controls](#controls)
   - [TUI Keybindings](#tui-keybindings)
-  - [GUI Controls](#gui-controls)
+  - [3D Controls](#3d-controls)
 - [HTTP API](#http-api)
   - [Authentication](#authentication)
   - [Agents](#agents)
@@ -48,7 +48,7 @@
 ## Features
 
 - **Pixel-art TUI** — office with desks, break room with vending machines and coffee, lounge with couches, gym with treadmills, arcade with pinball machines
-- **GTK4 GUI** — isometric 2.5D world view with Cairo rendering, camera controls, sidebar, and agent detail panel (requires `gui` feature + GTK4 installed)
+- **Bevy 3D** — isometric 3D world with orthographic camera, voxel agents, detailed furniture, floating labels, sidebar, and agent messaging (requires `bevy3d` feature)
 - **Animated agents** — walking animations, state-driven behavior, BFS pathfinding, and speech bubbles
 - **Privacy-first** — runs entirely locally on `127.0.0.1`, no telemetry, no cloud
 - **Production-ready API** — REST endpoints with JSON error responses, API key auth, rate limiting, SSE event streaming
@@ -74,17 +74,14 @@ cd agentverse
 cargo build --release
 ```
 
-### GTK4 GUI (optional)
+### Bevy 3D (optional)
 
 ```bash
-# macOS
-brew install gtk4
+# Build with 3D renderer
+cargo build --release --features bevy3d
 
-# Build with GUI support
-cargo build --release --features gui
-
-# Run in GUI mode
-cargo run --features gui -- --gui
+# Run in 3D mode
+cargo run --features bevy3d -- --bevy
 ```
 
 ---
@@ -95,8 +92,8 @@ cargo run --features gui -- --gui
 # TUI mode (default)
 agentverse
 
-# GUI mode (requires --features gui)
-agentverse --gui
+# 3D mode (requires --features bevy3d)
+agentverse --bevy
 ```
 
 Agents spawn in the office world and autonomously:
@@ -129,11 +126,7 @@ api_key = "your-secret-key"  # required when server is enabled
 endpoints = ["http://localhost:18789"]
 discovery_interval_secs = 30
 
-[gui]
-window_width = 1200
-window_height = 800
-sidebar_visible = true
-sidebar_width = 280
+# [gui] section removed — now using Bevy 3D renderer
 ```
 
 ---
@@ -153,16 +146,17 @@ sidebar_width = 280
 | `:` | Command input |
 | `q` / `Esc` | Quit |
 
-### GUI Controls
+### 3D Controls
 
 | Input | Action |
 |-------|--------|
 | Mouse drag | Pan camera |
-| Scroll wheel | Zoom (0.3x-4.0x) |
+| Scroll wheel | Zoom |
 | Left click | Select agent |
 | `R` | Rotate view (4 angles) |
 | `H` | Toggle sidebar |
 | `Escape` | Deselect agent |
+| `Enter` | Send message to selected agent |
 
 ---
 
@@ -526,12 +520,12 @@ src/
 │   ├── server.rs        # Router, middleware layers, server startup
 │   ├── types.rs         # Request/response structs
 │   └── observability.rs # AgentObserver, activity logs, heartbeat, task history
-├── gui/              # GTK4 isometric 2.5D (optional, behind `gui` feature)
-│   ├── world_view.rs # Cairo isometric renderer
-│   ├── tile_render.rs# Furniture/wall/floor 3D rendering
-│   ├── agent_render.rs# Agent voxel rendering
-│   ├── sidebar.rs    # Agent list + detail panel
-│   ├── input.rs      # Mouse/keyboard handlers
+├── bevy3d/           # Bevy 3D isometric renderer (optional, behind `bevy3d` feature)
+│   ├── sync.rs       # World tile spawning, agent sync
+│   ├── sim_system.rs # In-process simulation (runs in Bevy game loop)
+│   ├── overlay.rs    # Sidebar, floating labels, status bar, message input
+│   ├── camera.rs     # Orthographic isometric camera + controls
+│   ├── agents.rs     # Voxel agent meshes
 │   └── ...
 ├── tui/              # Terminal UI (ratatui)
 ├── error/            # AppError + ApiError with JSON responses

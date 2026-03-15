@@ -176,16 +176,23 @@ fn spawn_tile_entity(
                     Transform::from_xyz(x + lx, 0.14, z + lz),
                 ));
             }
-            // Monitor
+            // Monitor at back of desk (-z, away from camera), rotated to face +z
+            let mon_rot = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
             commands.spawn((
                 Mesh3d(mesh_lib.monitor_screen.clone()),
                 MeshMaterial3d(mat_lib.monitor_screen.clone()),
-                Transform::from_xyz(x + 0.15, 0.48, z),
+                Transform::from_xyz(x, 0.48, z - 0.18).with_rotation(mon_rot),
             ));
             commands.spawn((
                 Mesh3d(mesh_lib.monitor_base.clone()),
                 MeshMaterial3d(mat_lib.monitor_body.clone()),
-                Transform::from_xyz(x + 0.15, 0.38, z),
+                Transform::from_xyz(x, 0.38, z - 0.18).with_rotation(mon_rot),
+            ));
+            // Keyboard on desk surface (toward camera, +z side)
+            commands.spawn((
+                Mesh3d(mesh_lib.keyboard.clone()),
+                MeshMaterial3d(mat_lib.desk_leg.clone()),
+                Transform::from_xyz(x, 0.32, z + 0.05),
             ));
             Some(entity)
         }
@@ -259,22 +266,23 @@ fn spawn_tile_entity(
                 MeshMaterial3d(mat_lib.floor_tile.clone()),
                 Transform::from_xyz(x, 0.0, z),
             ));
-            // Body
+            // Body (rotated 90° so front faces +z toward camera)
+            let rot = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
             let entity = commands
                 .spawn((
                     Mesh3d(mesh_lib.vending_body.clone()),
                     MeshMaterial3d(mat_lib.vending_body.clone()),
-                    Transform::from_xyz(x, 0.40, z),
+                    Transform::from_xyz(x, 0.40, z).with_rotation(rot),
                     TileMarker {
                         pos: Position::new(_gx, _gy),
                     },
                 ))
                 .id();
-            // Glass front
+            // Glass front (faces +z toward camera)
             commands.spawn((
                 Mesh3d(mesh_lib.vending_glass.clone()),
                 MeshMaterial3d(mat_lib.vending_glass.clone()),
-                Transform::from_xyz(x - 0.31, 0.45, z),
+                Transform::from_xyz(x, 0.45, z + 0.31),
             ));
             // Shelves (3 rows)
             for row in 0..3 {
@@ -282,7 +290,7 @@ fn spawn_tile_entity(
                 commands.spawn((
                     Mesh3d(mesh_lib.vending_shelf.clone()),
                     MeshMaterial3d(mat_lib.vending_shelf.clone()),
-                    Transform::from_xyz(x, shelf_y, z),
+                    Transform::from_xyz(x, shelf_y, z).with_rotation(rot),
                 ));
                 // Cans on each shelf (4 per row)
                 let can_colors = [
@@ -292,25 +300,25 @@ fn spawn_tile_entity(
                     &mat_lib.vending_can_yellow,
                 ];
                 for col in 0..4 {
-                    let cz = z - 0.10 + col as f32 * 0.07;
+                    let cx = x - 0.10 + col as f32 * 0.07;
                     commands.spawn((
                         Mesh3d(mesh_lib.vending_can.clone()),
                         MeshMaterial3d(can_colors[(row + col) % 4].clone()),
-                        Transform::from_xyz(x, shelf_y + 0.04, cz),
+                        Transform::from_xyz(cx, shelf_y + 0.04, z),
                     ));
                 }
             }
-            // Dispensing slot at bottom
+            // Dispensing slot at bottom (faces +z)
             commands.spawn((
                 Mesh3d(mesh_lib.vending_slot.clone()),
                 MeshMaterial3d(mat_lib.vending_slot.clone()),
-                Transform::from_xyz(x - 0.21, 0.08, z),
+                Transform::from_xyz(x, 0.08, z + 0.21),
             ));
-            // Price display (green LCD)
+            // Price display (green LCD, faces +z)
             commands.spawn((
                 Mesh3d(mesh_lib.vending_display.clone()),
                 MeshMaterial3d(mat_lib.vending_display.clone()),
-                Transform::from_xyz(x - 0.31, 0.72, z),
+                Transform::from_xyz(x, 0.72, z + 0.31),
             ));
             Some(entity)
         }
@@ -347,12 +355,13 @@ fn spawn_tile_entity(
                 MeshMaterial3d(mat_lib.floor_concrete.clone()),
                 Transform::from_xyz(x, 0.0, z),
             ));
-            // Cabinet body
+            // Cabinet body (rotated 90° so front faces +z toward camera)
+            let rot = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
             let entity = commands
                 .spawn((
                     Mesh3d(mesh_lib.arcade_cabinet.clone()),
                     MeshMaterial3d(mat_lib.arcade_body.clone()),
-                    Transform::from_xyz(x, 0.375, z),
+                    Transform::from_xyz(x, 0.375, z).with_rotation(rot),
                     TileMarker {
                         pos: Position::new(_gx, _gy),
                     },
@@ -362,20 +371,20 @@ fn spawn_tile_entity(
             commands.spawn((
                 Mesh3d(mesh_lib.arcade_marquee.clone()),
                 MeshMaterial3d(mat_lib.arcade_marquee.clone()),
-                Transform::from_xyz(x, 0.79, z),
+                Transform::from_xyz(x, 0.79, z).with_rotation(rot),
             ));
-            // Screen (glowing green)
+            // Screen (glowing green, faces +z toward camera)
             commands.spawn((
                 Mesh3d(mesh_lib.arcade_screen.clone()),
                 MeshMaterial3d(mat_lib.arcade_screen.clone()),
-                Transform::from_xyz(x - 0.26, 0.52, z),
+                Transform::from_xyz(x, 0.52, z + 0.26),
             ));
-            // Control panel (angled below screen)
+            // Control panel (angled below screen, faces +z)
             commands.spawn((
                 Mesh3d(mesh_lib.arcade_panel.clone()),
                 MeshMaterial3d(mat_lib.arcade_panel.clone()),
-                Transform::from_xyz(x - 0.26, 0.30, z)
-                    .with_rotation(Quat::from_rotation_z(0.3)),
+                Transform::from_xyz(x, 0.30, z + 0.26)
+                    .with_rotation(Quat::from_rotation_x(0.3)),
             ));
             // Buttons on control panel (red, blue, green)
             for (i, btn_mat) in [
@@ -386,18 +395,18 @@ fn spawn_tile_entity(
             .iter()
             .enumerate()
             {
-                let bz = z - 0.06 + i as f32 * 0.06;
+                let bx = x - 0.06 + i as f32 * 0.06;
                 commands.spawn((
                     Mesh3d(mesh_lib.arcade_button.clone()),
                     MeshMaterial3d((*btn_mat).clone()),
-                    Transform::from_xyz(x - 0.30, 0.32, bz),
+                    Transform::from_xyz(bx, 0.32, z + 0.30),
                 ));
             }
-            // Coin slot
+            // Coin slot (faces +z)
             commands.spawn((
                 Mesh3d(mesh_lib.arcade_coin_slot.clone()),
                 MeshMaterial3d(mat_lib.arcade_coin_slot.clone()),
-                Transform::from_xyz(x - 0.26, 0.15, z),
+                Transform::from_xyz(x, 0.15, z + 0.26),
             ));
             Some(entity)
         }
@@ -687,7 +696,8 @@ pub fn sync_agents(
     mut agent_q: Query<&mut Transform, With<AgentMarker>>,
     time: Res<Time>,
 ) {
-    // Snapshot data and drop locks immediately to avoid starving the simulation
+    // Simulation runs as a chained Bevy system (sim_tick → sync_agents),
+    // so locks are never contended from the Bevy side.
     let (cx, cz, current_agents) = {
         let grid = bridge.grid.read().unwrap();
         let registry = bridge.registry.read().unwrap();

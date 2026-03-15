@@ -349,7 +349,6 @@ pub fn update_status_bar(
     let count = bridge.registry.read().unwrap().count();
 
     for mut text in tick_q.iter_mut() {
-        // We don't have tick count easily accessible; show agent count instead
         **text = format!("agents: {}", count);
     }
     for mut text in agents_q.iter_mut() {

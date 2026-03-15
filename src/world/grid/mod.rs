@@ -148,39 +148,24 @@ impl Grid {
         pos: Position,
         avoid: &[Position],
     ) -> Option<Position> {
+        // Ordered: +y (front), -y (back/opposite side), +x, -x
+        // This gives opposite-side placement for second agent (e.g. ping pong)
         let candidates = [
-            Position::new(pos.x + 1, pos.y),
             Position::new(pos.x, pos.y + 1),
-            Position::new(pos.x.wrapping_sub(1), pos.y),
             Position::new(pos.x, pos.y.wrapping_sub(1)),
+            Position::new(pos.x + 1, pos.y),
+            Position::new(pos.x.wrapping_sub(1), pos.y),
         ];
         let is_floor = |p: &Position| {
             self.get(*p).map(|c| !c.tile.is_solid()).unwrap_or(false)
         };
 
-        // Determine which zone half the furniture is in
-        let in_right_half = pos.x >= self.width / 2;
-        let in_bottom_half = pos.y >= self.height / 2;
-
-        // Prefer adjacent tiles that stay in the same zone quadrant
-        let same_zone = |p: &Position| {
-            (p.x >= self.width / 2) == in_right_half
-                && (p.y >= self.height / 2) == in_bottom_half
-        };
-
-        // 1st: same zone, not avoided
+        // 1st: not avoided, walkable (order already prefers front)
         candidates
             .iter()
             .copied()
-            .find(|p| !avoid.contains(p) && is_floor(p) && same_zone(p))
-            // 2nd: any not avoided
-            .or_else(|| {
-                candidates
-                    .iter()
-                    .copied()
-                    .find(|p| !avoid.contains(p) && is_floor(p))
-            })
-            // 3rd: any floor
+            .find(|p| !avoid.contains(p) && is_floor(p))
+            // 2nd: any floor at all
             .or_else(|| candidates.iter().copied().find(|p| is_floor(p)))
     }
 

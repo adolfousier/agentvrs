@@ -1,6 +1,7 @@
 use crate::bevy3d::bridge::WorldBridge;
 use crate::bevy3d::camera::CameraState;
 use crate::bevy3d::interaction::SelectedAgent;
+use crate::bevy3d::sim_system::SimState;
 use crate::bevy3d::sync::SyncState;
 use crate::config::AppConfig;
 use crate::runner;
@@ -10,12 +11,21 @@ use bevy::prelude::*;
 pub async fn run(config: AppConfig) -> Result<()> {
     let world_w = config.world.width;
     let world_h = config.world.height;
+    let tick_ms = config.world.tick_ms;
 
-    let rt = runner::setup(&config, world_w, world_h).await?;
+    let rt = runner::setup_no_sim(&config, world_w, world_h).await?;
 
     let grid = rt.grid;
     let registry = rt.registry;
     let shutdown_tx = rt.shutdown_tx;
+    let sim_state = SimState {
+        tick_count: 0,
+        tick_ms,
+        last_tick: std::time::Instant::now(),
+        event_tx: rt.event_tx,
+        broadcast_tx: rt.broadcast_tx,
+        shared_tick: rt.shared_tick,
+    };
 
     let cam_state = CameraState {
         focus: Vec3::ZERO,
@@ -50,6 +60,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.insert_resource(SyncState::default());
     app.insert_resource(SelectedAgent::default());
     app.insert_resource(super::overlay::MessageInputState::default());
+    app.insert_resource(sim_state);
 
     // Startup systems (run once, chained so materials/meshes exist before camera)
     app.add_systems(
@@ -70,10 +81,11 @@ pub async fn run(config: AppConfig) -> Result<()> {
         super::sync::spawn_tiles.run_if(resource_exists::<super::materials::MaterialLib>),
     );
 
-    // Per-frame systems
+    // Per-frame systems: simulation tick runs first, then sync, then everything else
     app.add_systems(
         Update,
         (
+            super::sim_system::sim_tick,
             super::sync::sync_agents,
             super::camera::camera_rotate,
             super::camera::camera_zoom,
@@ -86,6 +98,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::overlay::toggle_sidebar,
             super::overlay::handle_message_input,
         )
+            .chain()
             .run_if(resource_exists::<super::materials::MaterialLib>),
     );
 

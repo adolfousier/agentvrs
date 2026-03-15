@@ -13,9 +13,31 @@ pub struct WorldRuntime {
     pub message_log: Arc<RwLock<MessageLog>>,
     pub event_rx: mpsc::Receiver<WorldEvent>,
     pub shutdown_tx: mpsc::Sender<()>,
+    /// For Bevy: sim runs in-process, needs these channels
+    pub event_tx: mpsc::Sender<WorldEvent>,
+    pub broadcast_tx: broadcast::Sender<WorldEvent>,
+    pub shared_tick: Arc<std::sync::atomic::AtomicU64>,
 }
 
 pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<WorldRuntime> {
+    setup_inner(config, world_w, world_h, true).await
+}
+
+/// When `spawn_sim` is false, the simulation is NOT spawned on tokio (Bevy runs it in-process).
+pub async fn setup_no_sim(
+    config: &AppConfig,
+    world_w: u16,
+    world_h: u16,
+) -> Result<WorldRuntime> {
+    setup_inner(config, world_w, world_h, false).await
+}
+
+async fn setup_inner(
+    config: &AppConfig,
+    world_w: u16,
+    world_h: u16,
+    spawn_sim: bool,
+) -> Result<WorldRuntime> {
     let grid = Arc::new(RwLock::new(build_office_world(world_w, world_h)));
     let registry = Arc::new(RwLock::new(AgentRegistry::new()));
     let message_log = Arc::new(RwLock::new(MessageLog::new()));
@@ -40,16 +62,18 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
         }
     }
 
-    // Simulation (with broadcast for SSE)
-    let sim = Simulation::new(
-        Arc::clone(&grid),
-        Arc::clone(&registry),
-        event_tx.clone(),
-        config.world.tick_ms,
-    )
-    .with_broadcast(broadcast_tx.clone());
-    let tick_count = Arc::clone(&sim.shared_tick);
-    tokio::spawn(sim.run(shutdown_rx));
+    let shared_tick = Arc::new(std::sync::atomic::AtomicU64::new(0));
+
+    if spawn_sim {
+        let sim = Simulation::new(
+            Arc::clone(&grid),
+            Arc::clone(&registry),
+            event_tx.clone(),
+            config.world.tick_ms,
+        )
+        .with_broadcast(broadcast_tx.clone());
+        tokio::spawn(sim.run(shutdown_rx));
+    }
 
     // Agent observer (activity logs, heartbeats, task history)
     let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
@@ -62,9 +86,9 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
         let sg = Arc::clone(&grid);
         let sr = Arc::clone(&registry);
         let stx = event_tx.clone();
-        let sbtx = broadcast_tx;
+        let sbtx = broadcast_tx.clone();
         let sc = config.server.clone();
-        let st = Arc::clone(&tick_count);
+        let st = Arc::clone(&shared_tick);
         let so = Arc::clone(&observer);
         tokio::spawn(async move {
             if let Err(e) = api::start_api_server(&sc, sr, sg, stx, sbtx, st, so).await {
@@ -79,5 +103,8 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
         message_log,
         event_rx,
         shutdown_tx,
+        event_tx,
+        broadcast_tx,
+        shared_tick,
     })
 }
