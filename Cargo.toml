@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.91"
 authors = ["Adolfo Usier <adolfo@meetneura.ai>"]
 license = "MIT"
-description = "Privacy-first terminal world for AI agents. Connect OpenCrabs via A2A, external agents via HTTP."
-repository = "https://github.com/adolfousier/agentverse"
+description = "Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API. TUI + GTK4 GUI."
+repository = "https://github.com/adolfousier/agentvrs"
 keywords = ["ai", "agents", "terminal", "a2a", "tui"]
 categories = ["command-line-utilities"]
 

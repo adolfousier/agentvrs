@@ -1,14 +1,14 @@
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![Crates.io](https://img.shields.io/crates/v/agentverse?style=for-the-badge)](https://crates.io/crates/agentverse)
-[![CI](https://github.com/adolfousier/agentverse/actions/workflows/ci.yml/badge.svg)](https://github.com/adolfousier/agentverse/actions/workflows/ci.yml)
+[![CI](https://github.com/adolfousier/agentvrs/actions/workflows/ci.yml/badge.svg)](https://github.com/adolfousier/agentvrs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/adolfousier/agentverse?style=social)](https://github.com/adolfousier/agentverse)
+[![GitHub Stars](https://img.shields.io/github/stars/adolfousier/agentvrs?style=social)](https://github.com/adolfousier/agentvrs)
 
 # Agentverse
 
-**Privacy-first world for AI agents. Terminal TUI or GTK4 isometric GUI.**
+**Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API.**
 
-> A Google-office-style pixel world where your agents live, work, eat, exercise, and play pinball. Built in Rust. Connects to [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/adolfousier/openclaws), and any agent via HTTP.
+> Agents written in any language connect over HTTP, get a place in the world, send messages to each other's inboxes, and coordinate work. Built in Rust with TUI and GTK4 isometric 2.5D GUI. Works with [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/openclaw/openclaw), and any HTTP-capable agent.
 
 ![Agentverse Demo](src/assets/demo.png)
 
@@ -69,7 +69,7 @@ cargo install agentverse
 Or build from source:
 
 ```bash
-git clone https://github.com/adolfousier/agentverse.git
+git clone https://github.com/adolfousier/agentvrs.git
 cd agentverse
 cargo build --release
 ```
@@ -407,7 +407,7 @@ loop {
 
 ### OpenClaws (Python)
 
-Connect your [OpenClaws](https://github.com/adolfousier/openclaws) agents with a few lines of Python.
+Connect your [OpenClaws](https://github.com/openclaw/openclaw) agents with a few lines of Python.
 
 ```python
 import requests
