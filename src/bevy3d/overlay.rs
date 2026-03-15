@@ -37,6 +37,15 @@ pub struct AgentLabel;
 #[derive(Component)]
 pub struct MessageInputText;
 
+#[derive(Component)]
+pub struct StatusBarRoot;
+
+#[derive(Component)]
+pub struct MessageInputBox;
+
+#[derive(Component)]
+pub struct SidebarSeparator;
+
 /// Resource: tracks text being typed in the message input.
 #[derive(Resource, Default)]
 pub struct MessageInputState {
@@ -62,6 +71,7 @@ pub fn setup_ui(mut commands: Commands) {
                 ..default()
             },
             BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
+            StatusBarRoot,
         ))
         .with_children(|bar| {
             bar.spawn((
@@ -159,6 +169,7 @@ pub fn setup_ui(mut commands: Commands) {
                     ..default()
                 },
                 BackgroundColor(Color::srgb(0.25, 0.25, 0.28)),
+                SidebarSeparator,
             ));
 
             // ── Detail panel ────────────────────────────────────────
@@ -209,6 +220,7 @@ pub fn setup_ui(mut commands: Commands) {
                             },
                             BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
                             BorderRadius::all(Val::Px(4.0)),
+                            MessageInputBox,
                         ))
                         .with_children(|input_box| {
                             input_box.spawn((
@@ -227,13 +239,15 @@ pub fn setup_ui(mut commands: Commands) {
 
 // ── Per-frame: update sidebar content ───────────────────────────────────────
 
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_sidebar(
     mut commands: Commands,
     bridge: Res<WorldBridge>,
     selected: Res<SelectedAgent>,
+    theme: Res<super::runner::ThemeState>,
     list_q: Query<Entity, With<AgentListContainer>>,
-    mut title_q: Query<&mut Text, (With<DetailTitle>, Without<DetailInfo>)>,
-    mut info_q: Query<&mut Text, (With<DetailInfo>, Without<DetailTitle>)>,
+    mut title_q: Query<(&mut Text, &mut TextColor), (With<DetailTitle>, Without<DetailInfo>)>,
+    mut info_q: Query<(&mut Text, &mut TextColor), (With<DetailInfo>, Without<DetailTitle>)>,
     entry_q: Query<Entity, With<AgentListEntry>>,
 ) {
     let registry = bridge.registry.read().unwrap();
@@ -251,8 +265,10 @@ pub fn update_sidebar(
             let dot_color = state_color(&agent.state);
             let name_color = if is_selected {
                 Color::srgb(0.4, 0.9, 1.0)
-            } else {
+            } else if theme.is_dark {
                 Color::srgb(0.85, 0.85, 0.85)
+            } else {
+                Color::srgb(0.15, 0.15, 0.15)
             };
 
             let row_bg = if is_selected {
@@ -298,13 +314,18 @@ pub fn update_sidebar(
                         TextColor(name_color),
                     ));
                     // State label
+                    let state_text_color = if theme.is_dark {
+                        Color::srgb(0.5, 0.5, 0.5)
+                    } else {
+                        Color::srgb(0.4, 0.4, 0.4)
+                    };
                     row.spawn((
                         Text::new(format!("({})", agent.state.label())),
                         TextFont {
                             font_size: 11.0,
                             ..default()
                         },
-                        TextColor(Color::srgb(0.5, 0.5, 0.5)),
+                        TextColor(state_text_color),
                     ));
                 })
                 .id();
@@ -314,10 +335,22 @@ pub fn update_sidebar(
     }
 
     // ── Update detail panel ─────────────────────────────────────────────
+    let title_color = if theme.is_dark {
+        Color::srgb(0.85, 0.85, 0.85)
+    } else {
+        Color::srgb(0.15, 0.15, 0.15)
+    };
+    let info_color = if theme.is_dark {
+        Color::srgb(0.65, 0.65, 0.65)
+    } else {
+        Color::srgb(0.3, 0.3, 0.3)
+    };
+
     if let Some(agent_id) = selected.agent_id {
         if let Some(agent) = registry.get(&agent_id) {
-            for mut text in title_q.iter_mut() {
+            for (mut text, mut color) in title_q.iter_mut() {
                 **text = agent.name.clone();
+                color.0 = title_color;
             }
             let info_text = format!(
                 "State: {}\nPosition: ({}, {})\nKind: {:?}\nTasks: {}{}",
@@ -332,16 +365,19 @@ pub fn update_sidebar(
                     .map(|s| format!("\n\nSays: \"{}\"", s))
                     .unwrap_or_default(),
             );
-            for mut text in info_q.iter_mut() {
+            for (mut text, mut color) in info_q.iter_mut() {
                 **text = info_text.clone();
+                color.0 = info_color;
             }
         }
     } else {
-        for mut text in title_q.iter_mut() {
+        for (mut text, mut color) in title_q.iter_mut() {
             **text = "No agent selected".to_string();
+            color.0 = title_color;
         }
-        for mut text in info_q.iter_mut() {
+        for (mut text, mut color) in info_q.iter_mut() {
             **text = String::new();
+            color.0 = info_color;
         }
     }
 }
@@ -352,8 +388,9 @@ pub fn update_sidebar(
 pub fn update_status_bar(
     bridge: Res<WorldBridge>,
     cam_state: Res<super::camera::CameraState>,
+    theme: Res<super::runner::ThemeState>,
     mut tick_q: Query<
-        &mut Text,
+        (&mut Text, &mut TextColor),
         (
             With<StatusBarTick>,
             Without<StatusBarAgents>,
@@ -361,7 +398,7 @@ pub fn update_status_bar(
         ),
     >,
     mut agents_q: Query<
-        &mut Text,
+        (&mut Text, &mut TextColor),
         (
             With<StatusBarAgents>,
             Without<StatusBarTick>,
@@ -369,7 +406,7 @@ pub fn update_status_bar(
         ),
     >,
     mut zoom_q: Query<
-        &mut Text,
+        (&mut Text, &mut TextColor),
         (
             With<StatusBarZoom>,
             Without<StatusBarTick>,
@@ -378,24 +415,34 @@ pub fn update_status_bar(
     >,
 ) {
     let count = bridge.registry.read().unwrap().count();
+    let text_color = if theme.is_dark {
+        Color::srgb(0.7, 0.7, 0.7)
+    } else {
+        Color::srgb(0.25, 0.25, 0.25)
+    };
 
-    for mut text in tick_q.iter_mut() {
+    for (mut text, mut color) in tick_q.iter_mut() {
         **text = format!("agents: {}", count);
+        color.0 = text_color;
     }
-    for mut text in agents_q.iter_mut() {
+    for (mut text, mut color) in agents_q.iter_mut() {
         let (w, h) = bridge.grid.read().unwrap().bounds();
         **text = format!("world: {}x{}", w, h);
+        color.0 = text_color;
     }
-    for mut text in zoom_q.iter_mut() {
+    for (mut text, mut color) in zoom_q.iter_mut() {
         **text = format!("zoom: {:.0}%", (12.0 / cam_state.zoom) * 100.0);
+        color.0 = text_color;
     }
 }
 
 // ── Per-frame: floating name labels above agents ────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_agent_labels(
     mut commands: Commands,
     bridge: Res<WorldBridge>,
+    theme: Res<super::runner::ThemeState>,
     agent_q: Query<(&GlobalTransform, &AgentMarker)>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     label_q: Query<Entity, With<AgentLabel>>,
@@ -433,8 +480,10 @@ pub fn update_agent_labels(
 
         let text_color = if is_selected {
             Color::srgb(0.4, 0.9, 1.0)
-        } else {
+        } else if theme.is_dark {
             Color::srgb(0.95, 0.95, 0.95)
+        } else {
+            Color::srgb(0.1, 0.1, 0.1)
         };
 
         let dot_color = state_color(&agent.state);
@@ -450,7 +499,11 @@ pub fn update_agent_labels(
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.1, 0.1, 0.12, 0.80)),
+                BackgroundColor(if theme.is_dark {
+                    Color::srgba(0.1, 0.1, 0.12, 0.80)
+                } else {
+                    Color::srgba(0.9, 0.9, 0.92, 0.80)
+                }),
                 BorderRadius::all(Val::Px(8.0)),
                 AgentLabel,
             ))
@@ -555,6 +608,111 @@ pub fn handle_message_input(
             **text = input_state.text.clone();
             *color = TextColor(Color::srgb(0.9, 0.9, 0.9));
         }
+    }
+}
+
+// ── Theme-aware UI color updates ─────────────────────────────────────────────
+
+#[allow(clippy::type_complexity)]
+pub fn update_ui_theme(
+    theme: Res<super::runner::ThemeState>,
+    mut sidebar_q: Query<
+        &mut BackgroundColor,
+        (
+            With<SidebarRoot>,
+            Without<StatusBarRoot>,
+            Without<SidebarSeparator>,
+            Without<MessageInputBox>,
+            Without<AgentLabel>,
+        ),
+    >,
+    mut statusbar_q: Query<
+        &mut BackgroundColor,
+        (
+            With<StatusBarRoot>,
+            Without<SidebarRoot>,
+            Without<SidebarSeparator>,
+            Without<MessageInputBox>,
+            Without<AgentLabel>,
+        ),
+    >,
+    mut separator_q: Query<
+        &mut BackgroundColor,
+        (
+            With<SidebarSeparator>,
+            Without<SidebarRoot>,
+            Without<StatusBarRoot>,
+            Without<MessageInputBox>,
+            Without<AgentLabel>,
+        ),
+    >,
+    mut input_q: Query<
+        &mut BackgroundColor,
+        (
+            With<MessageInputBox>,
+            Without<SidebarRoot>,
+            Without<StatusBarRoot>,
+            Without<SidebarSeparator>,
+            Without<AgentLabel>,
+        ),
+    >,
+    mut label_q: Query<
+        &mut BackgroundColor,
+        (
+            With<AgentLabel>,
+            Without<SidebarRoot>,
+            Without<StatusBarRoot>,
+            Without<SidebarSeparator>,
+            Without<MessageInputBox>,
+        ),
+    >,
+) {
+    if !theme.is_changed() {
+        return;
+    }
+
+    let is_dark = theme.is_dark;
+
+    let sidebar_bg = if is_dark {
+        Color::srgb(0.13, 0.13, 0.15)
+    } else {
+        Color::srgb(0.92, 0.92, 0.94)
+    };
+    let bar_bg = if is_dark {
+        Color::srgb(0.08, 0.08, 0.10)
+    } else {
+        Color::srgb(0.82, 0.82, 0.85)
+    };
+    let sep_bg = if is_dark {
+        Color::srgb(0.25, 0.25, 0.28)
+    } else {
+        Color::srgb(0.75, 0.75, 0.78)
+    };
+    let input_bg = if is_dark {
+        Color::srgb(0.08, 0.08, 0.10)
+    } else {
+        Color::srgb(0.85, 0.85, 0.88)
+    };
+    let label_bg = if is_dark {
+        Color::srgba(0.1, 0.1, 0.12, 0.80)
+    } else {
+        Color::srgba(0.9, 0.9, 0.92, 0.80)
+    };
+
+    for mut bg in sidebar_q.iter_mut() {
+        bg.0 = sidebar_bg;
+    }
+    for mut bg in statusbar_q.iter_mut() {
+        bg.0 = bar_bg;
+    }
+    for mut bg in separator_q.iter_mut() {
+        bg.0 = sep_bg;
+    }
+    for mut bg in input_q.iter_mut() {
+        bg.0 = input_bg;
+    }
+    for mut bg in label_q.iter_mut() {
+        bg.0 = label_bg;
     }
 }
 

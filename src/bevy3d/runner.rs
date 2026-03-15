@@ -101,6 +101,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::overlay::toggle_sidebar,
             super::overlay::handle_message_input,
             poll_system_theme,
+            super::overlay::update_ui_theme,
         )
             .chain()
             .run_if(resource_exists::<super::materials::MaterialLib>),
@@ -113,9 +114,9 @@ pub async fn run(config: AppConfig) -> Result<()> {
 
 /// Bevy resource tracking the current OS theme.
 #[derive(Resource)]
-struct ThemeState {
-    is_dark: bool,
-    last_check: std::time::Instant,
+pub struct ThemeState {
+    pub is_dark: bool,
+    pub last_check: std::time::Instant,
 }
 
 /// Returns the background clear color for the given theme.
