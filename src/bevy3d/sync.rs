@@ -687,19 +687,18 @@ pub fn sync_agents(
     mut agent_q: Query<&mut Transform, With<AgentMarker>>,
     time: Res<Time>,
 ) {
-    let grid = bridge.grid.read().unwrap();
-    let registry = bridge.registry.read().unwrap();
-    let (w, h) = grid.bounds();
-    let cx = w as f32 / 2.0;
-    let cz = h as f32 / 2.0;
-
-    // Collect current agent positions and data
-    // goal_target is the furniture position the agent is using (for facing)
-    let mut current_agents: HashMap<AgentId, (Position, u8, Option<Position>)> = HashMap::new();
-    for agent in registry.agents() {
-        let goal_target = agent.goal.as_ref().map(|g| g.target());
-        current_agents.insert(agent.id, (agent.position, agent.color_index, goal_target));
-    }
+    // Snapshot data and drop locks immediately to avoid starving the simulation
+    let (cx, cz, current_agents) = {
+        let grid = bridge.grid.read().unwrap();
+        let registry = bridge.registry.read().unwrap();
+        let (w, h) = grid.bounds();
+        let mut agents: HashMap<AgentId, (Position, u8, Option<Position>)> = HashMap::new();
+        for agent in registry.agents() {
+            let goal_target = agent.goal.as_ref().map(|g| g.target());
+            agents.insert(agent.id, (agent.position, agent.color_index, goal_target));
+        }
+        (w as f32 / 2.0, h as f32 / 2.0, agents)
+    };
 
     // Remove agents that no longer exist
     let stale: Vec<AgentId> = sync

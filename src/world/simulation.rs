@@ -291,11 +291,11 @@ impl Simulation {
         if let Some(agent) = reg.get_mut(&id) {
             agent.anim.activity_ticks += 1;
             let min_ticks = match agent.state {
-                AgentState::Working => 120,
-                AgentState::Eating => 50,
-                AgentState::Playing => 80,
-                AgentState::Exercising => 90,
-                _ => 60,
+                AgentState::Working => 40,
+                AgentState::Eating => 20,
+                AgentState::Playing => 30,
+                AgentState::Exercising => 35,
+                _ => 25,
             };
             if agent.anim.activity_ticks > min_ticks && rand::rng().random_range(0..10) < 2 {
                 agent.set_state(AgentState::Idle);

@@ -49,6 +49,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.insert_resource(cam_state);
     app.insert_resource(SyncState::default());
     app.insert_resource(SelectedAgent::default());
+    app.insert_resource(super::overlay::MessageInputState::default());
 
     // Startup systems (run once, chained so materials/meshes exist before camera)
     app.add_systems(
@@ -83,6 +84,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::overlay::update_sidebar,
             super::overlay::update_status_bar,
             super::overlay::toggle_sidebar,
+            super::overlay::handle_message_input,
         )
             .run_if(resource_exists::<super::materials::MaterialLib>),
     );

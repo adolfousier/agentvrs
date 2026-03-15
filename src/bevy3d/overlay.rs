@@ -36,6 +36,16 @@ pub struct AgentLabel {
     pub agent_id: AgentId,
 }
 
+#[derive(Component)]
+pub struct MessageInputText;
+
+/// Resource: tracks text being typed in the message input.
+#[derive(Resource, Default)]
+pub struct MessageInputState {
+    pub text: String,
+    pub active: bool,
+}
+
 // ── Startup: build the full UI layout ───────────────────────────────────────
 
 pub fn setup_ui(mut commands: Commands) {
@@ -169,6 +179,38 @@ pub fn setup_ui(mut commands: Commands) {
                         TextColor(Color::srgb(0.65, 0.65, 0.65)),
                         DetailInfo,
                     ));
+
+                    // ── Message input ──────────────────────────────
+                    detail.spawn((
+                        Text::new("Send message:"),
+                        TextFont {
+                            font_size: 11.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.5, 0.5, 0.5)),
+                    ));
+                    detail
+                        .spawn((
+                            Node {
+                                padding: UiRect::all(Val::Px(6.0)),
+                                min_height: Val::Px(24.0),
+                                width: Val::Percent(100.0),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
+                            BorderRadius::all(Val::Px(4.0)),
+                        ))
+                        .with_children(|input_box| {
+                            input_box.spawn((
+                                Text::new("Type and press Enter..."),
+                                TextFont {
+                                    font_size: 12.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.35, 0.35, 0.35)),
+                                MessageInputText,
+                            ));
+                        });
                 });
         });
 }
@@ -425,6 +467,70 @@ pub fn toggle_sidebar(
                 Visibility::Visible | Visibility::Inherited => Visibility::Hidden,
                 Visibility::Hidden => Visibility::Visible,
             };
+        }
+    }
+}
+
+// ── Message input handling ───────────────────────────────────────────────────
+
+pub fn handle_message_input(
+    mut char_evr: EventReader<bevy::input::keyboard::KeyboardInput>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut input_state: ResMut<MessageInputState>,
+    selected: Res<SelectedAgent>,
+    bridge: Res<WorldBridge>,
+    mut text_q: Query<(&mut Text, &mut TextColor), With<MessageInputText>>,
+) {
+    // Only active when an agent is selected
+    if selected.agent_id.is_none() {
+        input_state.active = false;
+        input_state.text.clear();
+        return;
+    }
+    input_state.active = true;
+
+    // Handle character input
+    for event in char_evr.read() {
+        if event.state != bevy::input::ButtonState::Pressed {
+            continue;
+        }
+        match &event.logical_key {
+            bevy::input::keyboard::Key::Character(s) => {
+                for ch in s.chars() {
+                    if !ch.is_control() {
+                        input_state.text.push(ch);
+                    }
+                }
+            }
+            bevy::input::keyboard::Key::Space => {
+                input_state.text.push(' ');
+            }
+            bevy::input::keyboard::Key::Backspace => {
+                input_state.text.pop();
+            }
+            _ => {}
+        }
+    }
+
+    // Enter — send message
+    if keys.just_pressed(KeyCode::Enter) && input_state.active && !input_state.text.is_empty() {
+        if let Some(agent_id) = selected.agent_id {
+            let mut registry = bridge.registry.write().unwrap();
+            if let Some(agent) = registry.get_mut(&agent_id) {
+                agent.say(&input_state.text);
+            }
+        }
+        input_state.text.clear();
+    }
+
+    // Update displayed text
+    for (mut text, mut color) in text_q.iter_mut() {
+        if input_state.text.is_empty() {
+            **text = "Type and press Enter...".to_string();
+            *color = TextColor(Color::srgb(0.35, 0.35, 0.35));
+        } else {
+            **text = input_state.text.clone();
+            *color = TextColor(Color::srgb(0.9, 0.9, 0.9));
         }
     }
 }
