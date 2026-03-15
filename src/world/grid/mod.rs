@@ -102,33 +102,24 @@ impl Grid {
         self.get_mut(pos).and_then(|cell| cell.occupant.take())
     }
 
-    pub fn move_agent(&mut self, from: Position, to: Position) -> bool {
-        if from == to {
+    pub fn move_agent(&mut self, _from: Position, to: Position) -> bool {
+        if _from == to {
             return true;
         }
-        // Only block on solid tiles (walls/furniture). Agents can share floor tiles.
-        if !self.get(to).map(|c| !c.tile.is_solid()).unwrap_or(false) {
-            return false;
-        }
-        let agent_id = self.get_mut(from).and_then(|c| c.occupant.take());
-        if let Some(id) = agent_id {
-            if let Some(cell) = self.get_mut(to) {
-                cell.occupant = Some(id);
-            }
-            return true;
-        }
-        false
+        // Only block on solid tiles (walls/furniture).
+        // Agent positions are tracked in AgentRegistry, not grid occupants.
+        self.get(to).map(|c| !c.tile.is_solid()).unwrap_or(false)
     }
 
     pub fn find_empty_floor(&self) -> Option<Position> {
         use rand::Rng;
         let mut rng = rand::rng();
         for _ in 0..200 {
-            let x = rng.random_range(1..self.width.saturating_sub(1).max(2));
-            let y = rng.random_range(1..self.height.saturating_sub(1).max(2));
+            let x = rng.random_range(0..self.width);
+            let y = rng.random_range(0..self.height);
             let pos = Position::new(x, y);
             if let Some(cell) = self.get(pos)
-                && cell.is_walkable()
+                && !cell.tile.is_solid()
             {
                 return Some(pos);
             }
@@ -157,24 +148,39 @@ impl Grid {
         pos: Position,
         avoid: &[Position],
     ) -> Option<Position> {
-        // LEFT face normal points toward -x (bottom-left on screen).
-        // Agent at (x-1, y) looks toward +x and sees the LEFT face (detail face).
         let candidates = [
-            Position::new(pos.x.wrapping_sub(1), pos.y), // sees LEFT face (detail face)
-            Position::new(pos.x, pos.y + 1),             // sees RIGHT face
-            Position::new(pos.x + 1, pos.y),             // behind (back)
-            Position::new(pos.x, pos.y.wrapping_sub(1)), // behind (back)
+            Position::new(pos.x + 1, pos.y),
+            Position::new(pos.x, pos.y + 1),
+            Position::new(pos.x.wrapping_sub(1), pos.y),
+            Position::new(pos.x, pos.y.wrapping_sub(1)),
         ];
-        // Check tile is a floor type (ignore occupants — agents move around)
         let is_floor = |p: &Position| {
             self.get(*p).map(|c| !c.tile.is_solid()).unwrap_or(false)
         };
-        // First try spots not in avoid list
+
+        // Determine which zone half the furniture is in
+        let in_right_half = pos.x >= self.width / 2;
+        let in_bottom_half = pos.y >= self.height / 2;
+
+        // Prefer adjacent tiles that stay in the same zone quadrant
+        let same_zone = |p: &Position| {
+            (p.x >= self.width / 2) == in_right_half
+                && (p.y >= self.height / 2) == in_bottom_half
+        };
+
+        // 1st: same zone, not avoided
         candidates
             .iter()
             .copied()
-            .find(|p| !avoid.contains(p) && is_floor(p))
-            // Fallback: any floor spot
+            .find(|p| !avoid.contains(p) && is_floor(p) && same_zone(p))
+            // 2nd: any not avoided
+            .or_else(|| {
+                candidates
+                    .iter()
+                    .copied()
+                    .find(|p| !avoid.contains(p) && is_floor(p))
+            })
+            // 3rd: any floor
             .or_else(|| candidates.iter().copied().find(|p| is_floor(p)))
     }
 

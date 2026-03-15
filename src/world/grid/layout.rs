@@ -50,9 +50,9 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
     p(&mut g, w, h, 1, hy + 1, Tile::Rug);
     p(&mut g, w, h, 3, hy, Tile::SmallArmchair);
     if hy + 2 < h {
-        p(&mut g, w, h, 3, hy + 2, Tile::PingPongTableLeft);
-        p(&mut g, w, h, 4, hy + 2, Tile::PingPongTableRight);
         p(&mut g, w, h, 0, hy + 2, Tile::Plant);
+        p(&mut g, w, h, 2, hy + 2, Tile::PingPongTableLeft);
+        p(&mut g, w, h, 3, hy + 2, Tile::PingPongTableRight);
     }
 
     // ── Bottom-right: Gym/arcade (concrete) ─────────────────────────
@@ -61,15 +61,17 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
             p(&mut g, w, h, x, y, Tile::Floor(FloorKind::Concrete));
         }
     }
-    p(&mut g, w, h, hx, hy, Tile::GymTreadmill);
-    p(&mut g, w, h, hx + 2, hy, Tile::WeightBench);
+    // Keep equipment 1+ tile inward from the zone boundary so agents
+    // stand on concrete, not carpet.
+    p(&mut g, w, h, hx + 1, hy, Tile::GymTreadmill);
+    p(&mut g, w, h, hx + 3, hy, Tile::WeightBench);
     p(&mut g, w, h, w - 1, hy, Tile::VendingMachine);
     if hy + 1 < h {
-        p(&mut g, w, h, hx, hy + 1, Tile::YogaMat);
+        p(&mut g, w, h, hx + 1, hy + 1, Tile::YogaMat);
     }
     if hy + 2 < h {
-        p(&mut g, w, h, hx, hy + 2, Tile::PinballMachine);
-        p(&mut g, w, h, hx + 2, hy + 2, Tile::PinballMachine);
+        p(&mut g, w, h, hx + 1, hy + 2, Tile::PinballMachine);
+        p(&mut g, w, h, hx + 3, hy + 2, Tile::PinballMachine);
         p(&mut g, w, h, w - 1, hy + 2, Tile::Plant);
     }
 

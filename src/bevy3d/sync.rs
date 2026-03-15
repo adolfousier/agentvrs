@@ -694,9 +694,11 @@ pub fn sync_agents(
     let cz = h as f32 / 2.0;
 
     // Collect current agent positions and data
-    let mut current_agents: HashMap<AgentId, (Position, u8)> = HashMap::new();
+    // goal_target is the furniture position the agent is using (for facing)
+    let mut current_agents: HashMap<AgentId, (Position, u8, Option<Position>)> = HashMap::new();
     for agent in registry.agents() {
-        current_agents.insert(agent.id, (agent.position, agent.color_index));
+        let goal_target = agent.goal.as_ref().map(|g| g.target());
+        current_agents.insert(agent.id, (agent.position, agent.color_index, goal_target));
     }
 
     // Remove agents that no longer exist
@@ -715,7 +717,7 @@ pub fn sync_agents(
     let t = time.elapsed_secs();
 
     // Update or spawn agents
-    for (agent_id, (pos, color_index)) in &current_agents {
+    for (agent_id, (pos, color_index, goal_target)) in &current_agents {
         let world_x = pos.x as f32 - cx;
         let world_z = pos.y as f32 - cz;
 
@@ -732,9 +734,7 @@ pub fn sync_agents(
 
                 // Walking animation when moving
                 let (bob, tilt) = if dist > 0.02 {
-                    // Pronounced bounce
                     let bounce = (t * 14.0).sin().abs() * 0.06;
-                    // Slight forward lean while walking
                     let lean = 0.05;
                     (bounce, lean)
                 } else {
@@ -743,12 +743,22 @@ pub fn sync_agents(
 
                 transform.translation = Vec3::new(lerped.x, bob, lerped.z);
 
-                // Face movement direction with slight forward tilt
                 if dist > 0.02 {
+                    // Face movement direction while walking
                     let dir = new_xz - old_xz;
                     let angle = dir.x.atan2(dir.y);
                     transform.rotation =
                         Quat::from_rotation_y(angle) * Quat::from_rotation_x(tilt);
+                } else if let Some(furniture_pos) = goal_target {
+                    // Stationary — face toward the furniture being used
+                    let fx = furniture_pos.x as f32 - cx;
+                    let fz = furniture_pos.y as f32 - cz;
+                    let dx = fx - world_x;
+                    let dz = fz - world_z;
+                    if dx.abs() > 0.01 || dz.abs() > 0.01 {
+                        let angle = dx.atan2(dz);
+                        transform.rotation = Quat::from_rotation_y(angle);
+                    }
                 }
             }
         } else {
