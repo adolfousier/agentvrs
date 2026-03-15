@@ -30,7 +30,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             crate::agent::AgentKind::Local => "Local".to_string(),
         };
 
-        vec![
+        let mut lines = vec![
             Line::from(vec![Span::styled(
                 &agent.name,
                 Style::default().fg(color).add_modifier(Modifier::BOLD),
@@ -65,7 +65,40 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             } else {
                 Line::raw("  (silent)")
             },
-        ]
+        ];
+
+        // Inbox messages
+        if agent.inbox.is_empty() {
+            lines.push(Line::raw(""));
+            lines.push(Line::from(vec![
+                Span::raw("  Inbox:  "),
+                Span::styled("empty", Style::default().fg(Color::DarkGray)),
+            ]));
+        } else {
+            lines.push(Line::raw(""));
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("  Inbox ({}):", agent.inbox.len()),
+                    Style::default().fg(Color::Cyan),
+                ),
+            ]));
+            // Show most recent 10 messages
+            for msg in agent.inbox.iter().rev().take(10) {
+                let sender_name = registry
+                    .get(&msg.from)
+                    .map(|a| a.name.clone())
+                    .unwrap_or_else(|| msg.from.to_string());
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("  {} ", sender_name),
+                        Style::default().fg(Color::Green),
+                    ),
+                    Span::styled(&msg.text, Style::default().fg(Color::White)),
+                ]));
+            }
+        }
+
+        lines
     } else {
         vec![Line::raw("  No agent selected. Use n/p and Enter.")]
     };
