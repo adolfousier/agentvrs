@@ -10,6 +10,7 @@ tick_ms = 200
 host = "127.0.0.1"
 port = 18800
 enabled = true
+api_key = "your-secret-key"
 
 [a2a]
 endpoints = ["http://localhost:18789"]

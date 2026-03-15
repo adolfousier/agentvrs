@@ -93,6 +93,21 @@ pub struct DeleteResponse {
     pub agent_id: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InboxMessage {
+    pub from: String,
+    pub from_name: String,
+    pub text: String,
+    pub timestamp: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InboxResponse {
+    pub agent_id: String,
+    pub count: usize,
+    pub messages: Vec<InboxMessage>,
+}
+
 // ─── Observability Types ────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

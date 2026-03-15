@@ -1,5 +1,7 @@
+use super::AgentMessage;
 use crate::world::Position;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use std::time::Instant;
 use uuid::Uuid;
 
@@ -124,6 +126,7 @@ pub struct Agent {
     pub anim: AnimState,
     pub goal: Option<AgentGoal>,
     pub path: Vec<Position>,
+    pub inbox: VecDeque<AgentMessage>,
 }
 
 impl Agent {
@@ -141,6 +144,7 @@ impl Agent {
             anim: AnimState::default(),
             goal: None,
             path: Vec::new(),
+            inbox: VecDeque::new(),
         }
     }
 

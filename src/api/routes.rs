@@ -1,6 +1,6 @@
 use super::observability::{ActivityKind, AgentObserver};
 use super::types::*;
-use crate::agent::{Agent, AgentGoal, AgentKind, AgentRegistry, AgentState};
+use crate::agent::{Agent, AgentGoal, AgentKind, AgentMessage, AgentRegistry, AgentState};
 use crate::error::ApiError;
 use crate::world::pathfind::find_path;
 use crate::world::{Grid, Position, Tile, WorldEvent};
@@ -21,7 +21,7 @@ pub struct ApiState {
     pub grid: Arc<RwLock<Grid>>,
     pub event_tx: mpsc::Sender<WorldEvent>,
     pub event_broadcast: broadcast::Sender<WorldEvent>,
-    pub api_key: Option<String>,
+    pub api_key: String,
     pub tick_count: Arc<std::sync::atomic::AtomicU64>,
     pub observer: Arc<RwLock<AgentObserver>>,
 }
@@ -153,7 +153,7 @@ pub async fn send_agent_message(
     Path(agent_id_str): Path<String>,
     Json(msg): Json<ApiMessage>,
 ) -> Result<Json<MessageResponse>, ApiError> {
-    let (sender_id, target_info) = {
+    let (sender_id, target_info, webhook_url) = {
         let mut reg = state.registry.write().unwrap();
 
         let sender = find_agent_by_id(&reg, &agent_id_str)?;
@@ -164,13 +164,30 @@ pub async fn send_agent_message(
             let target = find_agent_by_id(&reg, to_str)?;
             let target_id = target.id;
 
+            let mut webhook_url = None;
             if let Some(target_agent) = reg.get_mut(&target_id) {
                 target_agent.say(&msg.text);
                 target_agent.set_state(AgentState::Messaging);
                 target_agent.anim.activity_ticks = 0;
+
+                // Push to inbox
+                let inbox_msg = AgentMessage::new(sender_id, target_id, &msg.text);
+                target_agent.inbox.push_back(inbox_msg);
+
+                // Cap inbox at 500 messages
+                while target_agent.inbox.len() > 500 {
+                    target_agent.inbox.pop_front();
+                }
+
+                // Get webhook endpoint for push delivery
+                webhook_url = match &target_agent.kind {
+                    AgentKind::External { endpoint } => Some(endpoint.clone()),
+                    AgentKind::OpenCrabs { endpoint } => Some(endpoint.clone()),
+                    AgentKind::Local => None,
+                };
             }
 
-            (sender_id, Some((target_id, to_str.clone())))
+            (sender_id, Some((target_id, to_str.clone())), webhook_url)
         } else {
             // Self-message (speech bubble)
             if let Some(agent) = reg.get_mut(&sender_id) {
@@ -178,7 +195,7 @@ pub async fn send_agent_message(
                 agent.set_state(AgentState::Messaging);
                 agent.anim.activity_ticks = 0;
             }
-            (sender_id, None)
+            (sender_id, None, None)
         }
     };
 
@@ -204,6 +221,28 @@ pub async fn send_agent_message(
                 ActivityKind::MessageReceived,
                 format!("From {}: {}", &sender_id.to_string()[..8], &msg.text),
             );
+        }
+
+        // Push via webhook if target has an endpoint
+        if let Some(url) = webhook_url {
+            let payload = serde_json::json!({
+                "from": sender_id.0.to_string(),
+                "text": msg.text,
+                "timestamp": Utc::now().to_rfc3339(),
+            });
+            let api_key = state.api_key.clone();
+            tokio::spawn(async move {
+                let client = reqwest::Client::new();
+                let res = client
+                    .post(format!("{}/messages", url))
+                    .header("X-API-Key", api_key)
+                    .json(&payload)
+                    .send()
+                    .await;
+                if let Err(e) = res {
+                    tracing::warn!("Webhook delivery to {} failed: {}", url, e);
+                }
+            });
         }
 
         return Ok(Json(MessageResponse {
@@ -471,6 +510,66 @@ pub async fn world_tiles(State(state): State<ApiState>) -> Json<TileMapResponse>
     })
 }
 
+// --- Agent Inbox ---
+
+pub async fn get_agent_messages(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+    Query(params): Query<LimitQuery>,
+) -> Result<Json<InboxResponse>, ApiError> {
+    let reg = state.registry.read().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+
+    let limit = params.limit.unwrap_or(50);
+    let messages: Vec<InboxMessage> = agent
+        .inbox
+        .iter()
+        .rev()
+        .take(limit)
+        .map(|m| {
+            let from_name = reg
+                .get(&m.from)
+                .map(|a| a.name.clone())
+                .unwrap_or_else(|| m.from.to_string());
+            InboxMessage {
+                from: m.from.0.to_string(),
+                from_name,
+                text: m.text.clone(),
+                timestamp: m.timestamp.to_rfc3339(),
+            }
+        })
+        .collect();
+
+    Ok(Json(InboxResponse {
+        agent_id: agent_id.0.to_string(),
+        count: messages.len(),
+        messages,
+    }))
+}
+
+pub async fn ack_agent_messages(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let mut reg = state.registry.write().unwrap();
+    let agent = find_agent_by_id(&reg, &agent_id_str)?;
+    let agent_id = agent.id;
+
+    let count = if let Some(agent) = reg.get_mut(&agent_id) {
+        let c = agent.inbox.len();
+        agent.inbox.clear();
+        c
+    } else {
+        0
+    };
+
+    Ok(Json(serde_json::json!({
+        "status": "cleared",
+        "cleared": count,
+    })))
+}
+
 // --- SSE Event Stream ---
 
 pub async fn event_stream(
@@ -676,11 +775,9 @@ pub async fn auth_middleware(
     req: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Result<axum::response::Response, ApiError> {
-    if let Some(ref expected) = state.api_key {
-        let provided = req.headers().get("X-API-Key").and_then(|v| v.to_str().ok());
-        if provided != Some(expected.as_str()) {
-            return Err(ApiError::Unauthorized);
-        }
+    let provided = req.headers().get("X-API-Key").and_then(|v| v.to_str().ok());
+    if provided != Some(state.api_key.as_str()) {
+        return Err(ApiError::Unauthorized);
     }
     Ok(next.run(req).await)
 }

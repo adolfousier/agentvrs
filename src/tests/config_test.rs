@@ -9,7 +9,7 @@ fn test_default_config() {
     assert_eq!(config.server.host, "127.0.0.1");
     assert_eq!(config.server.port, 18800);
     assert!(config.server.enabled);
-    assert!(config.server.api_key.is_none());
+    assert!(config.server.api_key.is_empty());
     assert!(config.a2a.endpoints.is_empty());
     assert_eq!(config.a2a.discovery_interval_secs, 30);
 }
@@ -47,7 +47,7 @@ api_key = "my-secret"
     assert_eq!(config.world.height, 40);
     assert_eq!(config.world.tick_ms, 200); // default
     assert_eq!(config.server.port, 9999);
-    assert_eq!(config.server.api_key.as_deref(), Some("my-secret"));
+    assert_eq!(config.server.api_key, "my-secret");
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn test_config_roundtrip() {
             host: "0.0.0.0".to_string(),
             port: 8080,
             enabled: false,
-            api_key: Some("test-key".to_string()),
+            api_key: "test-key".to_string(),
         },
         a2a: A2aConfig {
             endpoints: vec!["http://localhost:9090".to_string()],
@@ -77,7 +77,7 @@ fn test_config_roundtrip() {
     assert_eq!(parsed.world.width, 32);
     assert_eq!(parsed.server.port, 8080);
     assert!(!parsed.server.enabled);
-    assert_eq!(parsed.server.api_key.as_deref(), Some("test-key"));
+    assert_eq!(parsed.server.api_key, "test-key");
     assert_eq!(parsed.a2a.endpoints.len(), 1);
 }
 
@@ -109,17 +109,22 @@ fn test_config_save_and_load() {
 }
 
 #[test]
-fn test_config_api_key_not_serialized_when_none() {
-    let config = AppConfig::default();
-    let toml_str = toml::to_string_pretty(&config).unwrap();
-    assert!(!toml_str.contains("api_key"));
+fn test_config_api_key_redacted_in_debug() {
+    let config = ServerConfig {
+        api_key: "super-secret-key".to_string(),
+        ..ServerConfig::default()
+    };
+    let debug_output = format!("{:?}", config);
+    assert!(!debug_output.contains("super-secret-key"));
+    assert!(debug_output.contains("[REDACTED]"));
 }
 
 #[test]
-fn test_config_api_key_serialized_when_set() {
+fn test_config_api_key_serialized() {
     let mut config = AppConfig::default();
-    config.server.api_key = Some("secret".to_string());
+    config.server.api_key = "secret".to_string();
     let toml_str = toml::to_string_pretty(&config).unwrap();
     assert!(toml_str.contains("api_key"));
+    // The value should be in the serialized TOML (it's a config file, not debug output)
     assert!(toml_str.contains("secret"));
 }

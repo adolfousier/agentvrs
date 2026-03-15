@@ -10,23 +10,10 @@ use std::sync::{Arc, RwLock};
 use tokio::sync::{broadcast, mpsc};
 use tower::ServiceExt;
 
+const TEST_KEY: &str = "test-key";
+
 fn test_state() -> (axum::Router, Arc<RwLock<AgentRegistry>>, Arc<RwLock<Grid>>) {
-    let registry = Arc::new(RwLock::new(AgentRegistry::new()));
-    let grid = Arc::new(RwLock::new(Grid::with_walls(16, 12)));
-    let (event_tx, _rx) = mpsc::channel::<WorldEvent>(64);
-    let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(64);
-    let tick_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
-    let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
-    let router = build_router(
-        Arc::clone(&registry),
-        Arc::clone(&grid),
-        event_tx,
-        broadcast_tx,
-        None,
-        tick_count,
-        observer,
-    );
-    (router, registry, grid)
+    test_state_with_auth(TEST_KEY)
 }
 
 fn test_state_with_auth(
@@ -43,7 +30,7 @@ fn test_state_with_auth(
         Arc::clone(&grid),
         event_tx,
         broadcast_tx,
-        Some(api_key.to_string()),
+        api_key.to_string(),
         tick_count,
         observer,
     );
@@ -56,6 +43,7 @@ async fn connect_helper(router: &axum::Router, name: &str) -> String {
         .method("POST")
         .uri("/agents/connect")
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&ConnectRequest {
                 name: name.to_string(),
@@ -95,6 +83,7 @@ async fn test_list_agents_empty() {
     let (router, _, _) = test_state();
     let req = Request::builder()
         .uri("/agents")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -120,6 +109,7 @@ async fn test_connect_agent_with_endpoint() {
         .method("POST")
         .uri("/agents/connect")
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&ConnectRequest {
                 name: "external-bot".to_string(),
@@ -148,6 +138,7 @@ async fn test_list_agents_after_connect() {
 
     let req = Request::builder()
         .uri("/agents")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -167,6 +158,7 @@ async fn test_delete_agent() {
     let req = Request::builder()
         .method("DELETE")
         .uri(format!("/agents/{}", agent_id))
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -184,6 +176,7 @@ async fn test_delete_nonexistent_agent() {
     let req = Request::builder()
         .method("DELETE")
         .uri("/agents/nonexistent")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -218,6 +211,7 @@ async fn test_delete_clears_grid_occupant() {
     let req = Request::builder()
         .method("DELETE")
         .uri(format!("/agents/{}", agent_id))
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     router.oneshot(req).await.unwrap();
@@ -236,6 +230,7 @@ async fn test_message_to_nonexistent_agent() {
         .method("POST")
         .uri("/agents/nonexistent/message")
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&ApiMessage {
                 text: "hello".to_string(),
@@ -257,6 +252,7 @@ async fn test_send_self_message() {
         .method("POST")
         .uri(format!("/agents/{}/message", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&ApiMessage {
                 text: "hello world".to_string(),
@@ -290,6 +286,7 @@ async fn test_agent_to_agent_message() {
         .method("POST")
         .uri(format!("/agents/{}/message", sender_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&ApiMessage {
                 text: "hey there".to_string(),
@@ -322,6 +319,7 @@ async fn test_message_to_invalid_target() {
         .method("POST")
         .uri(format!("/agents/{}/message", sender_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&ApiMessage {
                 text: "hello".to_string(),
@@ -332,6 +330,316 @@ async fn test_message_to_invalid_target() {
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// ─── Agent Inbox ────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_inbox_empty() {
+    let (router, _, _) = test_state();
+    let id = connect_helper(&router, "inbox-bot").await;
+
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages", id))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 0);
+    assert!(inbox.messages.is_empty());
+}
+
+#[tokio::test]
+async fn test_inbox_receives_message() {
+    let (router, _, _) = test_state();
+    let sender_id = connect_helper(&router, "sender").await;
+    let receiver_id = connect_helper(&router, "receiver").await;
+
+    // Send message from sender to receiver
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/agents/{}/message", sender_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::to_string(&ApiMessage {
+                text: "do task X".to_string(),
+                to: Some(receiver_id.clone()),
+            })
+            .unwrap(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // Check receiver's inbox
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages", receiver_id))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 1);
+    assert_eq!(inbox.messages[0].text, "do task X");
+    assert_eq!(inbox.messages[0].from_name, "sender");
+}
+
+#[tokio::test]
+async fn test_inbox_multiple_messages() {
+    let (router, _, _) = test_state();
+    let a = connect_helper(&router, "agent-a").await;
+    let b = connect_helper(&router, "agent-b").await;
+
+    for text in &["msg-1", "msg-2", "msg-3"] {
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/agents/{}/message", a))
+            .header("content-type", "application/json")
+            .header("X-API-Key", TEST_KEY)
+            .body(Body::from(
+                serde_json::to_string(&ApiMessage {
+                    text: text.to_string(),
+                    to: Some(b.clone()),
+                })
+                .unwrap(),
+            ))
+            .unwrap();
+        router.clone().oneshot(req).await.unwrap();
+    }
+
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages", b))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 3);
+}
+
+#[tokio::test]
+async fn test_inbox_limit() {
+    let (router, _, _) = test_state();
+    let a = connect_helper(&router, "agent-a").await;
+    let b = connect_helper(&router, "agent-b").await;
+
+    for i in 0..5 {
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/agents/{}/message", a))
+            .header("content-type", "application/json")
+            .header("X-API-Key", TEST_KEY)
+            .body(Body::from(
+                serde_json::to_string(&ApiMessage {
+                    text: format!("msg-{}", i),
+                    to: Some(b.clone()),
+                })
+                .unwrap(),
+            ))
+            .unwrap();
+        router.clone().oneshot(req).await.unwrap();
+    }
+
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages?limit=2", b))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 2);
+}
+
+#[tokio::test]
+async fn test_inbox_ack_clears() {
+    let (router, _, _) = test_state();
+    let a = connect_helper(&router, "agent-a").await;
+    let b = connect_helper(&router, "agent-b").await;
+
+    // Send a message
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/agents/{}/message", a))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::to_string(&ApiMessage {
+                text: "hello".to_string(),
+                to: Some(b.clone()),
+            })
+            .unwrap(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // Ack
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/agents/{}/messages/ack", b))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
+    let ack: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(ack["cleared"], 1);
+
+    // Inbox should be empty now
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages", b))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 0);
+}
+
+#[tokio::test]
+async fn test_self_message_not_in_inbox() {
+    let (router, _, _) = test_state();
+    let id = connect_helper(&router, "self-talker").await;
+
+    // Self-message (no "to")
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/agents/{}/message", id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::to_string(&ApiMessage {
+                text: "thinking out loud".to_string(),
+                to: None,
+            })
+            .unwrap(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // Inbox should be empty — self-messages are speech bubbles only
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages", id))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 0);
+}
+
+#[tokio::test]
+async fn test_inbox_cap_at_500() {
+    let (router, registry, _) = test_state();
+    let sender_id = connect_helper(&router, "spammer").await;
+    let receiver_id = connect_helper(&router, "receiver").await;
+
+    // Send 505 messages directly via registry to avoid 505 HTTP round trips
+    {
+        let mut reg = registry.write().unwrap();
+        // Find agents by name since API returns short IDs
+        let sender_agent_id = reg.agents().find(|a| a.name == "spammer").unwrap().id;
+        let receiver_agent_id = reg.agents().find(|a| a.name == "receiver").unwrap().id;
+
+        if let Some(receiver) = reg.get_mut(&receiver_agent_id) {
+            for i in 0..505 {
+                let msg = crate::agent::AgentMessage::new(
+                    sender_agent_id,
+                    receiver_agent_id,
+                    format!("msg-{}", i),
+                );
+                receiver.inbox.push_back(msg);
+                while receiver.inbox.len() > 500 {
+                    receiver.inbox.pop_front();
+                }
+            }
+        }
+    }
+
+    // Check inbox — should be capped at 500
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages?limit=600", receiver_id))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 512_000).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 500);
+    // Oldest messages should be dropped — first message should be msg-5
+    assert_eq!(inbox.messages.last().unwrap().text, "msg-5");
+}
+
+#[tokio::test]
+async fn test_inbox_multiple_senders() {
+    let (router, _, _) = test_state();
+    let a = connect_helper(&router, "agent-a").await;
+    let b = connect_helper(&router, "agent-b").await;
+    let c = connect_helper(&router, "agent-c").await;
+
+    // A sends to C
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/agents/{}/message", a))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::to_string(&ApiMessage {
+                text: "from A".to_string(),
+                to: Some(c.clone()),
+            })
+            .unwrap(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // B sends to C
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/agents/{}/message", b))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::to_string(&ApiMessage {
+                text: "from B".to_string(),
+                to: Some(c.clone()),
+            })
+            .unwrap(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // C's inbox should have both
+    let req = Request::builder()
+        .uri(format!("/agents/{}/messages", c))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let inbox: InboxResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(inbox.count, 2);
+
+    let texts: Vec<&str> = inbox.messages.iter().map(|m| m.text.as_str()).collect();
+    assert!(texts.contains(&"from A"));
+    assert!(texts.contains(&"from B"));
+
+    // Verify sender names
+    let names: Vec<&str> = inbox.messages.iter().map(|m| m.from_name.as_str()).collect();
+    assert!(names.contains(&"agent-a"));
+    assert!(names.contains(&"agent-b"));
 }
 
 // ─── Agent Actions: Move ────────────────────────────────────
@@ -354,6 +662,7 @@ async fn test_move_agent() {
         .method("POST")
         .uri(format!("/agents/{}/move", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&MoveRequest {
                 x: target.x,
@@ -381,6 +690,7 @@ async fn test_move_to_wall() {
         .method("POST")
         .uri(format!("/agents/{}/move", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&MoveRequest { x: 0, y: 0 }).unwrap(),
         ))
@@ -398,6 +708,7 @@ async fn test_move_out_of_bounds() {
         .method("POST")
         .uri(format!("/agents/{}/move", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&MoveRequest { x: 999, y: 999 }).unwrap(),
         ))
@@ -417,6 +728,7 @@ async fn test_set_goal_wander() {
         .method("POST")
         .uri(format!("/agents/{}/goal", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&GoalRequest {
                 goal: "wander".to_string(),
@@ -441,6 +753,7 @@ async fn test_set_goal_invalid() {
         .method("POST")
         .uri(format!("/agents/{}/goal", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&GoalRequest {
                 goal: "swimming".to_string(),
@@ -468,6 +781,7 @@ async fn test_set_agent_state() {
         .method("POST")
         .uri(format!("/agents/{}/state", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&StateRequest {
                 state: "working".to_string(),
@@ -493,6 +807,7 @@ async fn test_set_agent_state_idle_clears_path() {
         .method("POST")
         .uri(format!("/agents/{}/goal", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&GoalRequest {
                 goal: "wander".to_string(),
@@ -507,6 +822,7 @@ async fn test_set_agent_state_idle_clears_path() {
         .method("POST")
         .uri(format!("/agents/{}/state", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&StateRequest {
                 state: "idle".to_string(),
@@ -533,6 +849,7 @@ async fn test_set_agent_state_invalid() {
         .method("POST")
         .uri(format!("/agents/{}/state", agent_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&StateRequest {
                 state: "dancing".to_string(),
@@ -566,6 +883,7 @@ async fn test_set_all_valid_states() {
             .method("POST")
             .uri(format!("/agents/{}/state", agent_id))
             .header("content-type", "application/json")
+            .header("X-API-Key", TEST_KEY)
             .body(Body::from(
                 serde_json::to_string(&StateRequest {
                     state: state_name.to_string(),
@@ -590,6 +908,7 @@ async fn test_world_snapshot() {
     let (router, _, _) = test_state();
     let req = Request::builder()
         .uri("/world")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -609,6 +928,7 @@ async fn test_world_snapshot_with_agents() {
 
     let req = Request::builder()
         .uri("/world")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -623,6 +943,7 @@ async fn test_world_tiles() {
     let (router, _, _) = test_state();
     let req = Request::builder()
         .uri("/world/tiles")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -645,7 +966,7 @@ async fn test_world_tiles() {
 
 #[tokio::test]
 async fn test_api_key_auth_required() {
-    let (router, _, _) = test_state_with_auth("test-secret-key");
+    let (router, _, _) = test_state();
 
     // No API key → 401
     let req = Request::builder()
@@ -662,7 +983,7 @@ async fn test_api_key_auth_required() {
 
 #[tokio::test]
 async fn test_api_key_auth_wrong_key() {
-    let (router, _, _) = test_state_with_auth("correct-key");
+    let (router, _, _) = test_state();
 
     let req = Request::builder()
         .uri("/agents")
@@ -675,11 +996,11 @@ async fn test_api_key_auth_wrong_key() {
 
 #[tokio::test]
 async fn test_api_key_auth_correct_key() {
-    let (router, _, _) = test_state_with_auth("correct-key");
+    let (router, _, _) = test_state();
 
     let req = Request::builder()
         .uri("/agents")
-        .header("X-API-Key", "correct-key")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -688,22 +1009,10 @@ async fn test_api_key_auth_correct_key() {
 
 #[tokio::test]
 async fn test_health_no_auth_needed() {
-    let (router, _, _) = test_state_with_auth("secret");
+    let (router, _, _) = test_state();
 
     let req = Request::builder()
         .uri("/health")
-        .body(Body::empty())
-        .unwrap();
-    let resp = router.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK);
-}
-
-#[tokio::test]
-async fn test_no_auth_when_key_not_configured() {
-    let (router, _, _) = test_state(); // no api_key
-
-    let req = Request::builder()
-        .uri("/agents")
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -718,6 +1027,7 @@ async fn test_error_response_json_format() {
     let req = Request::builder()
         .method("DELETE")
         .uri("/agents/does-not-exist")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -742,6 +1052,7 @@ async fn test_agent_id_prefix_match() {
         .method("POST")
         .uri(format!("/agents/{}/state", short_id))
         .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::from(
             serde_json::to_string(&StateRequest {
                 state: "thinking".to_string(),
@@ -760,6 +1071,7 @@ async fn test_event_stream_endpoint_exists() {
     let (router, _, _) = test_state();
     let req = Request::builder()
         .uri("/events")
+        .header("X-API-Key", TEST_KEY)
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();

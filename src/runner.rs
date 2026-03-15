@@ -55,6 +55,9 @@ pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<Wor
     let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
 
     // API server
+    if config.server.enabled && config.server.api_key.is_empty() {
+        anyhow::bail!("API key is required. Set api_key in ~/.config/agentverse/config.toml");
+    }
     if config.server.enabled {
         let sg = Arc::clone(&grid);
         let sr = Arc::clone(&registry);

@@ -15,7 +15,7 @@ pub fn build_router(
     grid: Arc<RwLock<Grid>>,
     event_tx: mpsc::Sender<WorldEvent>,
     event_broadcast: broadcast::Sender<WorldEvent>,
-    api_key: Option<String>,
+    api_key: String,
     tick_count: Arc<std::sync::atomic::AtomicU64>,
     observer: Arc<RwLock<AgentObserver>>,
 ) -> Router {
@@ -50,6 +50,9 @@ pub fn build_router(
         .route("/agents/{id}/status", get(routes::get_agent_status))
         .route("/agents/{id}/tasks", get(routes::get_agent_tasks))
         .route("/agents/{id}/dashboard", get(routes::get_agent_dashboard))
+        // Agent inbox
+        .route("/agents/{id}/messages", get(routes::get_agent_messages))
+        .route("/agents/{id}/messages/ack", post(routes::ack_agent_messages))
         // World
         .route("/world", get(routes::world_snapshot))
         .route("/world/tiles", get(routes::world_tiles))

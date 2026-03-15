@@ -14,7 +14,7 @@
 //! cargo install agentverse
 //! agentverse                    # TUI mode
 //! agentverse --gui              # GTK4 GUI (requires gui feature)
-//! agentverse --api-key SECRET   # enable API authentication
+//! # set api_key in ~/.config/agentverse/config.toml for authentication
 //! ```
 //!
 //! ## Crate features

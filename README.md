@@ -29,6 +29,7 @@
   - [Authentication](#authentication)
   - [Agents](#agents)
   - [Agent Actions](#agent-actions)
+  - [Agent Inbox](#agent-inbox)
   - [World](#world)
   - [Observability & Control Plane](#observability--control-plane)
   - [Real-time Events (SSE)](#real-time-events-sse)
@@ -54,6 +55,7 @@
 - **Observability & control plane** — activity logs, heartbeat monitoring, task history, connection health, full agent dashboard — control all agents from one place across multiple machines
 - **A2A protocol** — wire-compatible A2A client for connecting OpenCrabs agents
 - **Agent control** — move agents, set goals, change states, send messages between agents via API
+- **Agent inbox** — messages between agents are stored in-world; agents poll their inbox or receive push via webhook
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
 
 ---
@@ -121,7 +123,7 @@ tick_ms = 200
 host = "127.0.0.1"
 port = 18800
 enabled = true
-api_key = "your-secret-key"  # optional, omit for no auth
+api_key = "your-secret-key"  # required when server is enabled
 
 [a2a]
 endpoints = ["http://localhost:18789"]
@@ -166,11 +168,11 @@ sidebar_width = 280
 
 ## HTTP API
 
-API runs on `127.0.0.1:18800` by default. All endpoints (except `/health`) require `X-API-Key` header when `api_key` is configured.
+API runs on `127.0.0.1:18800` by default. All endpoints (except `/health`) require the `X-API-Key` header.
 
 ### Authentication
 
-If `api_key` is set in config, include it in requests:
+Include your API key in every request:
 
 ```bash
 curl -H "X-API-Key: your-secret-key" http://127.0.0.1:18800/agents
@@ -225,6 +227,23 @@ POST /agents/{id}/state
 # Body: {"state":"working"}
 # Response: {"status":"state_changed","state":"working"}
 ```
+
+#### Agent Inbox
+
+Every agent has an inbox stored in agentverse. When Agent A sends a message to Agent B, the message is stored in Agent B's inbox. Agent B polls to check for new messages.
+
+```bash
+# Check inbox (most recent first)
+GET /agents/{id}/messages?limit=50
+# Response: {"agent_id":"b2c3d4e5","count":1,"messages":[
+#   {"from":"a1b2c3d4-...","from_name":"crab-alpha","text":"handle task X","timestamp":"2026-03-14T10:00:00Z"}]}
+
+# Clear inbox after reading
+POST /agents/{id}/messages/ack
+# Response: {"status":"cleared","cleared":1}
+```
+
+If the agent registered with an `endpoint` on connect, agentverse also pushes messages to `{endpoint}/messages` automatically for real-time delivery.
 
 #### World
 
@@ -316,26 +335,44 @@ Agentverse works with any agent that can make HTTP requests. Connect from any la
 # 1. Connect your agent
 curl -X POST http://127.0.0.1:18800/agents/connect \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
   -d '{"name":"my-agent"}'
 # Returns: {"agent_id":"a1b2c3d4-...","position":[5,3]}
 
 # 2. Send heartbeats (keep-alive, report health)
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/heartbeat \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
   -d '{"status":"healthy","metadata":{"task":"researching"}}'
 
 # 3. Control your agent
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/state \
-  -H "Content-Type: application/json" -d '{"state":"working"}'
-
-curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/message \
-  -H "Content-Type: application/json" -d '{"text":"Found 3 results"}'
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{"state":"working"}'
 
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/goal \
-  -H "Content-Type: application/json" -d '{"goal":"desk"}'
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{"goal":"desk"}'
 
-# 4. Monitor from the dashboard
-curl http://127.0.0.1:18800/agents/a1b2c3d4/dashboard
+# 4. Send a message to another agent
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/message \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{"text":"handle task X","to":"b2c3d4e5"}'
+
+# 5. Check your inbox for messages from other agents
+curl http://127.0.0.1:18800/agents/a1b2c3d4/messages \
+  -H "X-API-Key: your-secret-key"
+
+# 6. Clear inbox after reading
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/messages/ack \
+  -H "X-API-Key: your-secret-key"
+
+# 7. Monitor from the dashboard
+curl http://127.0.0.1:18800/agents/a1b2c3d4/dashboard \
+  -H "X-API-Key: your-secret-key"
 ```
 
 ### OpenCrabs (Rust)
@@ -452,7 +489,7 @@ Agents can connect from any machine on your network. Change the bind address:
 [server]
 host = "0.0.0.0"     # listen on all interfaces
 port = 18800
-api_key = "your-secret-key"  # always use auth when exposed
+api_key = "your-secret-key"
 ```
 
 Then connect from other machines:

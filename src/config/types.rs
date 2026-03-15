@@ -22,7 +22,7 @@ pub struct WorldConfig {
     pub tick_ms: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     #[serde(default = "default_host")]
     pub host: String,
@@ -30,9 +30,19 @@ pub struct ServerConfig {
     pub port: u16,
     #[serde(default = "default_enabled")]
     pub enabled: bool,
-    /// Optional API key for authentication. If set, all endpoints (except /health) require X-API-Key header.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub api_key: Option<String>,
+    /// API key for authentication. All endpoints (except /health) require X-API-Key header.
+    pub api_key: String,
+}
+
+impl std::fmt::Debug for ServerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ServerConfig")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("enabled", &self.enabled)
+            .field("api_key", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,7 +127,7 @@ impl Default for ServerConfig {
             host: default_host(),
             port: default_port(),
             enabled: default_enabled(),
-            api_key: None,
+            api_key: String::new(),
         }
     }
 }
