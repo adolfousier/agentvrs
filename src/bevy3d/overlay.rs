@@ -178,139 +178,141 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
             ));
 
             // Main sidebar column
-            sidebar.spawn(Node {
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                overflow: Overflow::clip(),
-                ..default()
-            }).with_children(|sidebar| {
-            // ── Header ──────────────────────────────────────────────
-            sidebar.spawn((
-                Text::new("Agents"),
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
-                TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                Node {
-                    padding: UiRect::new(
-                        Val::Px(14.0),
-                        Val::Px(14.0),
-                        Val::Px(14.0),
-                        Val::Px(8.0),
-                    ),
-                    ..default()
-                },
-            ));
-
-            // ── Agent list (scrollable area) ────────────────────────
             sidebar
-                .spawn((
-                    Node {
-                        flex_direction: FlexDirection::Column,
-                        overflow: Overflow::clip(),
-                        flex_grow: 1.0,
-                        padding: UiRect::all(Val::Px(6.0)),
-                        row_gap: Val::Px(2.0),
-                        ..default()
-                    },
-                    AgentListContainer,
-                ))
-                .with_children(|_| {});
-
-            // ── Separator (drag to resize detail panel) ──────────────
-            sidebar
-                .spawn((
-                    Node {
-                        height: Val::Px(8.0),
-                        width: Val::Percent(100.0),
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        ..default()
-                    },
-                    BackgroundColor(Color::NONE),
-                    SidebarSeparator,
-                    Interaction::default(),
-                ))
-                .with_children(|sep| {
-                    // Thin visible line inside the hit area
-                    sep.spawn((
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    flex_grow: 1.0,
+                    overflow: Overflow::clip(),
+                    ..default()
+                })
+                .with_children(|sidebar| {
+                    // ── Header ──────────────────────────────────────────────
+                    sidebar.spawn((
+                        Text::new("Agents"),
+                        TextFont {
+                            font_size: 16.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.9, 0.9, 0.9)),
                         Node {
-                            height: Val::Px(1.0),
-                            width: Val::Percent(100.0),
+                            padding: UiRect::new(
+                                Val::Px(14.0),
+                                Val::Px(14.0),
+                                Val::Px(14.0),
+                                Val::Px(8.0),
+                            ),
                             ..default()
                         },
-                        BackgroundColor(Color::srgb(0.25, 0.25, 0.28)),
-                    ));
-                });
-
-            // ── Detail panel ────────────────────────────────────────
-            sidebar
-                .spawn((
-                    Node {
-                        flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(14.0)),
-                        row_gap: Val::Px(8.0),
-                        height: Val::Px(sidebar_state.detail_height),
-                        overflow: Overflow::clip(),
-                        ..default()
-                    },
-                    DetailPanel,
-                ))
-                .with_children(|detail| {
-                    detail.spawn((
-                        Text::new("No agent selected"),
-                        TextFont {
-                            font_size: 14.0,
-                            ..default()
-                        },
-                        TextColor(Color::srgb(0.85, 0.85, 0.85)),
-                        DetailTitle,
-                    ));
-                    detail.spawn((
-                        Text::new(""),
-                        TextFont {
-                            font_size: 12.0,
-                            ..default()
-                        },
-                        TextColor(Color::srgb(0.65, 0.65, 0.65)),
-                        DetailInfo,
                     ));
 
-                    // ── Message input ──────────────────────────────
-                    detail.spawn((
-                        Text::new("Send message:"),
-                        TextFont {
-                            font_size: 11.0,
-                            ..default()
-                        },
-                        TextColor(Color::srgb(0.5, 0.5, 0.5)),
-                    ));
-                    detail
+                    // ── Agent list (scrollable area) ────────────────────────
+                    sidebar
                         .spawn((
                             Node {
+                                flex_direction: FlexDirection::Column,
+                                overflow: Overflow::clip(),
+                                flex_grow: 1.0,
                                 padding: UiRect::all(Val::Px(6.0)),
-                                min_height: Val::Px(24.0),
-                                width: Val::Percent(100.0),
-                                border_radius: BorderRadius::all(Val::Px(4.0)),
+                                row_gap: Val::Px(2.0),
                                 ..default()
                             },
-                            BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
-                            MessageInputBox,
+                            AgentListContainer,
                         ))
-                        .with_children(|input_box| {
-                            input_box.spawn((
-                                Text::new("Type and press Enter..."),
+                        .with_children(|_| {});
+
+                    // ── Separator (drag to resize detail panel) ──────────────
+                    sidebar
+                        .spawn((
+                            Node {
+                                height: Val::Px(8.0),
+                                width: Val::Percent(100.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            BackgroundColor(Color::NONE),
+                            SidebarSeparator,
+                            Interaction::default(),
+                        ))
+                        .with_children(|sep| {
+                            // Thin visible line inside the hit area
+                            sep.spawn((
+                                Node {
+                                    height: Val::Px(1.0),
+                                    width: Val::Percent(100.0),
+                                    ..default()
+                                },
+                                BackgroundColor(Color::srgb(0.25, 0.25, 0.28)),
+                            ));
+                        });
+
+                    // ── Detail panel ────────────────────────────────────────
+                    sidebar
+                        .spawn((
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect::all(Val::Px(14.0)),
+                                row_gap: Val::Px(8.0),
+                                height: Val::Px(sidebar_state.detail_height),
+                                overflow: Overflow::clip(),
+                                ..default()
+                            },
+                            DetailPanel,
+                        ))
+                        .with_children(|detail| {
+                            detail.spawn((
+                                Text::new("No agent selected"),
+                                TextFont {
+                                    font_size: 14.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.85, 0.85, 0.85)),
+                                DetailTitle,
+                            ));
+                            detail.spawn((
+                                Text::new(""),
                                 TextFont {
                                     font_size: 12.0,
                                     ..default()
                                 },
-                                TextColor(Color::srgb(0.35, 0.35, 0.35)),
-                                MessageInputText,
+                                TextColor(Color::srgb(0.65, 0.65, 0.65)),
+                                DetailInfo,
                             ));
+
+                            // ── Message input ──────────────────────────────
+                            detail.spawn((
+                                Text::new("Send message:"),
+                                TextFont {
+                                    font_size: 11.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.5, 0.5, 0.5)),
+                            ));
+                            detail
+                                .spawn((
+                                    Node {
+                                        padding: UiRect::all(Val::Px(6.0)),
+                                        min_height: Val::Px(24.0),
+                                        width: Val::Percent(100.0),
+                                        border_radius: BorderRadius::all(Val::Px(4.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
+                                    MessageInputBox,
+                                ))
+                                .with_children(|input_box| {
+                                    input_box.spawn((
+                                        Text::new("Type and press Enter..."),
+                                        TextFont {
+                                            font_size: 12.0,
+                                            ..default()
+                                        },
+                                        TextColor(Color::srgb(0.35, 0.35, 0.35)),
+                                        MessageInputText,
+                                    ));
+                                });
                         });
                 });
-            });
         });
 }
 
@@ -913,15 +915,21 @@ pub fn sidebar_resize(
         if wants_ew_cursor {
             commands
                 .entity(entity)
-                .insert(bevy::window::CursorIcon::from(bevy::window::SystemCursorIcon::ColResize));
+                .insert(bevy::window::CursorIcon::from(
+                    bevy::window::SystemCursorIcon::ColResize,
+                ));
         } else if wants_ns_cursor {
             commands
                 .entity(entity)
-                .insert(bevy::window::CursorIcon::from(bevy::window::SystemCursorIcon::RowResize));
+                .insert(bevy::window::CursorIcon::from(
+                    bevy::window::SystemCursorIcon::RowResize,
+                ));
         } else {
             commands
                 .entity(entity)
-                .insert(bevy::window::CursorIcon::from(bevy::window::SystemCursorIcon::Default));
+                .insert(bevy::window::CursorIcon::from(
+                    bevy::window::SystemCursorIcon::Default,
+                ));
         }
     }
 
@@ -929,24 +937,24 @@ pub fn sidebar_resize(
     for interaction in handle_q.iter() {
         if *interaction == Interaction::Pressed
             && let Some((_, window)) = windows.iter().next()
-                && let Some(cursor) = window.cursor_position()
-            {
-                sidebar_state.dragging_width = true;
-                sidebar_state.drag_start = cursor.x;
-                sidebar_state.drag_start_value = sidebar_state.width;
-            }
+            && let Some(cursor) = window.cursor_position()
+        {
+            sidebar_state.dragging_width = true;
+            sidebar_state.drag_start = cursor.x;
+            sidebar_state.drag_start_value = sidebar_state.width;
+        }
     }
 
     // Start detail height drag
     for interaction in sep_q.iter() {
         if *interaction == Interaction::Pressed
             && let Some((_, window)) = windows.iter().next()
-                && let Some(cursor) = window.cursor_position()
-            {
-                sidebar_state.dragging_detail = true;
-                sidebar_state.drag_start = cursor.y;
-                sidebar_state.drag_start_value = sidebar_state.detail_height;
-            }
+            && let Some(cursor) = window.cursor_position()
+        {
+            sidebar_state.dragging_detail = true;
+            sidebar_state.drag_start = cursor.y;
+            sidebar_state.drag_start_value = sidebar_state.detail_height;
+        }
     }
 
     // While dragging width

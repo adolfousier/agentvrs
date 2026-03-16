@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.1.3] - 2026-03-16
+
+### Added
+- **Speech bubbles** — messages sent via sidebar now appear as floating bubbles above agents in the 3D world
+- **Inbox delivery** — sidebar messages push to agent inbox so external agents can retrieve them via API
+- **Resizable sidebar** — drag left edge to resize width (200–600px), drag separator to resize detail panel height
+- **Resize cursor feedback** — col-resize / row-resize cursors on hover over drag handles
+- **Live dark/light mode** — all world materials (floors, walls, furniture, equipment) tint for dark mode, not just background
+- **System theme detection** — polls macOS/Windows OS appearance every 2 seconds, auto-switches
+
+### Changed
+- **Bevy 3D is now the default renderer** — no `--bevy` flag needed, just run `agentverse`
+- **Upgraded all dependencies** — Bevy 0.15→0.18, rand 0.9→0.10, reqwest 0.12→0.13, toml 0.8→1.0, and more
+- Rust minimum version bumped to 1.94
+- Repository URL changed to `github.com/adolfousier/agentverse`
+- Updated all descriptions: "Isometric 3D world... built for teams, built in Rust with Bevy"
+- Sidebar width persists to config file across restarts
+- 3D controls listed first in README, TUI secondary
+
+### Removed
+- **GTK4 renderer** — 12 source files (2,700+ lines) deleted; Bevy fully replaces it
+- `gui` feature flag and `gtk4` dependency removed from Cargo.toml
+- `--gui` CLI flag removed
+
+### Fixed
+- UI invisible after Bevy 0.18 upgrade (missing `bevy_ui_render` feature)
+- Agent name labels vanished after upgrade (`IsDefaultUiCamera` marker needed)
+- Meeting table accidentally replaced by plant during layout refactor
+- Sidebar header padding misaligned with detail panel
+- All Bevy 0.18 breaking changes: `EventReader`→`MessageReader`, `get_single()`→`single()`, `despawn_recursive()`→`despawn()`, `AmbientLight` as Component, `BorderRadius` in `Node`, `ScalingMode` moved
+
 ## [0.1.2] - 2026-03-15
 
 ### Added
