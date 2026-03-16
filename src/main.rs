@@ -14,19 +14,9 @@ async fn main() -> Result<()> {
         .init();
 
     let use_tui = std::env::args().any(|a| a == "--tui");
-    let use_gui = std::env::args().any(|a| a == "--gui");
 
     if use_tui {
         agentverse::tui::run(config).await
-    } else if use_gui {
-        #[cfg(feature = "gui")]
-        {
-            agentverse::gui::run(config).await
-        }
-        #[cfg(not(feature = "gui"))]
-        {
-            anyhow::bail!("GUI not available. Rebuild with: cargo build --features gui")
-        }
     } else {
         #[cfg(feature = "bevy3d")]
         {

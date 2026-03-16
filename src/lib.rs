@@ -56,7 +56,6 @@
 //! | Feature  | Default | Description |
 //! |----------|---------|-------------|
 //! | `bevy3d` | yes     | Bevy isometric 3D renderer |
-//! | `gui`    | no      | GTK4 GUI (experimental) |
 
 pub mod a2a;
 pub mod agent;
@@ -66,8 +65,6 @@ pub mod avatar;
 pub mod bevy3d;
 pub mod config;
 pub mod error;
-#[cfg(feature = "gui")]
-pub mod gui;
 pub mod runner;
 pub mod tui;
 pub mod world;
