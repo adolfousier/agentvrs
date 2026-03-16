@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.4] - 2026-03-16
+
+### Added
+- **SQLite persistence** — agents, messages, activity logs, tasks, and heartbeats survive restarts; stored at `~/.config/agentverse/agentverse.db` with WAL mode for concurrent reads
+- **Mission Control panel** — press `M` to open full-screen overlay with GitHub-style agent cards (status dot, kind badge, inbox count), activity feed, and task list
+- **Dynamic Mission Control theme** — panel follows system light/dark mode in real-time with full color palette (backgrounds, cards, borders, text, badges)
+- **Agent restore on startup** — external agents are restored from SQLite with original UUIDs, inbox messages, and valid positions
+- 15 Bevy ECS tests for Mission Control (state, colors, setup hierarchy, update behavior, DB integration)
+- 18 SQLite persistence tests (agents, messages, activity, tasks, heartbeats, purge, restore)
+- Test count: 217 tests across 10 modules
+
+### Fixed
+- Agent name labels rendering on top of sidebar and status bar (added `ZIndex(100)`)
+- Agent name labels overlapping Mission Control overlay (hidden when MC open)
+- Agent list padding inconsistent with detail panel (6px → 14px)
+
 ## [0.1.3] - 2026-03-16
 
 ### Added

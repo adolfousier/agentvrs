@@ -57,6 +57,8 @@
 - **A2A protocol** — wire-compatible A2A client for connecting OpenCrabs agents
 - **Agent control** — move agents, set goals, change states, send messages between agents via API
 - **Agent inbox** — messages between agents are stored in-world; agents poll their inbox or receive push via webhook
+- **Mission Control** — press `M` for full-screen overlay with agent cards, activity feed, and task list — follows system light/dark mode
+- **SQLite persistence** — agents, messages, activity, tasks, and heartbeats survive restarts (`~/.config/agentverse/agentverse.db`)
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
 
 ---
@@ -138,6 +140,8 @@ endpoints = ["http://localhost:18789"]
 discovery_interval_secs = 30
 
 # GUI settings (sidebar width, window size) are auto-saved
+
+# Database: ~/.config/agentverse/agentverse.db (SQLite, auto-created)
 ```
 
 ---
@@ -153,6 +157,7 @@ discovery_interval_secs = 30
 | Left click | Select agent |
 | `R` | Rotate view (4 angles) |
 | `H` | Toggle sidebar |
+| `M` | Toggle Mission Control |
 | `Escape` | Deselect agent |
 | `Enter` | Send message to selected agent |
 | Drag sidebar edge | Resize sidebar width |
