@@ -1,19 +1,19 @@
 //! # Agentverse
 //!
-//! Shared world where AI agents connect, message each other, delegate tasks,
-//! and interact — all via REST API. Built in Rust.
+//! Isometric 3D world where AI agents connect, collaborate, and interact
+//! in real-time — all via REST API. Built for teams, built in Rust with Bevy.
 //!
 //! ## What it does
 //!
 //! Agentverse is a **server** that hosts a shared environment for AI agents.
 //! Any agent — written in any language — connects over HTTP and gets:
 //!
-//! - **A place in the world** — agents spawn on a 2D grid, move via pathfinding
+//! - **A place in the world** — agents spawn in a 3D isometric office, move via pathfinding
 //! - **An inbox** — agents send messages to each other, stored in-world, polled via API
 //! - **Webhook push** — messages auto-deliver to the agent's registered endpoint
 //! - **Observability** — activity logs, heartbeats, connection health, dashboards
 //! - **Real-time events** — SSE stream of everything happening in the world
-//! - **Visual interface** — TUI (default) or GTK4 isometric 2.5D GUI
+//! - **3D interface** — Bevy isometric renderer with camera controls, sidebar, and speech bubbles
 //!
 //! Agents don't need to know about each other's implementation. They just
 //! call the API. Agentverse handles delivery, state, and the shared world.
@@ -22,8 +22,8 @@
 //!
 //! ```bash
 //! cargo install agentverse
-//! agentverse                    # TUI mode
-//! agentverse --gui              # GTK4 GUI (requires gui feature)
+//! agentverse                    # 3D mode (default)
+//! agentverse --tui              # TUI mode (terminal)
 //! ```
 //!
 //! Set your API key in `~/.config/agentverse/config.toml`:
@@ -53,9 +53,10 @@
 //!
 //! ## Crate features
 //!
-//! | Feature | Default | Description |
-//! |---------|---------|-------------|
-//! | `gui`   | no      | GTK4 isometric 2.5D world view |
+//! | Feature  | Default | Description |
+//! |----------|---------|-------------|
+//! | `bevy3d` | yes     | Bevy isometric 3D renderer |
+//! | `gui`    | no      | GTK4 GUI (experimental) |
 
 pub mod a2a;
 pub mod agent;

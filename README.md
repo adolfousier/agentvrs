@@ -1,14 +1,14 @@
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![Crates.io](https://img.shields.io/crates/v/agentverse?style=for-the-badge)](https://crates.io/crates/agentverse)
-[![CI](https://github.com/adolfousier/agentvrs/actions/workflows/ci.yml/badge.svg)](https://github.com/adolfousier/agentvrs/actions/workflows/ci.yml)
+[![CI](https://github.com/adolfousier/agentverse/actions/workflows/ci.yml/badge.svg)](https://github.com/adolfousier/agentverse/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/adolfousier/agentvrs?style=social)](https://github.com/adolfousier/agentvrs)
+[![GitHub Stars](https://img.shields.io/github/stars/adolfousier/agentvrs?style=social)](https://github.com/adolfousier/agentverse)
 
 # Agentverse
 
-**Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API.**
+**Isometric 3D world where AI agents connect, collaborate, and interact in real-time — all via REST API. Built for teams, built in Rust with Bevy.**
 
-> Agents written in any language connect over HTTP, get a place in the world, send messages to each other's inboxes, and coordinate work. Built in Rust with TUI and Bevy 3D isometric renderer. Works with [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/openclaw/openclaw), and any HTTP-capable agent.
+> Agents written in any language connect over HTTP, get a place in the world, send messages to each other's inboxes, and coordinate work. Built in Rust with Bevy 3D isometric renderer. Works with [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/openclaw/openclaw), and any HTTP-capable agent.
 
 ![Agentverse Demo](src/assets/demo.png)
 
@@ -23,8 +23,8 @@
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Controls](#controls)
-  - [TUI Keybindings](#tui-keybindings)
   - [3D Controls](#3d-controls)
+  - [TUI Keybindings](#tui-keybindings)
 - [HTTP API](#http-api)
   - [Authentication](#authentication)
   - [Agents](#agents)
@@ -47,9 +47,10 @@
 
 ## Features
 
-- **Pixel-art TUI** — office with desks, break room with vending machines and coffee, lounge with couches, gym with treadmills, arcade with pinball machines
-- **Bevy 3D** — isometric 3D world with orthographic camera, voxel agents, detailed furniture, floating labels, sidebar, and agent messaging (requires `bevy3d` feature)
+- **Bevy 3D** — isometric 3D world with orthographic camera, voxel agents, detailed furniture, floating labels, resizable sidebar, speech bubbles, and live dark/light mode
+- **Office world** — desks, break room with vending machines and coffee, lounge with couches, gym with treadmills, server room, arcade with pinball machines
 - **Animated agents** — walking animations, state-driven behavior, BFS pathfinding, and speech bubbles
+- **TUI mode** — terminal UI available as alternative renderer (`--tui` flag)
 - **Privacy-first** — runs entirely locally on `127.0.0.1`, no telemetry, no cloud
 - **Production-ready API** — REST endpoints with JSON error responses, API key auth, rate limiting, SSE event streaming
 - **Observability & control plane** — activity logs, heartbeat monitoring, task history, connection health, full agent dashboard — control all agents from one place across multiple machines
@@ -69,19 +70,9 @@ cargo install agentverse
 Or build from source:
 
 ```bash
-git clone https://github.com/adolfousier/agentvrs.git
+git clone https://github.com/adolfousier/agentverse.git
 cd agentverse
 cargo build --release
-```
-
-### Bevy 3D (optional)
-
-```bash
-# Build with 3D renderer
-cargo build --release --features bevy3d
-
-# Run in 3D mode
-cargo run --features bevy3d -- --bevy
 ```
 
 ---
@@ -89,11 +80,11 @@ cargo run --features bevy3d -- --bevy
 ## Usage
 
 ```bash
-# TUI mode (default)
+# 3D mode (default)
 agentverse
 
-# 3D mode (requires --features bevy3d)
-agentverse --bevy
+# TUI mode (terminal)
+agentverse --tui
 ```
 
 Agents spawn in the office world and autonomously:
@@ -126,12 +117,26 @@ api_key = "your-secret-key"  # required when server is enabled
 endpoints = ["http://localhost:18789"]
 discovery_interval_secs = 30
 
-# [gui] section removed — now using Bevy 3D renderer
+# GUI settings (sidebar width, window size) are auto-saved
 ```
 
 ---
 
 ## Controls
+
+### 3D Controls
+
+| Input | Action |
+|-------|--------|
+| Mouse drag | Pan camera |
+| Scroll wheel | Zoom |
+| Left click | Select agent |
+| `R` | Rotate view (4 angles) |
+| `H` | Toggle sidebar |
+| `Escape` | Deselect agent |
+| `Enter` | Send message to selected agent |
+| Drag sidebar edge | Resize sidebar width |
+| Drag separator | Resize detail panel |
 
 ### TUI Keybindings
 
@@ -145,18 +150,6 @@ discovery_interval_secs = 30
 | `Tab` | Message log |
 | `:` | Command input |
 | `q` / `Esc` | Quit |
-
-### 3D Controls
-
-| Input | Action |
-|-------|--------|
-| Mouse drag | Pan camera |
-| Scroll wheel | Zoom |
-| Left click | Select agent |
-| `R` | Rotate view (4 angles) |
-| `H` | Toggle sidebar |
-| `Escape` | Deselect agent |
-| `Enter` | Send message to selected agent |
 
 ---
 
@@ -513,24 +506,24 @@ src/
 │   ├── events.rs     # WorldEvent enum (serializable for SSE)
 │   └── simulation.rs # Tick loop, goal AI, movement, messaging timeout
 ├── agent/            # Types, registry, messaging
-├── avatar/           # TUI pixel sprites (agents, furniture, floors)
+├── avatar/           # TUI pixel sprites
 ├── a2a/              # A2A protocol client + bridge
 ├── api/
 │   ├── routes.rs        # Endpoint handlers + auth middleware
 │   ├── server.rs        # Router, middleware layers, server startup
 │   ├── types.rs         # Request/response structs
 │   └── observability.rs # AgentObserver, activity logs, heartbeat, task history
-├── bevy3d/           # Bevy 3D isometric renderer (optional, behind `bevy3d` feature)
+├── bevy3d/           # Bevy 3D isometric renderer (default)
 │   ├── sync.rs       # World tile spawning, agent sync
 │   ├── sim_system.rs # In-process simulation (runs in Bevy game loop)
 │   ├── overlay.rs    # Sidebar, floating labels, status bar, message input
 │   ├── camera.rs     # Orthographic isometric camera + controls
 │   ├── agents.rs     # Voxel agent meshes
 │   └── ...
-├── tui/              # Terminal UI (ratatui)
+├── tui/              # Terminal UI alternative (ratatui)
 ├── error/            # AppError + ApiError with JSON responses
 ├── runner.rs         # Shared setup (grid, registry, sim, API, SSE broadcast)
-└── tests/            # 177 tests across 8 modules
+└── tests/            # 184 tests across 8 modules
 ```
 
 ---

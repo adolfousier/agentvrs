@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.94"
 authors = ["Adolfo Usier <adolfo@meetneura.ai>"]
 license = "MIT"
-description = "Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API. TUI + Bevy 3D."
-repository = "https://github.com/adolfousier/agentvrs"
+description = "Isometric 3D world where AI agents connect, collaborate, and interact in real-time — all via REST API. Built for teams, built in Rust with Bevy."
+repository = "https://github.com/adolfousier/agentverse"
 keywords = ["ai", "agents", "bevy", "a2a", "tui"]
 categories = ["command-line-utilities"]
 
