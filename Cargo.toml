@@ -36,6 +36,7 @@ bevy = { version = "0.18", optional = true, default-features = false, features =
     "bevy_render",
     "bevy_text",
     "bevy_ui",
+    "bevy_ui_render",
     "bevy_winit",
     "bevy_picking",
     "x11",

@@ -136,12 +136,15 @@ fn theme_clear_color(is_dark: bool) -> Color {
     }
 }
 
-/// Polls OS dark/light mode every 2 seconds and updates ClearColor + AmbientLight.
+/// Polls OS dark/light mode every 2 seconds and updates ClearColor, lighting, and materials.
+#[allow(clippy::too_many_arguments)]
 fn poll_system_theme(
     mut theme: ResMut<ThemeState>,
     mut clear: ResMut<ClearColor>,
     mut ambient_q: Query<&mut AmbientLight>,
     mut lights: Query<&mut DirectionalLight>,
+    mat_lib: Option<Res<super::materials::MaterialLib>>,
+    mut mats: ResMut<Assets<StandardMaterial>>,
 ) {
     let now = std::time::Instant::now();
     if now.duration_since(theme.last_check).as_secs() < 2 {
@@ -175,6 +178,26 @@ fn poll_system_theme(
             light.illuminance = 8000.0;
         } else {
             light.illuminance = 15000.0;
+        }
+    }
+
+    // Update floor/wall material colors for theme
+    if let Some(lib) = mat_lib {
+        let tint = if is_dark { 0.65 } else { 1.0 };
+        let updates: Vec<(Handle<StandardMaterial>, [f32; 3])> = vec![
+            (lib.floor_tile.clone(), [0.88, 0.88, 0.90]),
+            (lib.floor_wood.clone(), [0.78, 0.62, 0.42]),
+            (lib.floor_carpet.clone(), [0.42, 0.38, 0.55]),
+            (lib.floor_concrete.clone(), [0.55, 0.55, 0.55]),
+            (lib.wall_solid.clone(), [0.50, 0.48, 0.45]),
+            (lib.wall_window.clone(), [0.50, 0.48, 0.45]),
+            (lib.whiteboard_surface.clone(), [0.95, 0.95, 0.95]),
+            (lib.kitchen_top.clone(), [0.85, 0.85, 0.87]),
+        ];
+        for (handle, [r, g, b]) in updates {
+            if let Some(m) = mats.get_mut(&handle) {
+                m.base_color = Color::srgb(r * tint, g * tint, b * tint);
+            }
         }
     }
 }

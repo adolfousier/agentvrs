@@ -50,6 +50,7 @@ pub fn setup_camera(mut commands: Commands, cam_state: Res<CameraState>) {
             ..OrthographicProjection::default_3d()
         }),
         Transform::from_translation(pos).looking_at(look_at, Vec3::Y),
+        IsDefaultUiCamera,
         MainCamera,
     ));
 }

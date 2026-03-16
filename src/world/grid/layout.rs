@@ -48,7 +48,7 @@ pub fn build_office_world(w: u16, h: u16) -> Grid {
     p(&mut g, w, h, 3, hy, Tile::FileCabinet);
     if hy + 2 < h {
         p(&mut g, w, h, 0, hy + 2, Tile::FileCabinet);
-        p(&mut g, w, h, 3, hy + 2, Tile::Plant);
+        p(&mut g, w, h, 3, hy + 2, Tile::MeetingTable);
     }
 
     // ── Bottom-right: Gym/arcade (concrete) ─────────────────────────
