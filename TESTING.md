@@ -3,8 +3,11 @@
 ## Running Tests
 
 ```bash
-# All tests
+# All tests (without optional features)
 cargo test
+
+# All tests including Bevy 3D
+cargo test --features bevy3d
 
 # Specific module
 cargo test tests::world_test
@@ -15,6 +18,8 @@ cargo test tests::tui_test
 cargo test tests::config_test
 cargo test tests::simulation_test
 cargo test tests::observability_test
+cargo test tests::db_test
+cargo test --features bevy3d tests::mission_control_test
 
 # Single test
 cargo test tests::world_test::test_grid_move_agent
@@ -32,15 +37,17 @@ All tests live under `src/tests/` with modular organization:
 
 ```
 src/tests/
-├── mod.rs              # Module declarations
-├── world_test.rs       # Grid, position, pathfinding, tiles, layout, events
-├── agent_test.rs       # Agent types, registry, messaging
-├── a2a_test.rs         # A2A protocol wire compatibility
-├── api_test.rs         # HTTP API endpoint tests (tower::ServiceExt)
-├── tui_test.rs         # TUI state machine and input handling
-├── config_test.rs         # Configuration loading, saving, serialization
-├── simulation_test.rs     # Simulation tick loop, agent behavior, state transitions
-└── observability_test.rs  # Observability endpoints (detail, activity, heartbeat, status, tasks, dashboard)
+├── mod.rs                  # Module declarations
+├── world_test.rs           # Grid, position, pathfinding, tiles, layout, events
+├── agent_test.rs           # Agent types, registry, messaging
+├── a2a_test.rs             # A2A protocol wire compatibility
+├── api_test.rs             # HTTP API endpoint tests (tower::ServiceExt)
+├── tui_test.rs             # TUI state machine and input handling
+├── config_test.rs          # Configuration loading, saving, serialization
+├── simulation_test.rs      # Simulation tick loop, agent behavior, state transitions
+├── observability_test.rs   # Observability endpoints (detail, activity, heartbeat, status, tasks, dashboard)
+├── db_test.rs              # SQLite persistence (agents, messages, activity, tasks, heartbeats, purge)
+└── mission_control_test.rs # Mission Control panel (bevy3d feature, ECS systems, UI hierarchy)
 ```
 
 ## Test Coverage by Module
@@ -226,6 +233,65 @@ src/tests/
 **Dashboard:**
 - Full dashboard aggregation (detail + activity + health)
 
+### db_test.rs (18 tests)
+
+**Agents:**
+- Save and load agent
+- External agent roundtrip
+- Multiple agents
+- Remove agent
+- Update agent position
+- Upsert (update on duplicate)
+
+**Messages:**
+- Save and load messages
+- Message limit
+- Clear messages
+- Recipient filtering
+
+**Activity:**
+- Save and load activity log
+- Activity limit
+
+**Tasks:**
+- Save and load tasks
+- Task upsert (update on duplicate)
+
+**Heartbeats:**
+- Save and load heartbeat
+- Heartbeat upsert
+
+**Purge:**
+- Purge removes all agent data (agent, messages, activity, tasks, heartbeats)
+
+**Agent Restore:**
+- Agent::restore() reconstructs with original UUID
+
+### mission_control_test.rs (15 tests) — requires `bevy3d` feature
+
+**MissionControlState:**
+- Default state is closed
+- Toggle open/closed
+
+**state_color:**
+- All 10 agent states return valid colors
+- Working state is green
+- Error state is red
+
+**Setup System:**
+- Spawns root node (hidden)
+- Spawns agent card container
+- Spawns activity feed container
+- Spawns task list container
+
+**Update System:**
+- Skips when panel is closed (no McChild entities)
+- Creates agent cards when open (3 agents → 3+ McChild)
+- Shows activity entries from DB
+- Shows tasks from DB
+- Cleans up previous children on re-render
+- Empty world shows only placeholder text
+
 ## Writing New Tests
 
 1. Add tests to the appropriate `*_test.rs` file
@@ -234,6 +300,8 @@ src/tests/
 4. For TUI tests, use the `test_app()` and `key()` helpers
 5. For simulation tests, use `setup_sim()` and `spawn_agent()` helpers
 6. For config tests, use `tempfile` for filesystem operations
+7. For DB tests, use `Database::open_in_memory()` for isolation
+8. For Bevy ECS tests, wrap in `#[cfg(feature = "bevy3d")]`, use `App::new()` + `MinimalPlugins`, and run with `cargo test --features bevy3d`
 
 ## Test Helpers
 
@@ -250,6 +318,13 @@ src/tests/
 ### Simulation Tests
 - `setup_sim()` — Creates simulation with 28x20 office world
 - `spawn_agent(registry, grid, name)` — Spawns agent on empty floor, returns AgentId
+
+### DB Tests
+- `Database::open_in_memory()` — In-memory SQLite for test isolation
+
+### Mission Control Tests (bevy3d)
+- `test_bridge()` — Creates WorldBridge with in-memory DB, 10x8 office grid
+- `count_with::<Filter>(app)` — Counts entities matching a query filter via `world_mut()`
 
 ## CI
 

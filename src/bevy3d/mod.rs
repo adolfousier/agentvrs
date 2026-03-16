@@ -1,5 +1,5 @@
 mod agents;
-mod bridge;
+pub(crate) mod bridge;
 mod camera;
 mod interaction;
 mod lighting;

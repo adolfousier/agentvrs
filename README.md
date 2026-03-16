@@ -543,7 +543,7 @@ src/
 ├── tui/              # Terminal UI alternative (ratatui)
 ├── error/            # AppError + ApiError with JSON responses
 ├── runner.rs         # Shared setup (grid, registry, sim, API, SSE broadcast)
-└── tests/            # 184 tests across 8 modules
+└── tests/            # 217 tests across 10 modules
 ```
 
 ---

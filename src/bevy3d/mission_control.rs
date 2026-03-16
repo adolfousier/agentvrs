@@ -495,7 +495,7 @@ pub fn update_mission_control(
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-fn state_color(state: &crate::agent::AgentState) -> Color {
+pub(crate) fn state_color(state: &crate::agent::AgentState) -> Color {
     use crate::agent::AgentState;
     match state {
         AgentState::Working => Color::srgb(0.2, 0.8, 0.2),
