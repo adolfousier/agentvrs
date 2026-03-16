@@ -63,6 +63,9 @@ thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# Persistence
+rusqlite = { version = "0.34", features = ["bundled"] }
+
 # Utilities
 uuid = { version = "1.22", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }

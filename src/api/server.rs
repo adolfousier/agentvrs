@@ -2,14 +2,16 @@ use super::observability::AgentObserver;
 use super::routes::{self, ApiState};
 use crate::agent::AgentRegistry;
 use crate::config::ServerConfig;
+use crate::db::Database;
 use crate::world::{Grid, WorldEvent};
 use axum::Router;
 use axum::middleware;
 use axum::routing::{delete, get, post};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::{broadcast, mpsc};
 use tower::limit::ConcurrencyLimitLayer;
 
+#[allow(clippy::too_many_arguments)]
 pub fn build_router(
     registry: Arc<RwLock<AgentRegistry>>,
     grid: Arc<RwLock<Grid>>,
@@ -18,6 +20,7 @@ pub fn build_router(
     api_key: String,
     tick_count: Arc<std::sync::atomic::AtomicU64>,
     observer: Arc<RwLock<AgentObserver>>,
+    db: Arc<Mutex<Database>>,
 ) -> Router {
     let state = ApiState {
         registry,
@@ -27,6 +30,7 @@ pub fn build_router(
         api_key,
         tick_count,
         observer,
+        db,
     };
 
     // Health endpoint — no auth required
@@ -70,6 +74,7 @@ pub fn build_router(
     Router::new().merge(health_routes).merge(api_routes)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn start_api_server(
     config: &ServerConfig,
     registry: Arc<RwLock<AgentRegistry>>,
@@ -78,6 +83,7 @@ pub async fn start_api_server(
     event_broadcast: broadcast::Sender<WorldEvent>,
     tick_count: Arc<std::sync::atomic::AtomicU64>,
     observer: Arc<RwLock<AgentObserver>>,
+    db: Arc<Mutex<Database>>,
 ) -> anyhow::Result<()> {
     let router = build_router(
         registry,
@@ -87,6 +93,7 @@ pub async fn start_api_server(
         config.api_key.clone(),
         tick_count,
         observer,
+        db,
     );
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;

@@ -2,10 +2,11 @@ use crate::agent::AgentRegistry;
 use crate::api::observability::AgentObserver;
 use crate::api::server::build_router;
 use crate::api::types::*;
+use crate::db::Database;
 use crate::world::{Grid, WorldEvent};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::{broadcast, mpsc};
 use tower::ServiceExt;
 
@@ -18,6 +19,7 @@ fn test_state() -> axum::Router {
     let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(64);
     let tick_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
     let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
+    let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
     build_router(
         registry,
         grid,
@@ -26,6 +28,7 @@ fn test_state() -> axum::Router {
         TEST_KEY.to_string(),
         tick_count,
         observer,
+        db,
     )
 }
 

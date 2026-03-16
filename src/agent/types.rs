@@ -160,6 +160,31 @@ impl Agent {
         self.last_activity = Instant::now();
     }
 
+    /// Restore an agent from persisted data (e.g. SQLite).
+    pub fn restore(
+        id: AgentId,
+        name: String,
+        kind: AgentKind,
+        position: Position,
+        color_index: u8,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            kind,
+            state: AgentState::Idle,
+            position,
+            color_index,
+            last_activity: Instant::now(),
+            task_count: 0,
+            speech: None,
+            anim: AnimState::default(),
+            goal: None,
+            path: Vec::new(),
+            inbox: VecDeque::new(),
+        }
+    }
+
     pub fn say(&mut self, text: impl Into<String>) {
         self.speech = Some(text.into());
         self.last_activity = Instant::now();

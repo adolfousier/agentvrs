@@ -2,6 +2,7 @@ mod a2a_test;
 mod agent_test;
 mod api_test;
 mod config_test;
+mod db_test;
 mod observability_test;
 mod simulation_test;
 mod tui_test;

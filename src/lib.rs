@@ -64,6 +64,7 @@ pub mod avatar;
 #[cfg(feature = "bevy3d")]
 pub mod bevy3d;
 pub mod config;
+pub mod db;
 pub mod error;
 pub mod runner;
 pub mod tui;

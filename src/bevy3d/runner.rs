@@ -57,7 +57,8 @@ pub async fn run(config: AppConfig) -> Result<()> {
         is_dark,
         last_check: std::time::Instant::now(),
     });
-    app.insert_resource(WorldBridge { grid, registry });
+    let db = rt.db;
+    app.insert_resource(WorldBridge { grid, registry, db });
     app.insert_resource(cam_state);
     app.insert_resource(SyncState::default());
     app.insert_resource(SelectedAgent::default());

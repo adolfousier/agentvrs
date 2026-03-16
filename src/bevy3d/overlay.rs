@@ -724,6 +724,10 @@ pub fn handle_message_input(
                 // Also deliver to the agent's inbox so external agents can retrieve it
                 let system_id = crate::agent::AgentId::default();
                 let msg = AgentMessage::new(system_id, agent_id, &input_state.text);
+                // Persist to database
+                if let Ok(db) = bridge.db.lock() {
+                    let _ = db.save_message(&msg);
+                }
                 agent.inbox.push_back(msg);
                 agent.set_state(AgentState::Messaging);
                 agent.anim.activity_ticks = 0;

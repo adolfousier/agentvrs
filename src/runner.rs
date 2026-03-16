@@ -2,9 +2,10 @@ use crate::agent::{Agent, AgentKind, AgentRegistry, MessageLog};
 use crate::api;
 use crate::api::observability::AgentObserver;
 use crate::config::AppConfig;
+use crate::db::Database;
 use crate::world::{Grid, Simulation, WorldEvent, build_office_world};
 use anyhow::Result;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::{broadcast, mpsc};
 
 pub struct WorldRuntime {
@@ -17,6 +18,7 @@ pub struct WorldRuntime {
     pub event_tx: mpsc::Sender<WorldEvent>,
     pub broadcast_tx: broadcast::Sender<WorldEvent>,
     pub shared_tick: Arc<std::sync::atomic::AtomicU64>,
+    pub db: Arc<Mutex<Database>>,
 }
 
 pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<WorldRuntime> {
@@ -58,6 +60,66 @@ async fn setup_inner(
         }
     }
 
+    // Open SQLite database and restore persisted agents
+    let db = Database::open()?;
+    {
+        let mut g = grid.write().unwrap();
+        let mut r = registry.write().unwrap();
+        match db.load_agents() {
+            Ok(agents) => {
+                for row in agents {
+                    // Only restore if the position is valid and floor is available
+                    if g.get(row.position)
+                        .map(|c| !c.tile.is_solid() && c.occupant.is_none())
+                        .unwrap_or(false)
+                    {
+                        let agent = Agent::restore(
+                            row.id,
+                            row.name.clone(),
+                            row.kind,
+                            row.position,
+                            row.color_index,
+                        );
+                        // Restore inbox from DB
+                        if let Ok(inbox) = db.load_messages_for(&row.id, 500) {
+                            let mut agent = agent;
+                            agent.inbox = inbox;
+                            g.place_agent(row.position, row.id);
+                            r.register(agent);
+                            tracing::info!("Restored agent '{}' from database", row.name);
+                        } else {
+                            g.place_agent(row.position, row.id);
+                            r.register(agent);
+                        }
+                    } else {
+                        // Position invalid, place on any empty floor
+                        if let Some(pos) = g.find_empty_floor() {
+                            let agent = Agent::restore(
+                                row.id,
+                                row.name.clone(),
+                                row.kind,
+                                pos,
+                                row.color_index,
+                            );
+                            g.place_agent(pos, row.id);
+                            r.register(agent);
+                            tracing::info!(
+                                "Restored agent '{}' at new position ({},{})",
+                                row.name,
+                                pos.x,
+                                pos.y
+                            );
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to load agents from database: {}", e);
+            }
+        }
+    }
+    let db = Arc::new(Mutex::new(db));
+
     let shared_tick = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
     if spawn_sim {
@@ -86,8 +148,9 @@ async fn setup_inner(
         let sc = config.server.clone();
         let st = Arc::clone(&shared_tick);
         let so = Arc::clone(&observer);
+        let sdb = Arc::clone(&db);
         tokio::spawn(async move {
-            if let Err(e) = api::start_api_server(&sc, sr, sg, stx, sbtx, st, so).await {
+            if let Err(e) = api::start_api_server(&sc, sr, sg, stx, sbtx, st, so, sdb).await {
                 tracing::error!("API server error: {}", e);
             }
         });
@@ -102,5 +165,6 @@ async fn setup_inner(
         event_tx,
         broadcast_tx,
         shared_tick,
+        db,
     })
 }

@@ -1,6 +1,7 @@
 use super::observability::{ActivityKind, AgentObserver};
 use super::types::*;
 use crate::agent::{Agent, AgentGoal, AgentKind, AgentMessage, AgentRegistry, AgentState};
+use crate::db::Database;
 use crate::error::ApiError;
 use crate::world::pathfind::find_path;
 use crate::world::{Grid, Position, Tile, WorldEvent};
@@ -10,7 +11,7 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use chrono::Utc;
 use futures::stream::Stream;
 use std::convert::Infallible;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::BroadcastStream;
@@ -24,6 +25,7 @@ pub struct ApiState {
     pub api_key: String,
     pub tick_count: Arc<std::sync::atomic::AtomicU64>,
     pub observer: Arc<RwLock<AgentObserver>>,
+    pub db: Arc<Mutex<Database>>,
 }
 
 // --- Health (no auth) ---
@@ -101,6 +103,16 @@ pub async fn connect_agent(
         );
     }
 
+    // Persist to database
+    {
+        let reg = state.registry.read().unwrap();
+        if let Some(agent) = reg.get(&agent_id)
+            && let Ok(db) = state.db.lock()
+        {
+            let _ = db.save_agent(agent);
+        }
+    }
+
     Ok(Json(ConnectResponse {
         agent_id: agent_id.to_string(),
         position: (position.x, position.y),
@@ -138,6 +150,11 @@ pub async fn delete_agent(
         let mut obs = state.observer.write().unwrap();
         obs.record_activity(target_id, ActivityKind::Removed, "Agent disconnected");
         obs.remove_agent(&target_id);
+    }
+
+    // Remove from database
+    if let Ok(db) = state.db.lock() {
+        let _ = db.purge_agent(&target_id);
     }
 
     Ok(Json(DeleteResponse {
@@ -221,6 +238,12 @@ pub async fn send_agent_message(
                 ActivityKind::MessageReceived,
                 format!("From {}: {}", &sender_id.to_string()[..8], &msg.text),
             );
+        }
+
+        // Persist message to database
+        if let Ok(db) = state.db.lock() {
+            let msg = AgentMessage::new(sender_id, target_id, &msg.text);
+            let _ = db.save_message(&msg);
         }
 
         // Push via webhook if target has an endpoint
@@ -567,6 +590,11 @@ pub async fn ack_agent_messages(
         0
     };
 
+    // Clear messages from database
+    if let Ok(db) = state.db.lock() {
+        let _ = db.clear_messages_for(&agent_id);
+    }
+
     Ok(Json(serde_json::json!({
         "status": "cleared",
         "cleared": count,
@@ -666,9 +694,17 @@ pub async fn post_agent_heartbeat(
     );
 
     let hb = obs.get_heartbeat(&agent_id).unwrap();
+    let hb_clone = hb.clone();
+    drop(obs);
+
+    // Persist heartbeat to database
+    if let Ok(db) = state.db.lock() {
+        let _ = db.save_heartbeat(agent_id, &hb_clone);
+    }
+
     Ok(Json(HeartbeatResponse {
         status: "ok".to_string(),
-        last_seen: hb.last_seen.to_rfc3339(),
+        last_seen: hb_clone.last_seen.to_rfc3339(),
     }))
 }
 
