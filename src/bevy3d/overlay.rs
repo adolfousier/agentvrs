@@ -104,6 +104,7 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                 ..default()
             },
             BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
+            ZIndex(100),
             StatusBarRoot,
         ))
         .with_children(|bar| {
@@ -162,6 +163,7 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                 ..default()
             },
             BackgroundColor(Color::srgb(0.13, 0.13, 0.15)),
+            ZIndex(100),
             SidebarRoot,
         ))
         .with_children(|sidebar| {
