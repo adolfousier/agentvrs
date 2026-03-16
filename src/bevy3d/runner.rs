@@ -181,18 +181,63 @@ fn poll_system_theme(
         }
     }
 
-    // Update floor/wall material colors for theme
+    // Update all non-emissive material colors for theme
     if let Some(lib) = mat_lib {
         let tint = if is_dark { 0.65 } else { 1.0 };
         let updates: Vec<(Handle<StandardMaterial>, [f32; 3])> = vec![
+            // Floors
             (lib.floor_tile.clone(), [0.88, 0.88, 0.90]),
             (lib.floor_wood.clone(), [0.78, 0.62, 0.42]),
             (lib.floor_carpet.clone(), [0.42, 0.38, 0.55]),
             (lib.floor_concrete.clone(), [0.55, 0.55, 0.55]),
+            // Walls
             (lib.wall_solid.clone(), [0.50, 0.48, 0.45]),
             (lib.wall_window.clone(), [0.50, 0.48, 0.45]),
-            (lib.whiteboard_surface.clone(), [0.95, 0.95, 0.95]),
+            // Furniture — desks
+            (lib.desk_wood.clone(), [0.72, 0.55, 0.35]),
+            (lib.desk_leg.clone(), [0.35, 0.35, 0.38]),
+            (lib.monitor_body.clone(), [0.18, 0.18, 0.20]),
+            // Furniture — seating
+            (lib.couch_fabric.clone(), [0.25, 0.22, 0.45]),
+            (lib.couch_cushion.clone(), [0.30, 0.27, 0.50]),
+            (lib.armchair_fabric.clone(), [0.50, 0.18, 0.22]),
+            (lib.meeting_table.clone(), [0.70, 0.52, 0.32]),
+            (lib.meeting_chair.clone(), [0.28, 0.28, 0.30]),
+            // Furniture — kitchen/break
+            (lib.kitchen_counter.clone(), [0.40, 0.35, 0.30]),
             (lib.kitchen_top.clone(), [0.85, 0.85, 0.87]),
+            (lib.coffee_counter.clone(), [0.45, 0.30, 0.15]),
+            (lib.coffee_machine.clone(), [0.30, 0.30, 0.32]),
+            // Furniture — whiteboard
+            (lib.whiteboard_frame.clone(), [0.40, 0.40, 0.42]),
+            (lib.whiteboard_surface.clone(), [0.95, 0.95, 0.95]),
+            // Plants
+            (lib.plant_pot.clone(), [0.55, 0.35, 0.18]),
+            (lib.plant_leaves.clone(), [0.20, 0.55, 0.20]),
+            // Vending
+            (lib.vending_body.clone(), [0.75, 0.15, 0.10]),
+            (lib.vending_shelf.clone(), [0.50, 0.50, 0.52]),
+            (lib.vending_slot.clone(), [0.10, 0.10, 0.10]),
+            // Arcade
+            (lib.arcade_body.clone(), [0.40, 0.15, 0.55]),
+            (lib.arcade_panel.clone(), [0.15, 0.15, 0.18]),
+            (lib.arcade_coin_slot.clone(), [0.60, 0.55, 0.10]),
+            // Gym
+            (lib.treadmill_frame.clone(), [0.40, 0.40, 0.42]),
+            (lib.treadmill_belt.clone(), [0.15, 0.15, 0.15]),
+            (lib.bench_frame.clone(), [0.45, 0.45, 0.48]),
+            (lib.bench_pad.clone(), [0.20, 0.20, 0.22]),
+            (lib.yoga_mat.clone(), [0.55, 0.30, 0.65]),
+            // Lamp
+            (lib.lamp_pole.clone(), [0.60, 0.55, 0.40]),
+            // Rug
+            (lib.rug.clone(), [0.55, 0.35, 0.25]),
+            // Server room
+            (lib.server_rack.clone(), [0.20, 0.20, 0.22]),
+            (lib.server_unit.clone(), [0.12, 0.12, 0.14]),
+            (lib.cabinet_body.clone(), [0.55, 0.52, 0.48]),
+            (lib.cabinet_drawer.clone(), [0.50, 0.47, 0.43]),
+            (lib.cabinet_handle.clone(), [0.60, 0.58, 0.50]),
         ];
         for (handle, [r, g, b]) in updates {
             if let Some(m) = mats.get_mut(&handle) {
