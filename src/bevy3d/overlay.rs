@@ -214,7 +214,7 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                                 flex_direction: FlexDirection::Column,
                                 overflow: Overflow::clip(),
                                 flex_grow: 1.0,
-                                padding: UiRect::all(Val::Px(6.0)),
+                                padding: UiRect::all(Val::Px(14.0)),
                                 row_gap: Val::Px(2.0),
                                 ..default()
                             },
