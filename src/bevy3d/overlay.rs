@@ -193,7 +193,12 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                 },
                 TextColor(Color::srgb(0.9, 0.9, 0.9)),
                 Node {
-                    padding: UiRect::all(Val::Px(10.0)),
+                    padding: UiRect::new(
+                        Val::Px(14.0),
+                        Val::Px(14.0),
+                        Val::Px(14.0),
+                        Val::Px(8.0),
+                    ),
                     ..default()
                 },
             ));
@@ -214,16 +219,30 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                 .with_children(|_| {});
 
             // ── Separator (drag to resize detail panel) ──────────────
-            sidebar.spawn((
-                Node {
-                    height: Val::Px(4.0),
-                    width: Val::Percent(100.0),
-                    ..default()
-                },
-                BackgroundColor(Color::srgb(0.25, 0.25, 0.28)),
-                SidebarSeparator,
-                Interaction::default(),
-            ));
+            sidebar
+                .spawn((
+                    Node {
+                        height: Val::Px(8.0),
+                        width: Val::Percent(100.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    BackgroundColor(Color::NONE),
+                    SidebarSeparator,
+                    Interaction::default(),
+                ))
+                .with_children(|sep| {
+                    // Thin visible line inside the hit area
+                    sep.spawn((
+                        Node {
+                            height: Val::Px(1.0),
+                            width: Val::Percent(100.0),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgb(0.25, 0.25, 0.28)),
+                    ));
+                });
 
             // ── Detail panel ────────────────────────────────────────
             sidebar
@@ -867,18 +886,18 @@ pub fn sidebar_resize(
             Interaction::None => Color::NONE,
         };
     }
-    // Visual hover feedback on separator (thin line by default)
+    // Visual hover feedback on separator (transparent by default, highlight on hover)
     for (interaction, mut bg) in sep_bg_q.iter_mut() {
         bg.0 = match interaction {
             Interaction::Hovered => {
                 wants_ns_cursor = true;
-                Color::srgba(0.4, 0.7, 1.0, 0.5)
+                Color::srgba(0.4, 0.7, 1.0, 0.3)
             }
             Interaction::Pressed => {
                 wants_ns_cursor = true;
-                Color::srgba(0.4, 0.7, 1.0, 0.7)
+                Color::srgba(0.4, 0.7, 1.0, 0.5)
             }
-            Interaction::None => Color::srgb(0.25, 0.25, 0.28),
+            Interaction::None => Color::NONE,
         };
     }
 
