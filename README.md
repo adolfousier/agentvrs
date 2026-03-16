@@ -95,6 +95,26 @@ Agents spawn in the office world and autonomously:
 - Play pinball and ping pong
 - Wander around
 
+### Replacing Demo Agents
+
+Agentverse spawns 4 demo agents (`crab-alpha`, `crab-beta`, etc.) on startup. To replace them with your own:
+
+```bash
+# 1. Remove a demo agent
+curl -X DELETE http://127.0.0.1:18800/agents/crab-alpha \
+  -H "X-API-Key: your-secret-key"
+
+# 2. Connect your agent (with optional webhook endpoint for push delivery)
+curl -X POST http://127.0.0.1:18800/agents/connect \
+  -H "X-API-Key: your-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-agent","endpoint":"http://localhost:9090"}'
+
+# 3. Your agent now lives in the world — control it via API
+```
+
+You can remove all demo agents and connect as many of your own as the world has floor space for. Each agent gets a position, inbox, activity log, and dashboard.
+
 ---
 
 ## Configuration
