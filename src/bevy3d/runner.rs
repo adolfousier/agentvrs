@@ -40,7 +40,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Agentverse".into(),
-                    resolution: bevy::window::WindowResolution::new(1400.0, 900.0),
+                    resolution: bevy::window::WindowResolution::new(1400, 900),
                     ..default()
                 }),
                 ..default()
@@ -52,7 +52,6 @@ pub async fn run(config: AppConfig) -> Result<()> {
     let is_dark = detect_system_dark_mode();
 
     // Resources
-    app.insert_resource(bevy::pbr::DirectionalLightShadowMap { size: 2048 });
     app.insert_resource(ClearColor(theme_clear_color(is_dark)));
     app.insert_resource(ThemeState {
         is_dark,
@@ -84,7 +83,8 @@ pub async fn run(config: AppConfig) -> Result<()> {
         super::sync::spawn_tiles.run_if(resource_exists::<super::materials::MaterialLib>),
     );
 
-    // Per-frame systems: simulation tick runs first, then sync, then everything else
+    // Per-frame systems: simulation tick runs first, then sync, then everything else.
+    // Split into two chained groups to stay under the 12-tuple limit.
     app.add_systems(
         Update,
         (
@@ -95,6 +95,13 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::camera::camera_pan,
             super::interaction::handle_selection,
             super::interaction::click_select_agent,
+        )
+            .chain()
+            .run_if(resource_exists::<super::materials::MaterialLib>),
+    );
+    app.add_systems(
+        Update,
+        (
             super::overlay::update_agent_labels,
             super::overlay::update_sidebar,
             super::overlay::update_status_bar,
@@ -104,6 +111,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::overlay::update_ui_theme,
         )
             .chain()
+            .after(super::interaction::click_select_agent)
             .run_if(resource_exists::<super::materials::MaterialLib>),
     );
 
@@ -132,7 +140,7 @@ fn theme_clear_color(is_dark: bool) -> Color {
 fn poll_system_theme(
     mut theme: ResMut<ThemeState>,
     mut clear: ResMut<ClearColor>,
-    mut ambient: ResMut<AmbientLight>,
+    mut ambient_q: Query<&mut AmbientLight>,
     mut lights: Query<&mut DirectionalLight>,
 ) {
     let now = std::time::Instant::now();
@@ -151,12 +159,14 @@ fn poll_system_theme(
     clear.0 = theme_clear_color(is_dark);
 
     // Update ambient light
-    if is_dark {
-        ambient.color = Color::srgb(0.85, 0.87, 0.95);
-        ambient.brightness = 300.0;
-    } else {
-        ambient.color = Color::srgb(1.0, 0.98, 0.95);
-        ambient.brightness = 800.0;
+    if let Ok(mut ambient) = ambient_q.single_mut() {
+        if is_dark {
+            ambient.color = Color::srgb(0.85, 0.87, 0.95);
+            ambient.brightness = 300.0;
+        } else {
+            ambient.color = Color::srgb(1.0, 0.98, 0.95);
+            ambient.brightness = 800.0;
+        }
     }
 
     // Update directional light

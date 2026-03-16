@@ -24,7 +24,7 @@ impl SimState {
 }
 
 pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
-    use rand::Rng;
+    use rand::RngExt;
 
     let now = Instant::now();
     if now.duration_since(sim.last_tick).as_millis() < sim.tick_ms as u128 {
@@ -194,7 +194,7 @@ fn assign_random_goal(
     reg: &mut crate::agent::AgentRegistry,
     id: AgentId,
 ) {
-    use rand::Rng;
+    use rand::RngExt;
 
     // Reset activity_ticks so we don't retry every tick if assignment fails
     if let Some(agent) = reg.get_mut(&id) {

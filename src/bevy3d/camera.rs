@@ -1,6 +1,6 @@
+use bevy::camera::ScalingMode;
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
-use bevy::render::camera::ScalingMode;
 
 /// Marker for our main 3D camera.
 #[derive(Component)]
@@ -94,7 +94,7 @@ pub fn camera_rotate(
 
 /// System: handle camera zoom (scroll wheel).
 pub fn camera_zoom(
-    mut scroll_evr: EventReader<MouseWheel>,
+    mut scroll_evr: MessageReader<MouseWheel>,
     mut cam_state: ResMut<CameraState>,
     mut camera_q: Query<(&mut Transform, &mut Projection), With<MainCamera>>,
 ) {
@@ -125,7 +125,7 @@ pub fn camera_pan(
     let panning = mouse_btn.pressed(MouseButton::Left) || mouse_btn.pressed(MouseButton::Middle);
 
     if panning {
-        if let Ok(window) = windows.get_single()
+        if let Ok(window) = windows.single()
             && let Some(cursor_pos) = window.cursor_position()
         {
             // Track drag start for click-vs-drag detection

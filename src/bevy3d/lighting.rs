@@ -18,9 +18,10 @@ pub fn setup_lighting(mut commands: Commands) {
         )),
     ));
 
-    // Soft ambient fill
-    commands.insert_resource(AmbientLight {
+    // Soft ambient fill (spawned as entity in Bevy 0.18)
+    commands.spawn(AmbientLight {
         color: Color::srgb(0.85, 0.87, 0.95), // cool blue-ish fill
         brightness: 300.0,
+        affects_lightmapped_meshes: true,
     });
 }

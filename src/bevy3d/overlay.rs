@@ -216,10 +216,10 @@ pub fn setup_ui(mut commands: Commands) {
                                 padding: UiRect::all(Val::Px(6.0)),
                                 min_height: Val::Px(24.0),
                                 width: Val::Percent(100.0),
+                                border_radius: BorderRadius::all(Val::Px(4.0)),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.08, 0.08, 0.10)),
-                            BorderRadius::all(Val::Px(4.0)),
                             MessageInputBox,
                         ))
                         .with_children(|input_box| {
@@ -255,11 +255,11 @@ pub fn update_sidebar(
     // ── Rebuild agent list ──────────────────────────────────────────────
     // Remove old entries
     for entity in entry_q.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     // Add current agents
-    if let Ok(list_entity) = list_q.get_single() {
+    if let Ok(list_entity) = list_q.single() {
         for agent in registry.agents() {
             let is_selected = selected.agent_id == Some(agent.id);
             let dot_color = state_color(&agent.state);
@@ -299,10 +299,10 @@ pub fn update_sidebar(
                         Node {
                             width: Val::Px(8.0),
                             height: Val::Px(8.0),
+                            border_radius: BorderRadius::all(Val::Px(4.0)),
                             ..default()
                         },
                         BackgroundColor(dot_color),
-                        BorderRadius::all(Val::Px(4.0)),
                     ));
                     // Name
                     row.spawn((
@@ -448,13 +448,13 @@ pub fn update_agent_labels(
     label_q: Query<Entity, With<AgentLabel>>,
     selected: Res<SelectedAgent>,
 ) {
-    let Ok((camera, cam_gt)) = camera_q.get_single() else {
+    let Ok((camera, cam_gt)) = camera_q.single() else {
         return;
     };
 
     // Remove all existing labels (recreated each frame with proper dot nodes)
     for entity in label_q.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     let registry = bridge.registry.read().unwrap();
@@ -497,6 +497,7 @@ pub fn update_agent_labels(
                     padding: UiRect::new(Val::Px(8.0), Val::Px(8.0), Val::Px(4.0), Val::Px(4.0)),
                     column_gap: Val::Px(6.0),
                     align_items: AlignItems::Center,
+                    border_radius: BorderRadius::all(Val::Px(8.0)),
                     ..default()
                 },
                 BackgroundColor(if theme.is_dark {
@@ -504,7 +505,6 @@ pub fn update_agent_labels(
                 } else {
                     Color::srgba(0.9, 0.9, 0.92, 0.80)
                 }),
-                BorderRadius::all(Val::Px(8.0)),
                 AgentLabel,
             ))
             .with_children(|label| {
@@ -513,10 +513,10 @@ pub fn update_agent_labels(
                     Node {
                         width: Val::Px(7.0),
                         height: Val::Px(7.0),
+                        border_radius: BorderRadius::all(Val::Px(4.0)),
                         ..default()
                     },
                     BackgroundColor(dot_color),
-                    BorderRadius::all(Val::Px(4.0)),
                 ));
                 // Agent name
                 label.spawn((
@@ -550,7 +550,7 @@ pub fn toggle_sidebar(
 // ── Message input handling ───────────────────────────────────────────────────
 
 pub fn handle_message_input(
-    mut char_evr: EventReader<bevy::input::keyboard::KeyboardInput>,
+    mut char_evr: MessageReader<bevy::input::keyboard::KeyboardInput>,
     keys: Res<ButtonInput<KeyCode>>,
     mut input_state: ResMut<MessageInputState>,
     selected: Res<SelectedAgent>,

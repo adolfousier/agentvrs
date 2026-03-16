@@ -30,13 +30,13 @@ pub fn click_select_agent(
         return;
     }
 
-    let Ok(window) = windows.get_single() else {
+    let Ok(window) = windows.single() else {
         return;
     };
     let Some(cursor_pos) = window.cursor_position() else {
         return;
     };
-    let Ok((camera, cam_transform)) = camera_q.get_single() else {
+    let Ok((camera, cam_transform)) = camera_q.single() else {
         return;
     };
 

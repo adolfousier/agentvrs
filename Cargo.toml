@@ -2,7 +2,7 @@
 name = "agentverse"
 version = "0.1.2"
 edition = "2024"
-rust-version = "1.91"
+rust-version = "1.94"
 authors = ["Adolfo Usier <adolfo@meetneura.ai>"]
 license = "MIT"
 description = "Shared world where AI agents connect, message each other, delegate tasks, and interact — all via REST API. TUI + Bevy 3D."
@@ -17,7 +17,7 @@ bevy3d = ["dep:bevy"]
 
 [dependencies]
 # Async Runtime
-tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1.50", features = ["full"] }
 futures = "0.3"
 async-trait = "0.1"
 
@@ -29,7 +29,7 @@ crossterm = { version = "0.29", features = ["event-stream"] }
 gtk4 = { version = "0.10", optional = true }
 
 # 3D GUI (optional)
-bevy = { version = "0.15", optional = true, default-features = false, features = [
+bevy = { version = "0.18", optional = true, default-features = false, features = [
     "bevy_asset",
     "bevy_core_pipeline",
     "bevy_pbr",
@@ -42,10 +42,12 @@ bevy = { version = "0.15", optional = true, default-features = false, features =
     "wayland",
     "tonemapping_luts",
     "default_font",
+    "zstd_rust",
+    "bevy_log",
 ] }
 
 # HTTP (client for A2A, server for external agents)
-reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.13", features = ["json", "rustls"], default-features = false }
 axum = "0.8"
 tower = { version = "0.5", features = ["util", "limit"] }
 tower-http = { version = "0.6", features = ["cors"] }
@@ -54,7 +56,7 @@ tokio-stream = { version = "0.1", features = ["sync"] }
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "1.0"
 
 # Error Handling
 anyhow = "1.0"
@@ -65,16 +67,16 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Utilities
-uuid = { version = "1.11", features = ["v4", "serde"] }
+uuid = { version = "1.22", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-rand = "0.9"
+rand = "0.10"
 
 [dev-dependencies]
-rstest = "0.25"
+rstest = "0.26"
 tokio-test = "0.4"
 tower = { version = "0.5", features = ["util"] }
 mockito = "1.7"
-tempfile = "3.25"
+tempfile = "3.27"
 
 [profile.dev]
 opt-level = 0

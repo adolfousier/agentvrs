@@ -49,7 +49,7 @@ pub enum Direction {
 
 impl Direction {
     pub fn random() -> Self {
-        use rand::Rng;
+        use rand::RngExt;
         match rand::rng().random_range(0..4) {
             0 => Direction::Up,
             1 => Direction::Down,

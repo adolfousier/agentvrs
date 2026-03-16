@@ -389,7 +389,7 @@ pub async fn set_agent_goal(
     }
 
     // Pick random available target
-    use rand::Rng;
+    use rand::RngExt;
     let target = targets[rand::rng().random_range(0..targets.len())];
 
     let adj = grid

@@ -46,7 +46,7 @@ impl Simulation {
     }
 
     pub async fn tick(&mut self) {
-        use rand::Rng;
+        use rand::RngExt;
 
         self.tick_count += 1;
         self.shared_tick
@@ -208,7 +208,7 @@ impl Simulation {
     }
 
     fn assign_random_goal(&self, id: AgentId) {
-        use rand::Rng;
+        use rand::RngExt;
         let grid = self.grid.read().unwrap();
         let mut reg = self.registry.write().unwrap();
 

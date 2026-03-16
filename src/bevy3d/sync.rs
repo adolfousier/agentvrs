@@ -744,7 +744,7 @@ pub fn sync_agents(
         .collect();
     for id in stale {
         if let Some(entity) = sync.agent_entities.remove(&id) {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 

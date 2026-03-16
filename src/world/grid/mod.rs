@@ -112,7 +112,7 @@ impl Grid {
     }
 
     pub fn find_empty_floor(&self) -> Option<Position> {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         for _ in 0..200 {
             let x = rng.random_range(0..self.width);
