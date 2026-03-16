@@ -68,6 +68,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
         detail_height: 180.0,
         ..default()
     });
+    app.insert_resource(super::mission_control::MissionControlState::default());
     app.insert_resource(sim_state);
 
     // Startup systems (run once, chained so materials/meshes exist before camera)
@@ -79,6 +80,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::lighting::setup_lighting,
             super::camera::setup_camera,
             super::overlay::setup_ui,
+            super::mission_control::setup_mission_control,
         )
             .chain(),
     );
@@ -119,6 +121,15 @@ pub async fn run(config: AppConfig) -> Result<()> {
         )
             .chain()
             .after(super::interaction::click_select_agent)
+            .run_if(resource_exists::<super::materials::MaterialLib>),
+    );
+    app.add_systems(
+        Update,
+        (
+            super::mission_control::toggle_mission_control,
+            super::mission_control::update_mission_control,
+        )
+            .chain()
             .run_if(resource_exists::<super::materials::MaterialLib>),
     );
 

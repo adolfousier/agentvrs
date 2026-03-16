@@ -135,7 +135,7 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                 StatusBarZoom,
             ));
             bar.spawn((
-                Text::new("r:rotate  scroll:zoom  drag:pan  click:select  h:sidebar  esc:deselect"),
+                Text::new("r:rotate  scroll:zoom  drag:pan  click:select  h:sidebar  m:mission  esc:deselect"),
                 TextFont {
                     font_size: 11.0,
                     ..default()
