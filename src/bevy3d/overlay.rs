@@ -168,11 +168,11 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
             // Resize handle (left edge — drag to resize width)
             sidebar.spawn((
                 Node {
-                    width: Val::Px(6.0),
+                    width: Val::Px(4.0),
                     height: Val::Percent(100.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.5, 0.5, 0.55, 0.3)),
+                BackgroundColor(Color::NONE),
                 SidebarResizeHandle,
                 Interaction::default(),
             ));
@@ -216,7 +216,7 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
             // ── Separator (drag to resize detail panel) ──────────────
             sidebar.spawn((
                 Node {
-                    height: Val::Px(6.0),
+                    height: Val::Px(4.0),
                     width: Val::Percent(100.0),
                     ..default()
                 },
@@ -853,21 +853,21 @@ pub fn sidebar_resize(
     let mut wants_ew_cursor = false;
     let mut wants_ns_cursor = false;
 
-    // Visual hover feedback on resize handle
+    // Visual hover feedback on resize handle (invisible by default)
     for (interaction, mut bg) in handle_bg_q.iter_mut() {
         bg.0 = match interaction {
             Interaction::Hovered => {
                 wants_ew_cursor = true;
-                Color::srgba(0.4, 0.7, 1.0, 0.5)
+                Color::srgba(0.4, 0.7, 1.0, 0.35)
             }
             Interaction::Pressed => {
                 wants_ew_cursor = true;
-                Color::srgba(0.4, 0.7, 1.0, 0.7)
+                Color::srgba(0.4, 0.7, 1.0, 0.5)
             }
-            Interaction::None => Color::srgba(0.5, 0.5, 0.55, 0.3),
+            Interaction::None => Color::NONE,
         };
     }
-    // Visual hover feedback on separator
+    // Visual hover feedback on separator (thin line by default)
     for (interaction, mut bg) in sep_bg_q.iter_mut() {
         bg.0 = match interaction {
             Interaction::Hovered => {
