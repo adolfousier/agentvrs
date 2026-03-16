@@ -12,11 +12,20 @@ mod bevy_tests {
     use bevy::prelude::*;
     use std::sync::{Arc, Mutex, RwLock};
 
+    use crate::bevy3d::runner::ThemeState;
+
     fn test_bridge() -> WorldBridge {
         let grid = Arc::new(RwLock::new(crate::world::build_office_world(10, 8)));
         let registry = Arc::new(RwLock::new(AgentRegistry::new()));
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
         WorldBridge { grid, registry, db }
+    }
+
+    fn test_theme() -> ThemeState {
+        ThemeState {
+            is_dark: true,
+            last_check: std::time::Instant::now(),
+        }
     }
 
     /// Count entities matching a query filter via world_mut().
@@ -138,6 +147,7 @@ mod bevy_tests {
 
         app.insert_resource(bridge);
         app.insert_resource(MissionControlState { open: false });
+        app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
         app.update(); // startup
@@ -169,6 +179,7 @@ mod bevy_tests {
 
         app.insert_resource(bridge);
         app.insert_resource(MissionControlState { open: true });
+        app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
         app.update(); // startup
@@ -212,6 +223,7 @@ mod bevy_tests {
 
         app.insert_resource(bridge);
         app.insert_resource(MissionControlState { open: true });
+        app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
         app.update();
@@ -257,6 +269,7 @@ mod bevy_tests {
 
         app.insert_resource(bridge);
         app.insert_resource(MissionControlState { open: true });
+        app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
         app.update();
@@ -288,6 +301,7 @@ mod bevy_tests {
 
         app.insert_resource(bridge);
         app.insert_resource(MissionControlState { open: true });
+        app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
         app.update(); // startup
@@ -309,12 +323,13 @@ mod bevy_tests {
 
         app.insert_resource(bridge);
         app.insert_resource(MissionControlState { open: true });
+        app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
         app.update();
         app.update();
 
-        // "No activity recorded yet" + "No tasks submitted yet" = 2
-        assert_eq!(count_with::<With<McChild>>(&mut app), 2);
+        // "No agents connected" + "No activity recorded yet" + "No tasks submitted yet" = 3
+        assert_eq!(count_with::<With<McChild>>(&mut app), 3);
     }
 }

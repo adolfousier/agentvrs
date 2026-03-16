@@ -7,7 +7,7 @@ mod materials;
 mod meshes;
 pub(crate) mod mission_control;
 mod overlay;
-mod runner;
+pub(crate) mod runner;
 pub(crate) mod sim_system;
 mod sync;
 
