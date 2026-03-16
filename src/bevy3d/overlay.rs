@@ -522,16 +522,13 @@ pub fn update_agent_labels(
     mut commands: Commands,
     bridge: Res<WorldBridge>,
     theme: Res<super::runner::ThemeState>,
+    mc_state: Res<super::mission_control::MissionControlState>,
     agent_q: Query<(&GlobalTransform, &AgentMarker)>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     label_q: Query<Entity, With<AgentLabel>>,
     bubble_q: Query<Entity, With<SpeechBubble>>,
     selected: Res<SelectedAgent>,
 ) {
-    let Ok((camera, cam_gt)) = camera_q.single() else {
-        return;
-    };
-
     // Remove all existing labels and speech bubbles (recreated each frame)
     for entity in label_q.iter() {
         commands.entity(entity).despawn();
@@ -539,6 +536,15 @@ pub fn update_agent_labels(
     for entity in bubble_q.iter() {
         commands.entity(entity).despawn();
     }
+
+    // Don't render labels when Mission Control is open
+    if mc_state.open {
+        return;
+    }
+
+    let Ok((camera, cam_gt)) = camera_q.single() else {
+        return;
+    };
 
     let registry = bridge.registry.read().unwrap();
 
