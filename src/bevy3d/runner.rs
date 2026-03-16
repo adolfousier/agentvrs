@@ -62,6 +62,11 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.insert_resource(SyncState::default());
     app.insert_resource(SelectedAgent::default());
     app.insert_resource(super::overlay::MessageInputState::default());
+    app.insert_resource(super::overlay::SidebarState {
+        width: config.gui.sidebar_width as f32,
+        detail_height: 180.0,
+        ..default()
+    });
     app.insert_resource(sim_state);
 
     // Startup systems (run once, chained so materials/meshes exist before camera)
@@ -107,6 +112,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
             super::overlay::update_status_bar,
             super::overlay::toggle_sidebar,
             super::overlay::handle_message_input,
+            super::overlay::sidebar_resize,
             poll_system_theme,
             super::overlay::update_ui_theme,
         )

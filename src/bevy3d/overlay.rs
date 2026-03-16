@@ -1,4 +1,4 @@
-use crate::agent::AgentState;
+use crate::agent::{AgentMessage, AgentState};
 use crate::bevy3d::agents::AgentMarker;
 use crate::bevy3d::bridge::WorldBridge;
 use crate::bevy3d::camera::MainCamera;
@@ -46,6 +46,15 @@ pub struct MessageInputBox;
 #[derive(Component)]
 pub struct SidebarSeparator;
 
+#[derive(Component)]
+pub struct SpeechBubble;
+
+#[derive(Component)]
+pub struct DetailPanel;
+
+#[derive(Component)]
+pub struct SidebarResizeHandle;
+
 /// Resource: tracks text being typed in the message input.
 #[derive(Resource, Default)]
 pub struct MessageInputState {
@@ -53,9 +62,33 @@ pub struct MessageInputState {
     pub active: bool,
 }
 
+/// Resource: sidebar layout state with drag-resize support.
+#[derive(Resource)]
+pub struct SidebarState {
+    pub width: f32,
+    pub detail_height: f32,
+    pub dragging_width: bool,
+    pub dragging_detail: bool,
+    pub drag_start: f32,
+    pub drag_start_value: f32,
+}
+
+impl Default for SidebarState {
+    fn default() -> Self {
+        Self {
+            width: 280.0,
+            detail_height: 180.0,
+            dragging_width: false,
+            dragging_detail: false,
+            drag_start: 0.0,
+            drag_start_value: 0.0,
+        }
+    }
+}
+
 // ── Startup: build the full UI layout ───────────────────────────────────────
 
-pub fn setup_ui(mut commands: Commands) {
+pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
     // ── Status bar (bottom) ─────────────────────────────────────────────
     commands
         .spawn((
@@ -124,14 +157,33 @@ pub fn setup_ui(mut commands: Commands) {
                 top: Val::Px(0.0),
                 right: Val::Px(0.0),
                 bottom: Val::Px(28.0),
-                width: Val::Px(280.0),
-                flex_direction: FlexDirection::Column,
+                width: Val::Px(sidebar_state.width),
+                flex_direction: FlexDirection::Row,
                 ..default()
             },
             BackgroundColor(Color::srgb(0.13, 0.13, 0.15)),
             SidebarRoot,
         ))
         .with_children(|sidebar| {
+            // Resize handle (left edge — drag to resize width)
+            sidebar.spawn((
+                Node {
+                    width: Val::Px(6.0),
+                    height: Val::Percent(100.0),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.5, 0.5, 0.55, 0.3)),
+                SidebarResizeHandle,
+                Interaction::default(),
+            ));
+
+            // Main sidebar column
+            sidebar.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                overflow: Overflow::clip(),
+                ..default()
+            }).with_children(|sidebar| {
             // ── Header ──────────────────────────────────────────────
             sidebar.spawn((
                 Text::new("Agents"),
@@ -161,26 +213,31 @@ pub fn setup_ui(mut commands: Commands) {
                 ))
                 .with_children(|_| {});
 
-            // ── Separator ───────────────────────────────────────────
+            // ── Separator (drag to resize detail panel) ──────────────
             sidebar.spawn((
                 Node {
-                    height: Val::Px(1.0),
+                    height: Val::Px(6.0),
                     width: Val::Percent(100.0),
                     ..default()
                 },
                 BackgroundColor(Color::srgb(0.25, 0.25, 0.28)),
                 SidebarSeparator,
+                Interaction::default(),
             ));
 
             // ── Detail panel ────────────────────────────────────────
             sidebar
-                .spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(14.0)),
-                    row_gap: Val::Px(8.0),
-                    min_height: Val::Px(160.0),
-                    ..default()
-                })
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(Val::Px(14.0)),
+                        row_gap: Val::Px(8.0),
+                        height: Val::Px(sidebar_state.detail_height),
+                        overflow: Overflow::clip(),
+                        ..default()
+                    },
+                    DetailPanel,
+                ))
                 .with_children(|detail| {
                     detail.spawn((
                         Text::new("No agent selected"),
@@ -234,6 +291,7 @@ pub fn setup_ui(mut commands: Commands) {
                             ));
                         });
                 });
+            });
         });
 }
 
@@ -446,14 +504,18 @@ pub fn update_agent_labels(
     agent_q: Query<(&GlobalTransform, &AgentMarker)>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     label_q: Query<Entity, With<AgentLabel>>,
+    bubble_q: Query<Entity, With<SpeechBubble>>,
     selected: Res<SelectedAgent>,
 ) {
     let Ok((camera, cam_gt)) = camera_q.single() else {
         return;
     };
 
-    // Remove all existing labels (recreated each frame with proper dot nodes)
+    // Remove all existing labels and speech bubbles (recreated each frame)
     for entity in label_q.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in bubble_q.iter() {
         commands.entity(entity).despawn();
     }
 
@@ -488,6 +550,7 @@ pub fn update_agent_labels(
 
         let dot_color = state_color(&agent.state);
 
+        // Name label
         commands
             .spawn((
                 Node {
@@ -528,6 +591,48 @@ pub fn update_agent_labels(
                     TextColor(text_color),
                 ));
             });
+
+        // Speech bubble (shown above name label when agent has speech)
+        if let Some(speech) = &agent.speech {
+            let bubble_text = if speech.len() > 40 {
+                format!("{}...", &speech[..37])
+            } else {
+                speech.clone()
+            };
+            commands
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(viewport_pos.x - 60.0),
+                        top: Val::Px(viewport_pos.y - 50.0),
+                        padding: UiRect::new(
+                            Val::Px(10.0),
+                            Val::Px(10.0),
+                            Val::Px(5.0),
+                            Val::Px(5.0),
+                        ),
+                        max_width: Val::Px(220.0),
+                        border_radius: BorderRadius::all(Val::Px(10.0)),
+                        ..default()
+                    },
+                    BackgroundColor(if theme.is_dark {
+                        Color::srgba(0.15, 0.35, 0.55, 0.92)
+                    } else {
+                        Color::srgba(0.20, 0.50, 0.80, 0.92)
+                    }),
+                    SpeechBubble,
+                ))
+                .with_children(|bubble| {
+                    bubble.spawn((
+                        Text::new(bubble_text),
+                        TextFont {
+                            font_size: 11.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(1.0, 1.0, 1.0)),
+                    ));
+                });
+        }
     }
 }
 
@@ -588,12 +693,19 @@ pub fn handle_message_input(
         }
     }
 
-    // Enter — send message
+    // Enter — send message (set speech bubble + push to inbox)
     if keys.just_pressed(KeyCode::Enter) && input_state.active && !input_state.text.is_empty() {
         if let Some(agent_id) = selected.agent_id {
             let mut registry = bridge.registry.write().unwrap();
             if let Some(agent) = registry.get_mut(&agent_id) {
+                // Show as speech bubble in the 3D world
                 agent.say(&input_state.text);
+                // Also deliver to the agent's inbox so external agents can retrieve it
+                let system_id = crate::agent::AgentId::default();
+                let msg = AgentMessage::new(system_id, agent_id, &input_state.text);
+                agent.inbox.push_back(msg);
+                agent.set_state(AgentState::Messaging);
+                agent.anim.activity_ticks = 0;
             }
         }
         input_state.text.clear();
@@ -714,6 +826,158 @@ pub fn update_ui_theme(
     for mut bg in label_q.iter_mut() {
         bg.0 = label_bg;
     }
+}
+
+// ── Sidebar resize via drag handles ─────────────────────────────────────────
+
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn sidebar_resize(
+    mut commands: Commands,
+    mut sidebar_state: ResMut<SidebarState>,
+    handle_q: Query<&Interaction, (With<SidebarResizeHandle>, Changed<Interaction>)>,
+    sep_q: Query<&Interaction, (With<SidebarSeparator>, Changed<Interaction>)>,
+    mut handle_bg_q: Query<
+        (&Interaction, &mut BackgroundColor),
+        (With<SidebarResizeHandle>, Without<SidebarSeparator>),
+    >,
+    mut sep_bg_q: Query<
+        (&Interaction, &mut BackgroundColor),
+        (With<SidebarSeparator>, Without<SidebarResizeHandle>),
+    >,
+    mouse_btn: Res<ButtonInput<MouseButton>>,
+    windows: Query<(Entity, &Window)>,
+    mut sidebar_q: Query<&mut Node, (With<SidebarRoot>, Without<DetailPanel>)>,
+    mut detail_q: Query<&mut Node, (With<DetailPanel>, Without<SidebarRoot>)>,
+) {
+    // Track whether any handle is hovered/active for cursor changes
+    let mut wants_ew_cursor = false;
+    let mut wants_ns_cursor = false;
+
+    // Visual hover feedback on resize handle
+    for (interaction, mut bg) in handle_bg_q.iter_mut() {
+        bg.0 = match interaction {
+            Interaction::Hovered => {
+                wants_ew_cursor = true;
+                Color::srgba(0.4, 0.7, 1.0, 0.5)
+            }
+            Interaction::Pressed => {
+                wants_ew_cursor = true;
+                Color::srgba(0.4, 0.7, 1.0, 0.7)
+            }
+            Interaction::None => Color::srgba(0.5, 0.5, 0.55, 0.3),
+        };
+    }
+    // Visual hover feedback on separator
+    for (interaction, mut bg) in sep_bg_q.iter_mut() {
+        bg.0 = match interaction {
+            Interaction::Hovered => {
+                wants_ns_cursor = true;
+                Color::srgba(0.4, 0.7, 1.0, 0.5)
+            }
+            Interaction::Pressed => {
+                wants_ns_cursor = true;
+                Color::srgba(0.4, 0.7, 1.0, 0.7)
+            }
+            Interaction::None => Color::srgb(0.25, 0.25, 0.28),
+        };
+    }
+
+    // Update cursor icon based on hover/drag state
+    if sidebar_state.dragging_width {
+        wants_ew_cursor = true;
+    }
+    if sidebar_state.dragging_detail {
+        wants_ns_cursor = true;
+    }
+
+    for (entity, _) in windows.iter() {
+        if wants_ew_cursor {
+            commands
+                .entity(entity)
+                .insert(bevy::window::CursorIcon::from(bevy::window::SystemCursorIcon::ColResize));
+        } else if wants_ns_cursor {
+            commands
+                .entity(entity)
+                .insert(bevy::window::CursorIcon::from(bevy::window::SystemCursorIcon::RowResize));
+        } else {
+            commands
+                .entity(entity)
+                .insert(bevy::window::CursorIcon::from(bevy::window::SystemCursorIcon::Default));
+        }
+    }
+
+    // Start width drag
+    for interaction in handle_q.iter() {
+        if *interaction == Interaction::Pressed
+            && let Some((_, window)) = windows.iter().next()
+                && let Some(cursor) = window.cursor_position()
+            {
+                sidebar_state.dragging_width = true;
+                sidebar_state.drag_start = cursor.x;
+                sidebar_state.drag_start_value = sidebar_state.width;
+            }
+    }
+
+    // Start detail height drag
+    for interaction in sep_q.iter() {
+        if *interaction == Interaction::Pressed
+            && let Some((_, window)) = windows.iter().next()
+                && let Some(cursor) = window.cursor_position()
+            {
+                sidebar_state.dragging_detail = true;
+                sidebar_state.drag_start = cursor.y;
+                sidebar_state.drag_start_value = sidebar_state.detail_height;
+            }
+    }
+
+    // While dragging width
+    if sidebar_state.dragging_width {
+        if mouse_btn.pressed(MouseButton::Left) {
+            if let Some((_, window)) = windows.iter().next()
+                && let Some(cursor) = window.cursor_position()
+            {
+                let delta = sidebar_state.drag_start - cursor.x;
+                let new_width = (sidebar_state.drag_start_value + delta).clamp(200.0, 600.0);
+                sidebar_state.width = new_width;
+                for mut node in sidebar_q.iter_mut() {
+                    node.width = Val::Px(new_width);
+                }
+            }
+        } else {
+            sidebar_state.dragging_width = false;
+            save_sidebar_config(sidebar_state.width, sidebar_state.detail_height);
+        }
+    }
+
+    // While dragging detail panel height
+    if sidebar_state.dragging_detail {
+        if mouse_btn.pressed(MouseButton::Left) {
+            if let Some((_, window)) = windows.iter().next()
+                && let Some(cursor) = window.cursor_position()
+            {
+                // Dragging separator up = larger detail, down = smaller
+                let delta = sidebar_state.drag_start - cursor.y;
+                let new_height = (sidebar_state.drag_start_value + delta).clamp(100.0, 500.0);
+                sidebar_state.detail_height = new_height;
+                for mut node in detail_q.iter_mut() {
+                    node.height = Val::Px(new_height);
+                }
+            }
+        } else {
+            sidebar_state.dragging_detail = false;
+            save_sidebar_config(sidebar_state.width, sidebar_state.detail_height);
+        }
+    }
+}
+
+/// Persist sidebar dimensions to config file (fire-and-forget).
+fn save_sidebar_config(width: f32, _detail_height: f32) {
+    std::thread::spawn(move || {
+        if let Ok(mut config) = crate::config::AppConfig::load() {
+            config.gui.sidebar_width = width as i32;
+            let _ = config.save();
+        }
+    });
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
