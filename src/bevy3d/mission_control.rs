@@ -67,6 +67,10 @@ pub struct MissionControlState {
     pub popup_open: bool,
     /// UI zoom scale (1.0 = default, 0.5–3.0 range).
     pub zoom: f32,
+    /// Show all activity entries (not just the recent subset).
+    pub show_all_activity: bool,
+    /// Show all task entries (not just the recent subset).
+    pub show_all_tasks: bool,
 }
 
 impl Default for MissionControlState {
@@ -76,6 +80,8 @@ impl Default for MissionControlState {
             selected_agent: None,
             popup_open: false,
             zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
         }
     }
 }
@@ -83,6 +89,14 @@ impl Default for MissionControlState {
 /// Marker component on clickable agent cards, stores the agent ID.
 #[derive(Component)]
 pub struct McCardButton(pub crate::agent::AgentId);
+
+/// Marker for "See All" / "Show Less" button on activity section.
+#[derive(Component)]
+pub struct McSeeAllActivity;
+
+/// Marker for "See All" / "Show Less" button on task section.
+#[derive(Component)]
+pub struct McSeeAllTasks;
 
 // ── Theme palette ────────────────────────────────────────────────────────────
 
@@ -704,9 +718,9 @@ pub fn update_mission_control(
                 Some(sel) => registry.agents().filter(|a| a.id == sel).collect(),
                 None => registry.agents().collect(),
             };
+            let db_limit = if mc_state.show_all_activity { 500 } else { 50 };
             for agent in &agents_to_show {
-                let limit = if mc_state.selected_agent.is_some() { 50 } else { 10 };
-                if let Ok(entries) = db.load_activity(&agent.id, limit) {
+                if let Ok(entries) = db.load_activity(&agent.id, db_limit) {
                     for entry in entries {
                         all_activity.push((agent.name.clone(), entry));
                     }
@@ -714,8 +728,11 @@ pub fn update_mission_control(
             }
         }
         all_activity.sort_by(|a, b| b.1.timestamp.cmp(&a.1.timestamp));
-        let max_items = if mc_state.selected_agent.is_some() { 50 } else { 20 };
-        all_activity.truncate(max_items);
+        let total_activity = all_activity.len();
+        if !mc_state.show_all_activity {
+            let max_items = if mc_state.selected_agent.is_some() { 20 } else { 10 };
+            all_activity.truncate(max_items);
+        }
 
         if all_activity.is_empty() {
             let empty = commands
@@ -800,6 +817,35 @@ pub fn update_mission_control(
                 .id();
             commands.entity(feed_parent).add_child(row);
         }
+
+        // "See All" / "Show Less" button if there are more items
+        if total_activity > all_activity.len() || mc_state.show_all_activity {
+            let label = if mc_state.show_all_activity {
+                format!("Show Less (showing {})", all_activity.len())
+            } else {
+                format!("See All ({} total)", total_activity)
+            };
+            let btn = commands
+                .spawn((
+                    Node {
+                        padding: UiRect::new(Val::Px(14.0), Val::Px(14.0), Val::Px(8.0), Val::Px(8.0)),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    Interaction::default(),
+                    McSeeAllActivity,
+                    McChild,
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(label),
+                        font(11.0),
+                        TextColor(t.link),
+                    ));
+                })
+                .id();
+            commands.entity(feed_parent).add_child(btn);
+        }
     }
 
     // ── Task list (from DB) — GitHub-style list rows ─────────────
@@ -815,9 +861,9 @@ pub fn update_mission_control(
                 Some(sel) => registry.agents().filter(|a| a.id == sel).collect(),
                 None => registry.agents().collect(),
             };
+            let db_limit = if mc_state.show_all_tasks { 500 } else { 50 };
             for agent in &agents_to_show {
-                let limit = if mc_state.selected_agent.is_some() { 50 } else { 10 };
-                if let Ok(tasks) = db.load_tasks(&agent.id, limit) {
+                if let Ok(tasks) = db.load_tasks(&agent.id, db_limit) {
                     for task in tasks {
                         all_tasks.push((agent.name.clone(), task));
                     }
@@ -825,8 +871,11 @@ pub fn update_mission_control(
             }
         }
         all_tasks.sort_by(|a, b| b.1.last_updated.cmp(&a.1.last_updated));
-        let max_items = if mc_state.selected_agent.is_some() { 50 } else { 20 };
-        all_tasks.truncate(max_items);
+        let total_tasks = all_tasks.len();
+        if !mc_state.show_all_tasks {
+            let max_items = if mc_state.selected_agent.is_some() { 20 } else { 10 };
+            all_tasks.truncate(max_items);
+        }
 
         if all_tasks.is_empty() {
             let empty = commands
@@ -943,6 +992,35 @@ pub fn update_mission_control(
                 .id();
             commands.entity(task_parent).add_child(row);
         }
+
+        // "See All" / "Show Less" button if there are more items
+        if total_tasks > all_tasks.len() || mc_state.show_all_tasks {
+            let label = if mc_state.show_all_tasks {
+                format!("Show Less (showing {})", all_tasks.len())
+            } else {
+                format!("See All ({} total)", total_tasks)
+            };
+            let btn = commands
+                .spawn((
+                    Node {
+                        padding: UiRect::new(Val::Px(14.0), Val::Px(14.0), Val::Px(8.0), Val::Px(8.0)),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    Interaction::default(),
+                    McSeeAllTasks,
+                    McChild,
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(label),
+                        font(11.0),
+                        TextColor(t.link),
+                    ));
+                })
+                .id();
+            commands.entity(task_parent).add_child(btn);
+        }
     }
 }
 
@@ -984,6 +1062,28 @@ pub fn handle_card_clicks(
                     None => "Tasks".to_string(),
                 };
             }
+        }
+    }
+}
+
+// ── See All toggle handler ───────────────────────────────────────────────────
+
+pub fn handle_see_all_clicks(
+    mut mc_state: ResMut<MissionControlState>,
+    activity_btn_q: Query<&Interaction, (Changed<Interaction>, With<McSeeAllActivity>)>,
+    task_btn_q: Query<&Interaction, (Changed<Interaction>, With<McSeeAllTasks>, Without<McSeeAllActivity>)>,
+) {
+    if !mc_state.open {
+        return;
+    }
+    for interaction in activity_btn_q.iter() {
+        if *interaction == Interaction::Pressed {
+            mc_state.show_all_activity = !mc_state.show_all_activity;
+        }
+    }
+    for interaction in task_btn_q.iter() {
+        if *interaction == Interaction::Pressed {
+            mc_state.show_all_tasks = !mc_state.show_all_tasks;
         }
     }
 }
