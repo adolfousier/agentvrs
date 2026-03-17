@@ -153,6 +153,8 @@ mod bevy_tests {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            message_popup_open: false,
+            show_all_inbox: false,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -192,6 +194,8 @@ mod bevy_tests {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            message_popup_open: false,
+            show_all_inbox: false,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -243,6 +247,8 @@ mod bevy_tests {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            message_popup_open: false,
+            show_all_inbox: false,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -297,6 +303,8 @@ mod bevy_tests {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            message_popup_open: false,
+            show_all_inbox: false,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -336,6 +344,8 @@ mod bevy_tests {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            message_popup_open: false,
+            show_all_inbox: false,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -365,6 +375,8 @@ mod bevy_tests {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            message_popup_open: false,
+            show_all_inbox: false,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -372,7 +384,7 @@ mod bevy_tests {
         app.update();
         app.update();
 
-        // "No agents connected" + "No activity recorded yet" + "No tasks submitted yet" = 3
-        assert_eq!(count_with::<With<McChild>>(&mut app), 3);
+        // "No agents connected" + "No activity recorded yet" + "No tasks submitted yet" + "No messages yet" = 4
+        assert_eq!(count_with::<With<McChild>>(&mut app), 4);
     }
 }

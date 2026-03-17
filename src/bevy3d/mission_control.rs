@@ -103,6 +103,27 @@ pub struct McTaskRowButton {
 #[derive(Component)]
 pub struct McTaskPopup;
 
+/// Marker for a clickable message row — stores message data for popup.
+#[derive(Component, Clone)]
+pub struct McMessageRowButton {
+    pub agent_name: String,
+    pub from_name: String,
+    pub text: String,
+    pub timestamp: String,
+}
+
+/// Marker for the message detail popup overlay.
+#[derive(Component)]
+pub struct McMessagePopup;
+
+/// Marker for the inbox list container in the right panel.
+#[derive(Component)]
+pub struct McInboxList;
+
+/// Marker for the "Inbox" heading.
+#[derive(Component)]
+pub(crate) struct McInboxHeading;
+
 /// Resource: mission control panel open/closed state.
 #[derive(Resource)]
 pub struct MissionControlState {
@@ -111,12 +132,16 @@ pub struct MissionControlState {
     pub selected_agent: Option<crate::agent::AgentId>,
     /// Whether a task detail popup is currently shown.
     pub popup_open: bool,
+    /// Whether a message detail popup is currently shown.
+    pub message_popup_open: bool,
     /// UI zoom scale (1.0 = default, 0.5–3.0 range).
     pub zoom: f32,
     /// Show all activity entries (not just the recent subset).
     pub show_all_activity: bool,
     /// Show all task entries (not just the recent subset).
     pub show_all_tasks: bool,
+    /// Show all inbox messages (not just the recent subset).
+    pub show_all_inbox: bool,
 }
 
 impl Default for MissionControlState {
@@ -125,9 +150,11 @@ impl Default for MissionControlState {
             open: false,
             selected_agent: None,
             popup_open: false,
+            message_popup_open: false,
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            show_all_inbox: false,
         }
     }
 }
@@ -143,6 +170,10 @@ pub struct McSeeAllActivity;
 /// Marker for "See All" / "Show Less" button on task section.
 #[derive(Component)]
 pub struct McSeeAllTasks;
+
+/// Marker for "See All" / "Show Less" button on inbox section.
+#[derive(Component)]
+pub struct McSeeAllInbox;
 
 // ── Theme palette ────────────────────────────────────────────────────────────
 
@@ -203,7 +234,7 @@ fn mc_theme(is_dark: bool) -> McTheme {
 
 // ── Toggle with M key ────────────────────────────────────────────────────────
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn toggle_mission_control(
     mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
@@ -233,6 +264,7 @@ pub fn toggle_mission_control(
         ),
     >,
     popup_q: Query<Entity, With<McTaskPopup>>,
+    msg_popup_q: Query<Entity, With<McMessagePopup>>,
 ) {
     if keys.just_pressed(KeyCode::KeyM) {
         // If popup is open, M closes the popup first (not the whole MC)
@@ -241,6 +273,13 @@ pub fn toggle_mission_control(
                 commands.entity(entity).despawn();
             }
             mc_state.popup_open = false;
+            return;
+        }
+        if mc_state.message_popup_open {
+            for entity in msg_popup_q.iter() {
+                commands.entity(entity).despawn();
+            }
+            mc_state.message_popup_open = false;
             return;
         }
         mc_state.open = !mc_state.open;
@@ -424,7 +463,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                         right.spawn((
                             Node {
                                 flex_direction: FlexDirection::Column,
-                                height: Val::Percent(45.0),
+                                height: Val::Percent(30.0),
                                 overflow: Overflow::scroll_y(),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(8.0)),
@@ -452,7 +491,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                         right.spawn((
                             Node {
                                 flex_direction: FlexDirection::Column,
-                                height: Val::Percent(45.0),
+                                height: Val::Percent(30.0),
                                 overflow: Overflow::scroll_y(),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(8.0)),
@@ -464,6 +503,34 @@ pub fn setup_mission_control(mut commands: Commands) {
                             BackgroundColor(Color::srgb(0.11, 0.12, 0.14)),
                             BorderColor::all(Color::srgb(0.18, 0.19, 0.23)),
                             McTaskList,
+                        ));
+
+                        // Inbox section
+                        right.spawn((
+                            Text::new("Inbox"),
+                            TextFont {
+                                font_size: 14.0,
+                                ..default()
+                            },
+                            TextColor(Color::srgb(0.58, 0.68, 0.90)),
+                            McHeading,
+                            McInboxHeading,
+                        ));
+                        right.spawn((
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                height: Val::Percent(30.0),
+                                overflow: Overflow::scroll_y(),
+                                border: UiRect::all(Val::Px(1.0)),
+                                border_radius: BorderRadius::all(Val::Px(8.0)),
+                                ..default()
+                            },
+                            ScrollPosition::default(),
+                            Interaction::default(),
+                            McScrollable,
+                            BackgroundColor(Color::srgb(0.11, 0.12, 0.14)),
+                            BorderColor::all(Color::srgb(0.18, 0.19, 0.23)),
+                            McInboxList,
                         ));
                     });
             });
@@ -482,6 +549,7 @@ pub fn update_mission_control(
     card_q: Query<Entity, With<McAgentCard>>,
     feed_q: Query<Entity, With<McActivityFeed>>,
     task_q: Query<Entity, With<McTaskList>>,
+    inbox_q: Query<Entity, With<McInboxList>>,
     child_q: Query<Entity, With<McChild>>,
     mut title_q: Query<&mut TextColor, With<McTitle>>,
     mut hint_q: Query<(Entity, &mut TextColor), (With<McHint>, Without<McTitle>)>,
@@ -944,6 +1012,180 @@ pub fn update_mission_control(
         }
     }
 
+    // ── Inbox (from DB) — message list rows ─────────────────────
+    if let Ok(inbox_parent) = inbox_q.single() {
+        commands.entity(inbox_parent).insert((
+            BackgroundColor(t.section_bg),
+            BorderColor::all(t.section_border),
+        ));
+
+        let mut all_messages: Vec<(String, crate::agent::AgentMessage)> = Vec::new();
+        if let Ok(db) = bridge.db.lock() {
+            let agents_to_show: Vec<_> = match mc_state.selected_agent {
+                Some(sel) => registry.agents().filter(|a| a.id == sel).collect(),
+                None => registry.agents().collect(),
+            };
+            let db_limit = if mc_state.show_all_inbox { 500 } else { 50 };
+            for agent in &agents_to_show {
+                if let Ok(msgs) = db.load_messages_for(&agent.id, db_limit) {
+                    for msg in msgs {
+                        all_messages.push((agent.name.clone(), msg));
+                    }
+                }
+            }
+        }
+        all_messages.sort_by(|a, b| b.1.timestamp.cmp(&a.1.timestamp));
+        let total_messages = all_messages.len();
+        if !mc_state.show_all_inbox {
+            let max_items = if mc_state.selected_agent.is_some() {
+                20
+            } else {
+                10
+            };
+            all_messages.truncate(max_items);
+        }
+
+        if all_messages.is_empty() {
+            let empty = commands
+                .spawn((
+                    Node {
+                        padding: UiRect::all(px(16.0)),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    McChild,
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new("No messages yet"),
+                        font(12.0),
+                        TextColor(t.text_muted),
+                    ));
+                })
+                .id();
+            commands.entity(inbox_parent).add_child(empty);
+        }
+
+        // Resolve sender names from registry
+        let resolve_name = |agent_id: &crate::agent::AgentId| -> String {
+            registry
+                .get(agent_id)
+                .map(|a| a.name.clone())
+                .unwrap_or_else(|| format!("{:.8}", agent_id))
+        };
+
+        for (i, (agent_name, msg)) in all_messages.iter().enumerate() {
+            let time_ago = (chrono::Utc::now() - msg.timestamp).num_seconds();
+            let time_str = if time_ago < 60 {
+                format!("{}s ago", time_ago)
+            } else if time_ago < 3600 {
+                format!("{}m ago", time_ago / 60)
+            } else {
+                format!("{}h ago", time_ago / 3600)
+            };
+
+            let row_bg = if i % 2 == 0 {
+                Color::NONE
+            } else {
+                t.separator.with_alpha(0.3)
+            };
+
+            let from_name = resolve_name(&msg.from);
+
+            let row = commands
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: px(12.0),
+                        align_items: AlignItems::Center,
+                        padding: UiRect::new(px(14.0), px(14.0), px(6.0), px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(row_bg),
+                    Interaction::default(),
+                    McMessageRowButton {
+                        agent_name: agent_name.clone(),
+                        from_name: from_name.clone(),
+                        text: msg.text.clone(),
+                        timestamp: msg.timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    },
+                    McChild,
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(&time_str),
+                        font(11.0),
+                        TextColor(t.text_muted),
+                        Node {
+                            min_width: px(55.0),
+                            ..default()
+                        },
+                    ));
+                    // Envelope icon
+                    row.spawn((
+                        Node {
+                            width: px(8.0),
+                            height: px(8.0),
+                            border_radius: BorderRadius::all(px(4.0)),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgb(0.3, 0.7, 1.0)),
+                    ));
+                    row.spawn((
+                        Text::new(format!("{} → {}", from_name, agent_name)),
+                        font(11.0),
+                        TextColor(t.link),
+                        Node {
+                            min_width: px(130.0),
+                            ..default()
+                        },
+                    ));
+                    // Message preview (truncated)
+                    let preview = if msg.text.len() > 60 {
+                        format!("{}…", &msg.text[..60])
+                    } else {
+                        msg.text.clone()
+                    };
+                    row.spawn((
+                        Text::new(preview),
+                        font(11.0),
+                        TextColor(t.text_secondary),
+                        Node {
+                            flex_shrink: 1.0,
+                            ..default()
+                        },
+                    ));
+                })
+                .id();
+            commands.entity(inbox_parent).add_child(row);
+        }
+
+        // "See All" / "Show Less" button
+        if total_messages > all_messages.len() || mc_state.show_all_inbox {
+            let label = if mc_state.show_all_inbox {
+                format!("Show Less (showing {})", all_messages.len())
+            } else {
+                format!("See All ({} total)", total_messages)
+            };
+            let btn = commands
+                .spawn((
+                    Node {
+                        padding: UiRect::new(px(14.0), px(14.0), px(8.0), px(8.0)),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    Interaction::default(),
+                    McSeeAllInbox,
+                    McChild,
+                ))
+                .with_children(|row| {
+                    row.spawn((Text::new(label), font(11.0), TextColor(t.link)));
+                })
+                .id();
+            commands.entity(inbox_parent).add_child(btn);
+        }
+    }
+
     // ── Task list (from DB) — GitHub-style list rows ─────────────
     if let Ok(task_parent) = task_q.single() {
         commands.entity(task_parent).insert((
@@ -1140,12 +1382,35 @@ pub fn update_mission_control(
 
 // ── Card click handler ───────────────────────────────────────────────────────
 
+#[allow(clippy::type_complexity)]
 pub fn handle_card_clicks(
     mut mc_state: ResMut<MissionControlState>,
     card_q: Query<(&Interaction, &McCardButton), Changed<Interaction>>,
     bridge: Res<WorldBridge>,
-    mut activity_heading_q: Query<&mut Text, With<McActivityHeading>>,
-    mut task_heading_q: Query<&mut Text, (With<McTaskHeading>, Without<McActivityHeading>)>,
+    mut activity_heading_q: Query<
+        &mut Text,
+        (
+            With<McActivityHeading>,
+            Without<McTaskHeading>,
+            Without<McInboxHeading>,
+        ),
+    >,
+    mut task_heading_q: Query<
+        &mut Text,
+        (
+            With<McTaskHeading>,
+            Without<McActivityHeading>,
+            Without<McInboxHeading>,
+        ),
+    >,
+    mut inbox_heading_q: Query<
+        &mut Text,
+        (
+            With<McInboxHeading>,
+            Without<McActivityHeading>,
+            Without<McTaskHeading>,
+        ),
+    >,
 ) {
     if !mc_state.open {
         return;
@@ -1178,6 +1443,12 @@ pub fn handle_card_clicks(
                     None => "Tasks".to_string(),
                 };
             }
+            for mut text in inbox_heading_q.iter_mut() {
+                **text = match &agent_name {
+                    Some(name) => format!("Inbox — {}", name),
+                    None => "Inbox".to_string(),
+                };
+            }
         }
     }
 }
@@ -1187,13 +1458,31 @@ pub fn handle_card_clicks(
 #[allow(clippy::type_complexity)]
 pub fn handle_see_all_clicks(
     mut mc_state: ResMut<MissionControlState>,
-    activity_btn_q: Query<&Interaction, (Changed<Interaction>, With<McSeeAllActivity>)>,
+    activity_btn_q: Query<
+        &Interaction,
+        (
+            Changed<Interaction>,
+            With<McSeeAllActivity>,
+            Without<McSeeAllTasks>,
+            Without<McSeeAllInbox>,
+        ),
+    >,
     task_btn_q: Query<
         &Interaction,
         (
             Changed<Interaction>,
             With<McSeeAllTasks>,
             Without<McSeeAllActivity>,
+            Without<McSeeAllInbox>,
+        ),
+    >,
+    inbox_btn_q: Query<
+        &Interaction,
+        (
+            Changed<Interaction>,
+            With<McSeeAllInbox>,
+            Without<McSeeAllActivity>,
+            Without<McSeeAllTasks>,
         ),
     >,
 ) {
@@ -1208,6 +1497,11 @@ pub fn handle_see_all_clicks(
     for interaction in task_btn_q.iter() {
         if *interaction == Interaction::Pressed {
             mc_state.show_all_tasks = !mc_state.show_all_tasks;
+        }
+    }
+    for interaction in inbox_btn_q.iter() {
+        if *interaction == Interaction::Pressed {
+            mc_state.show_all_inbox = !mc_state.show_all_inbox;
         }
     }
 }
@@ -1258,6 +1552,51 @@ pub fn handle_task_popup(
     }
 }
 
+// ── Message popup handler ─────────────────────────────────────────────────
+
+pub fn handle_message_popup(
+    mut commands: Commands,
+    mut mc_state: ResMut<MissionControlState>,
+    theme: Res<ThemeState>,
+    msg_row_q: Query<(&Interaction, &McMessageRowButton), Changed<Interaction>>,
+    popup_q: Query<Entity, With<McMessagePopup>>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    // Dismiss popup on Escape
+    if mc_state.message_popup_open && keys.just_pressed(KeyCode::Escape) {
+        for entity in popup_q.iter() {
+            commands.entity(entity).despawn();
+        }
+        mc_state.message_popup_open = false;
+        return;
+    }
+
+    // Open/replace popup on message row click
+    if mc_state.message_popup_open {
+        let mut clicked = None;
+        for (interaction, btn) in msg_row_q.iter() {
+            if *interaction == Interaction::Pressed {
+                clicked = Some(btn.clone());
+            }
+        }
+        if let Some(btn) = clicked {
+            for entity in popup_q.iter() {
+                commands.entity(entity).despawn();
+            }
+            spawn_message_popup(&mut commands, &btn, theme.is_dark, mc_state.zoom);
+        }
+        return;
+    }
+
+    for (interaction, btn) in msg_row_q.iter() {
+        if *interaction == Interaction::Pressed {
+            mc_state.message_popup_open = true;
+            spawn_message_popup(&mut commands, btn, theme.is_dark, mc_state.zoom);
+            return;
+        }
+    }
+}
+
 /// Spawn a label + value field pair inside a dialog.
 macro_rules! field_node {
     ($parent:expr, $theme:expr, $label:expr, $value:expr, $zoom:expr) => {
@@ -1286,6 +1625,127 @@ macro_rules! field_node {
                 ));
             });
     };
+}
+
+fn spawn_message_popup(
+    commands: &mut Commands,
+    btn: &McMessageRowButton,
+    is_dark: bool,
+    zoom: f32,
+) {
+    let t = mc_theme(is_dark);
+    let font = |size: f32| TextFont {
+        font_size: size * zoom,
+        ..default()
+    };
+    let px = |v: f32| Val::Px(v * zoom);
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: px(0.0),
+                left: px(0.0),
+                right: px(0.0),
+                bottom: px(0.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+            GlobalZIndex(100),
+            McMessagePopup,
+        ))
+        .with_children(|backdrop| {
+            backdrop
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(px(24.0)),
+                        row_gap: px(14.0),
+                        width: px(480.0),
+                        max_height: Val::Percent(70.0),
+                        overflow: Overflow::scroll_y(),
+                        border: UiRect::all(px(1.0)),
+                        border_radius: BorderRadius::all(px(12.0)),
+                        ..default()
+                    },
+                    ScrollPosition::default(),
+                    Interaction::default(),
+                    McScrollable,
+                    BackgroundColor(t.card_bg),
+                    BorderColor::all(t.card_border),
+                ))
+                .with_children(|dialog| {
+                    // Header
+                    dialog
+                        .spawn(Node {
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        })
+                        .with_children(|header| {
+                            header.spawn((
+                                Text::new("Message Detail"),
+                                font(18.0),
+                                TextColor(t.title),
+                            ));
+                            header.spawn((
+                                Text::new("press Esc to close"),
+                                font(11.0),
+                                TextColor(t.text_muted),
+                            ));
+                        });
+
+                    // Separator
+                    dialog.spawn((
+                        Node {
+                            height: px(1.0),
+                            ..default()
+                        },
+                        BackgroundColor(t.separator),
+                    ));
+
+                    // From
+                    field_node!(dialog, &t, "From", &btn.from_name, zoom);
+
+                    // To
+                    field_node!(dialog, &t, "To", &btn.agent_name, zoom);
+
+                    // Timestamp
+                    field_node!(dialog, &t, "Timestamp", &btn.timestamp, zoom);
+
+                    // Separator
+                    dialog.spawn((
+                        Node {
+                            height: px(1.0),
+                            ..default()
+                        },
+                        BackgroundColor(t.separator),
+                    ));
+
+                    // Message body
+                    dialog
+                        .spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            row_gap: px(4.0),
+                            ..default()
+                        })
+                        .with_children(|field| {
+                            field.spawn((
+                                Text::new("Message"),
+                                font(11.0),
+                                TextColor(t.text_muted),
+                            ));
+                            field.spawn((
+                                Text::new(&btn.text),
+                                font(13.0),
+                                TextColor(t.text_primary),
+                            ));
+                        });
+                });
+        });
 }
 
 fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: bool, zoom: f32) {

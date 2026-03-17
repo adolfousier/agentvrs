@@ -640,7 +640,13 @@ pub async fn report_task(
             .observer
             .write()
             .map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
-        obs.record_task(agent_id, &task_id, &req.state, req.summary.clone(), req.scope.clone());
+        obs.record_task(
+            agent_id,
+            &task_id,
+            &req.state,
+            req.summary.clone(),
+            req.scope.clone(),
+        );
 
         // Auto-sync visual state with task lifecycle.
         // api_locked prevents the simulation from overriding this state.

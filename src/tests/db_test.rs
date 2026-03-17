@@ -263,7 +263,10 @@ fn test_task_scope_persists() {
 
     let loaded = db.load_tasks(&id, 10).unwrap();
     assert_eq!(loaded.len(), 1);
-    assert_eq!(loaded[0].scope.as_deref(), Some("Full description of the task scope with details"));
+    assert_eq!(
+        loaded[0].scope.as_deref(),
+        Some("Full description of the task scope with details")
+    );
     assert_eq!(loaded[0].response_summary.as_deref(), Some("short summary"));
 }
 
