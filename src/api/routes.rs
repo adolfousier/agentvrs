@@ -664,7 +664,13 @@ pub async fn report_task(
             if let Some(agent) = reg.get_mut(&agent_id) {
                 agent.set_state(s.clone());
                 agent.anim.activity_ticks = 0;
-                agent.api_locked = s != AgentState::Idle;
+                let locked = s != AgentState::Idle;
+                agent.api_locked = locked;
+                if locked {
+                    // Stop any in-progress walk so the sim doesn't keep moving the agent
+                    agent.path.clear();
+                    agent.goal = None;
+                }
             }
         }
     }

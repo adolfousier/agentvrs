@@ -71,8 +71,11 @@ impl Simulation {
                 match state {
                     AgentState::Idle => {
                         if let Some(agent) = reg.get_mut(&id) {
-                            // Clear api_locked when agent returns to Idle
-                            agent.api_locked = false;
+                            // If api_locked, the API controls this agent — don't
+                            // assign random goals or clear the lock.
+                            if agent.api_locked {
+                                continue;
+                            }
                             agent.anim.activity_ticks += 1;
                             if agent.anim.activity_ticks >= 15 {
                                 needs_goal.push(id);
