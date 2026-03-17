@@ -173,36 +173,32 @@ pub fn toggle_mission_control(
     }
 }
 
-// ── Zoom with +/- keys or scroll wheel ───────────────────────────────────────
+// ── Zoom with Ctrl +/- keys ──────────────────────────────────────────────────
 
 pub fn handle_mc_zoom(
     mut mc_state: ResMut<MissionControlState>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut scroll_evr: MessageReader<bevy::input::mouse::MouseWheel>,
 ) {
     if !mc_state.open || mc_state.popup_open {
-        // Drain scroll events so they don't queue
-        for _ in scroll_evr.read() {}
+        return;
+    }
+
+    let ctrl = keys.pressed(KeyCode::SuperLeft)
+        || keys.pressed(KeyCode::SuperRight)
+        || keys.pressed(KeyCode::ControlLeft)
+        || keys.pressed(KeyCode::ControlRight);
+    if !ctrl {
         return;
     }
 
     let mut delta = 0.0_f32;
 
-    // +/= key zooms in, -/_ key zooms out
+    // Ctrl+= / Ctrl++ zooms in, Ctrl+- zooms out
     if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) {
         delta += 0.1;
     }
     if keys.just_pressed(KeyCode::Minus) || keys.just_pressed(KeyCode::NumpadSubtract) {
         delta -= 0.1;
-    }
-
-    // Scroll wheel zooms too
-    for ev in scroll_evr.read() {
-        let scroll_delta = match ev.unit {
-            bevy::input::mouse::MouseScrollUnit::Line => ev.y * 0.1,
-            bevy::input::mouse::MouseScrollUnit::Pixel => ev.y * 0.005,
-        };
-        delta += scroll_delta;
     }
 
     if delta != 0.0 {

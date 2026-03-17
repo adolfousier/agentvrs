@@ -101,8 +101,7 @@ pub fn camera_zoom(
     mc_state: Res<crate::bevy3d::mission_control::MissionControlState>,
 ) {
     if mc_state.open {
-        // Consume events so they don't queue up, but don't zoom
-        for _ in scroll_evr.read() {}
+        // Let Bevy UI handle scroll events for MC panel scrolling
         return;
     }
     for ev in scroll_evr.read() {
