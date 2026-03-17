@@ -32,11 +32,25 @@ pub(crate) struct McHint;
 #[derive(Component)]
 pub(crate) struct McHeading;
 
+/// Marker for the "Recent Activity" heading (updated when agent is selected).
+#[derive(Component)]
+pub(crate) struct McActivityHeading;
+
+/// Marker for the "Tasks" heading (updated when agent is selected).
+#[derive(Component)]
+pub(crate) struct McTaskHeading;
+
 /// Resource: mission control panel open/closed state.
 #[derive(Resource, Default)]
 pub struct MissionControlState {
     pub open: bool,
+    /// Currently selected agent in Mission Control (filters right panel).
+    pub selected_agent: Option<crate::agent::AgentId>,
 }
+
+/// Marker component on clickable agent cards, stores the agent ID.
+#[derive(Component)]
+pub struct McCardButton(pub crate::agent::AgentId);
 
 // ── Theme palette ────────────────────────────────────────────────────────────
 
@@ -104,6 +118,9 @@ pub fn toggle_mission_control(
 ) {
     if keys.just_pressed(KeyCode::KeyM) {
         mc_state.open = !mc_state.open;
+        if !mc_state.open {
+            mc_state.selected_agent = None;
+        }
         for mut vis in mc_root_q.iter_mut() {
             *vis = if mc_state.open {
                 Visibility::Visible
@@ -228,6 +245,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                             },
                             TextColor(Color::srgb(0.58, 0.68, 0.90)),
                             McHeading,
+                            McActivityHeading,
                         ));
                         right.spawn((
                             Node {
@@ -253,6 +271,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                             },
                             TextColor(Color::srgb(0.58, 0.68, 0.90)),
                             McHeading,
+                            McTaskHeading,
                         ));
                         right.spawn((
                             Node {
@@ -362,6 +381,8 @@ pub fn update_mission_control(
 
             let tasks = agent_tasks.get(&agent.id);
             let activity = agent_activity.get(&agent.id);
+            let is_selected = mc_state.selected_agent == Some(agent.id);
+            let card_border_color = if is_selected { t.link } else { t.card_border };
 
             let card = commands
                 .spawn((
@@ -370,13 +391,15 @@ pub fn update_mission_control(
                         padding: UiRect::all(Val::Px(14.0)),
                         row_gap: Val::Px(6.0),
                         width: Val::Px(280.0),
-                        border: UiRect::all(Val::Px(1.0)),
+                        border: UiRect::all(Val::Px(if is_selected { 2.0 } else { 1.0 })),
                         border_radius: BorderRadius::all(Val::Px(8.0)),
                         overflow: Overflow::clip(),
                         ..default()
                     },
                     BackgroundColor(t.card_bg),
-                    BorderColor::all(t.card_border),
+                    BorderColor::all(card_border_color),
+                    Interaction::default(),
+                    McCardButton(agent.id),
                     McChild,
                 ))
                 .with_children(|card| {
@@ -598,8 +621,13 @@ pub fn update_mission_control(
 
         let mut all_activity: Vec<(String, crate::api::observability::ActivityEntry)> = Vec::new();
         if let Ok(db) = bridge.db.lock() {
-            for agent in registry.agents() {
-                if let Ok(entries) = db.load_activity(&agent.id, 10) {
+            let agents_to_show: Vec<_> = match mc_state.selected_agent {
+                Some(sel) => registry.agents().filter(|a| a.id == sel).collect(),
+                None => registry.agents().collect(),
+            };
+            for agent in &agents_to_show {
+                let limit = if mc_state.selected_agent.is_some() { 50 } else { 10 };
+                if let Ok(entries) = db.load_activity(&agent.id, limit) {
                     for entry in entries {
                         all_activity.push((agent.name.clone(), entry));
                     }
@@ -607,7 +635,8 @@ pub fn update_mission_control(
             }
         }
         all_activity.sort_by(|a, b| b.1.timestamp.cmp(&a.1.timestamp));
-        all_activity.truncate(20);
+        let max_items = if mc_state.selected_agent.is_some() { 50 } else { 20 };
+        all_activity.truncate(max_items);
 
         if all_activity.is_empty() {
             let empty = commands
@@ -715,8 +744,13 @@ pub fn update_mission_control(
 
         let mut all_tasks: Vec<(String, crate::api::observability::TaskRecord)> = Vec::new();
         if let Ok(db) = bridge.db.lock() {
-            for agent in registry.agents() {
-                if let Ok(tasks) = db.load_tasks(&agent.id, 10) {
+            let agents_to_show: Vec<_> = match mc_state.selected_agent {
+                Some(sel) => registry.agents().filter(|a| a.id == sel).collect(),
+                None => registry.agents().collect(),
+            };
+            for agent in &agents_to_show {
+                let limit = if mc_state.selected_agent.is_some() { 50 } else { 10 };
+                if let Ok(tasks) = db.load_tasks(&agent.id, limit) {
                     for task in tasks {
                         all_tasks.push((agent.name.clone(), task));
                     }
@@ -724,7 +758,8 @@ pub fn update_mission_control(
             }
         }
         all_tasks.sort_by(|a, b| b.1.last_updated.cmp(&a.1.last_updated));
-        all_tasks.truncate(20);
+        let max_items = if mc_state.selected_agent.is_some() { 50 } else { 20 };
+        all_tasks.truncate(max_items);
 
         if all_tasks.is_empty() {
             let empty = commands
@@ -842,6 +877,48 @@ pub fn update_mission_control(
                 })
                 .id();
             commands.entity(task_parent).add_child(row);
+        }
+    }
+}
+
+// ── Card click handler ───────────────────────────────────────────────────────
+
+pub fn handle_card_clicks(
+    mut mc_state: ResMut<MissionControlState>,
+    card_q: Query<(&Interaction, &McCardButton), Changed<Interaction>>,
+    bridge: Res<WorldBridge>,
+    mut activity_heading_q: Query<&mut Text, With<McActivityHeading>>,
+    mut task_heading_q: Query<&mut Text, (With<McTaskHeading>, Without<McActivityHeading>)>,
+) {
+    if !mc_state.open {
+        return;
+    }
+    for (interaction, card_btn) in card_q.iter() {
+        if *interaction == Interaction::Pressed {
+            if mc_state.selected_agent == Some(card_btn.0) {
+                mc_state.selected_agent = None;
+            } else {
+                mc_state.selected_agent = Some(card_btn.0);
+            }
+
+            // Update heading texts
+            let agent_name = mc_state.selected_agent.and_then(|id| {
+                bridge.registry.read().ok().and_then(|reg| {
+                    reg.get(&id).map(|a| a.name.clone())
+                })
+            });
+            for mut text in activity_heading_q.iter_mut() {
+                **text = match &agent_name {
+                    Some(name) => format!("Recent Activity — {}", name),
+                    None => "Recent Activity".to_string(),
+                };
+            }
+            for mut text in task_heading_q.iter_mut() {
+                **text = match &agent_name {
+                    Some(name) => format!("Tasks — {}", name),
+                    None => "Tasks".to_string(),
+                };
+            }
         }
     }
 }
