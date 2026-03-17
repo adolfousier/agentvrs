@@ -1,6 +1,6 @@
+use crate::agent::{AgentState, Facing};
 use crate::avatar::palette::{hair_color, shirt_color, skin_color};
 use crate::avatar::sprite::{BigSpriteFrame, StyledCell};
-use crate::agent::{AgentState, Facing};
 use ratatui::style::Color;
 
 pub fn agent_sprite(

@@ -38,8 +38,8 @@ pub fn ui_scroll_system(
 
     for (interaction, mut scroll_pos, _node, computed) in scroll_q.iter_mut() {
         if *interaction == Interaction::Hovered || *interaction == Interaction::Pressed {
-            let max_y = (computed.content_size().y - computed.size().y)
-                * computed.inverse_scale_factor();
+            let max_y =
+                (computed.content_size().y - computed.size().y) * computed.inverse_scale_factor();
             scroll_pos.y = (scroll_pos.y + total_delta).clamp(0.0, max_y.max(0.0));
             return;
         }
@@ -233,10 +233,7 @@ pub fn toggle_mission_control(
 
 // ── Zoom with Ctrl +/- keys ──────────────────────────────────────────────────
 
-pub fn handle_mc_zoom(
-    mut mc_state: ResMut<MissionControlState>,
-    keys: Res<ButtonInput<KeyCode>>,
-) {
+pub fn handle_mc_zoom(mut mc_state: ResMut<MissionControlState>, keys: Res<ButtonInput<KeyCode>>) {
     if !mc_state.open || mc_state.popup_open {
         return;
     }
@@ -458,7 +455,10 @@ pub fn update_mission_control(
 
     let t = mc_theme(theme.is_dark);
     let z = mc_state.zoom;
-    let font = |size: f32| TextFont { font_size: size * z, ..default() };
+    let font = |size: f32| TextFont {
+        font_size: size * z,
+        ..default()
+    };
     let px = |v: f32| Val::Px(v * z);
 
     // Update root background for theme
@@ -486,7 +486,9 @@ pub fn update_mission_control(
         commands.entity(entity).despawn();
     }
 
-    let Ok(registry) = bridge.registry.read() else { return };
+    let Ok(registry) = bridge.registry.read() else {
+        return;
+    };
 
     // ── Agent cards (GitHub-style repo cards) ─────────────────────
     if let Ok(card_parent) = card_q.single() {
@@ -503,10 +505,14 @@ pub fn update_mission_control(
         }
 
         // Load per-agent tasks and activity from DB
-        let mut agent_tasks: std::collections::HashMap<crate::agent::AgentId, Vec<crate::api::observability::TaskRecord>> =
-            std::collections::HashMap::new();
-        let mut agent_activity: std::collections::HashMap<crate::agent::AgentId, Vec<crate::api::observability::ActivityEntry>> =
-            std::collections::HashMap::new();
+        let mut agent_tasks: std::collections::HashMap<
+            crate::agent::AgentId,
+            Vec<crate::api::observability::TaskRecord>,
+        > = std::collections::HashMap::new();
+        let mut agent_activity: std::collections::HashMap<
+            crate::agent::AgentId,
+            Vec<crate::api::observability::ActivityEntry>,
+        > = std::collections::HashMap::new();
         if let Ok(db) = bridge.db.lock() {
             for agent in registry.agents() {
                 if let Ok(tasks) = db.load_tasks(&agent.id, 3) {
@@ -638,118 +644,122 @@ pub fn update_mission_control(
                     });
 
                     // ── Recent tasks section ──
-                    if let Some(tasks) = tasks {
-                        if !tasks.is_empty() {
-                            // Separator
-                            card.spawn((
-                                Node { height: px(1.0), ..default() },
-                                BackgroundColor(t.separator),
-                            ));
-                            card.spawn((
-                                Text::new("Tasks"),
-                                font(10.0),
-                                TextColor(t.heading),
-                            ));
-                            for task in tasks.iter().rev().take(3) {
-                                let task_dot = match task.state.as_str() {
-                                    "completed" => Color::srgb(0.2, 0.8, 0.2),
-                                    "failed" => Color::srgb(1.0, 0.3, 0.3),
-                                    _ => Color::srgb(0.3, 0.7, 1.0),
-                                };
-                                card.spawn(Node {
-                                    flex_direction: FlexDirection::Row,
-                                    column_gap: px(6.0),
-                                    align_items: AlignItems::FlexStart,
-                                    ..default()
-                                })
-                                .with_children(|row| {
-                                    row.spawn((
-                                        Node {
-                                            width: px(6.0),
-                                            height: px(6.0),
-                                            border_radius: BorderRadius::all(px(3.0)),
-                                            margin: UiRect::top(px(4.0)),
-                                            ..default()
-                                        },
-                                        BackgroundColor(task_dot),
-                                    ));
-                                    // State badge
-                                    row.spawn((
-                                        Node {
-                                            padding: UiRect::new(px(5.0), px(5.0), px(1.0), px(1.0)),
-                                            border: UiRect::all(px(1.0)),
-                                            border_radius: BorderRadius::all(px(8.0)),
-                                            ..default()
-                                        },
-                                        BackgroundColor(Color::NONE),
-                                        BorderColor::all(task_dot),
-                                    ))
-                                    .with_children(|b| {
-                                        b.spawn((
-                                            Text::new(&task.state),
-                                            font(9.0),
-                                            TextColor(task_dot),
-                                        ));
-                                    });
-                                    // Summary — full text, wrapping
-                                    let summary = task.response_summary.as_deref()
-                                        .unwrap_or(&task.task_id);
-                                    row.spawn((
-                                        Text::new(summary),
-                                        font(10.0),
-                                        TextColor(t.text_secondary),
-                                        Node {
-                                            flex_shrink: 1.0,
-                                            ..default()
-                                        },
+                    if let Some(tasks) = tasks
+                        && !tasks.is_empty()
+                    {
+                        // Separator
+                        card.spawn((
+                            Node {
+                                height: px(1.0),
+                                ..default()
+                            },
+                            BackgroundColor(t.separator),
+                        ));
+                        card.spawn((Text::new("Tasks"), font(10.0), TextColor(t.heading)));
+                        for task in tasks.iter().rev().take(3) {
+                            let task_dot = match task.state.as_str() {
+                                "completed" => Color::srgb(0.2, 0.8, 0.2),
+                                "failed" => Color::srgb(1.0, 0.3, 0.3),
+                                _ => Color::srgb(0.3, 0.7, 1.0),
+                            };
+                            card.spawn(Node {
+                                flex_direction: FlexDirection::Row,
+                                column_gap: px(6.0),
+                                align_items: AlignItems::FlexStart,
+                                ..default()
+                            })
+                            .with_children(|row| {
+                                row.spawn((
+                                    Node {
+                                        width: px(6.0),
+                                        height: px(6.0),
+                                        border_radius: BorderRadius::all(px(3.0)),
+                                        margin: UiRect::top(px(4.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(task_dot),
+                                ));
+                                // State badge
+                                row.spawn((
+                                    Node {
+                                        padding: UiRect::new(px(5.0), px(5.0), px(1.0), px(1.0)),
+                                        border: UiRect::all(px(1.0)),
+                                        border_radius: BorderRadius::all(px(8.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(Color::NONE),
+                                    BorderColor::all(task_dot),
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(&task.state),
+                                        font(9.0),
+                                        TextColor(task_dot),
                                     ));
                                 });
-                            }
+                                // Summary — full text, wrapping
+                                let summary =
+                                    task.response_summary.as_deref().unwrap_or(&task.task_id);
+                                row.spawn((
+                                    Text::new(summary),
+                                    font(10.0),
+                                    TextColor(t.text_secondary),
+                                    Node {
+                                        flex_shrink: 1.0,
+                                        ..default()
+                                    },
+                                ));
+                            });
                         }
                     }
 
                     // ── Recent activity section ──
-                    if let Some(entries) = activity {
-                        if !entries.is_empty() {
-                            card.spawn((
-                                Node { height: px(1.0), ..default() },
-                                BackgroundColor(t.separator),
-                            ));
-                            card.spawn((
-                                Text::new("Activity"),
-                                font(10.0),
-                                TextColor(t.heading),
-                            ));
-                            for entry in entries.iter().rev().take(3) {
-                                let secs = (chrono::Utc::now() - entry.timestamp).num_seconds();
-                                let ago = if secs < 60 {
-                                    format!("{}s", secs)
-                                } else if secs < 3600 {
-                                    format!("{}m", secs / 60)
-                                } else {
-                                    format!("{}h", secs / 3600)
-                                };
-                                card.spawn(Node {
-                                    flex_direction: FlexDirection::Row,
-                                    column_gap: px(6.0),
-                                    align_items: AlignItems::FlexStart,
-                                    ..default()
-                                })
-                                .with_children(|row| {
-                                    row.spawn((
-                                        Text::new(&ago),
-                                        font(9.0),
-                                        TextColor(t.text_muted),
-                                        Node { min_width: px(28.0), ..default() },
-                                    ));
-                                    row.spawn((
-                                        Text::new(&entry.detail),
-                                        font(10.0),
-                                        TextColor(t.text_secondary),
-                                        Node { flex_shrink: 1.0, ..default() },
-                                    ));
-                                });
-                            }
+                    if let Some(entries) = activity
+                        && !entries.is_empty()
+                    {
+                        card.spawn((
+                            Node {
+                                height: px(1.0),
+                                ..default()
+                            },
+                            BackgroundColor(t.separator),
+                        ));
+                        card.spawn((Text::new("Activity"), font(10.0), TextColor(t.heading)));
+                        for entry in entries.iter().rev().take(3) {
+                            let secs = (chrono::Utc::now() - entry.timestamp).num_seconds();
+                            let ago = if secs < 60 {
+                                format!("{}s", secs)
+                            } else if secs < 3600 {
+                                format!("{}m", secs / 60)
+                            } else {
+                                format!("{}h", secs / 3600)
+                            };
+                            card.spawn(Node {
+                                flex_direction: FlexDirection::Row,
+                                column_gap: px(6.0),
+                                align_items: AlignItems::FlexStart,
+                                ..default()
+                            })
+                            .with_children(|row| {
+                                row.spawn((
+                                    Text::new(&ago),
+                                    font(9.0),
+                                    TextColor(t.text_muted),
+                                    Node {
+                                        min_width: px(28.0),
+                                        ..default()
+                                    },
+                                ));
+                                row.spawn((
+                                    Text::new(&entry.detail),
+                                    font(10.0),
+                                    TextColor(t.text_secondary),
+                                    Node {
+                                        flex_shrink: 1.0,
+                                        ..default()
+                                    },
+                                ));
+                            });
                         }
                     }
                 })
@@ -784,7 +794,11 @@ pub fn update_mission_control(
         all_activity.sort_by(|a, b| b.1.timestamp.cmp(&a.1.timestamp));
         let total_activity = all_activity.len();
         if !mc_state.show_all_activity {
-            let max_items = if mc_state.selected_agent.is_some() { 20 } else { 10 };
+            let max_items = if mc_state.selected_agent.is_some() {
+                20
+            } else {
+                10
+            };
             all_activity.truncate(max_items);
         }
 
@@ -831,12 +845,7 @@ pub fn update_mission_control(
                         flex_direction: FlexDirection::Row,
                         column_gap: px(12.0),
                         align_items: AlignItems::Center,
-                        padding: UiRect::new(
-                            px(14.0),
-                            px(14.0),
-                            px(6.0),
-                            px(6.0),
-                        ),
+                        padding: UiRect::new(px(14.0), px(14.0), px(6.0), px(6.0)),
                         ..default()
                     },
                     BackgroundColor(row_bg),
@@ -862,11 +871,7 @@ pub fn update_mission_control(
                         },
                     ));
                     let detail = entry.detail.clone();
-                    row.spawn((
-                        Text::new(detail),
-                        font(11.0),
-                        TextColor(t.text_secondary),
-                    ));
+                    row.spawn((Text::new(detail), font(11.0), TextColor(t.text_secondary)));
                 })
                 .id();
             commands.entity(feed_parent).add_child(row);
@@ -891,11 +896,7 @@ pub fn update_mission_control(
                     McChild,
                 ))
                 .with_children(|row| {
-                    row.spawn((
-                        Text::new(label),
-                        font(11.0),
-                        TextColor(t.link),
-                    ));
+                    row.spawn((Text::new(label), font(11.0), TextColor(t.link)));
                 })
                 .id();
             commands.entity(feed_parent).add_child(btn);
@@ -927,7 +928,11 @@ pub fn update_mission_control(
         all_tasks.sort_by(|a, b| b.1.last_updated.cmp(&a.1.last_updated));
         let total_tasks = all_tasks.len();
         if !mc_state.show_all_tasks {
-            let max_items = if mc_state.selected_agent.is_some() { 20 } else { 10 };
+            let max_items = if mc_state.selected_agent.is_some() {
+                20
+            } else {
+                10
+            };
             all_tasks.truncate(max_items);
         }
 
@@ -972,12 +977,7 @@ pub fn update_mission_control(
                         flex_direction: FlexDirection::Row,
                         column_gap: px(12.0),
                         align_items: AlignItems::Center,
-                        padding: UiRect::new(
-                            px(14.0),
-                            px(14.0),
-                            px(6.0),
-                            px(6.0),
-                        ),
+                        padding: UiRect::new(px(14.0), px(14.0), px(6.0), px(6.0)),
                         ..default()
                     },
                     BackgroundColor(row_bg),
@@ -987,8 +987,14 @@ pub fn update_mission_control(
                         task_id: task.task_id.clone(),
                         state: task.state.clone(),
                         summary: task.response_summary.clone().unwrap_or_default(),
-                        submitted_at: task.submitted_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-                        last_updated: task.last_updated.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        submitted_at: task
+                            .submitted_at
+                            .format("%Y-%m-%d %H:%M:%S UTC")
+                            .to_string(),
+                        last_updated: task
+                            .last_updated
+                            .format("%Y-%m-%d %H:%M:%S UTC")
+                            .to_string(),
                         duration: format_duration(task.last_updated - task.submitted_at),
                     },
                     McChild,
@@ -1016,12 +1022,7 @@ pub fn update_mission_control(
                     // State badge
                     row.spawn((
                         Node {
-                            padding: UiRect::new(
-                                px(7.0),
-                                px(7.0),
-                                px(1.0),
-                                px(1.0),
-                            ),
+                            padding: UiRect::new(px(7.0), px(7.0), px(1.0), px(1.0)),
                             border: UiRect::all(px(1.0)),
                             border_radius: BorderRadius::all(px(10.0)),
                             ..default()
@@ -1036,12 +1037,19 @@ pub fn update_mission_control(
                             TextColor(task_state_color),
                         ));
                     });
-                    let summary = task.response_summary.as_deref().unwrap_or(&task.task_id).to_string();
+                    let summary = task
+                        .response_summary
+                        .as_deref()
+                        .unwrap_or(&task.task_id)
+                        .to_string();
                     row.spawn((
                         Text::new(summary),
                         font(11.0),
                         TextColor(t.text_secondary),
-                        Node { flex_shrink: 1.0, ..default() },
+                        Node {
+                            flex_shrink: 1.0,
+                            ..default()
+                        },
                     ));
                     // Duration for completed/failed tasks
                     if task.state == "completed" || task.state == "failed" {
@@ -1050,7 +1058,10 @@ pub fn update_mission_control(
                             Text::new(dur),
                             font(10.0),
                             TextColor(t.text_muted),
-                            Node { min_width: px(50.0), ..default() },
+                            Node {
+                                min_width: px(50.0),
+                                ..default()
+                            },
                         ));
                     }
                 })
@@ -1077,11 +1088,7 @@ pub fn update_mission_control(
                     McChild,
                 ))
                 .with_children(|row| {
-                    row.spawn((
-                        Text::new(label),
-                        font(11.0),
-                        TextColor(t.link),
-                    ));
+                    row.spawn((Text::new(label), font(11.0), TextColor(t.link)));
                 })
                 .id();
             commands.entity(task_parent).add_child(btn);
@@ -1111,9 +1118,11 @@ pub fn handle_card_clicks(
 
             // Update heading texts
             let agent_name = mc_state.selected_agent.and_then(|id| {
-                bridge.registry.read().ok().and_then(|reg| {
-                    reg.get(&id).map(|a| a.name.clone())
-                })
+                bridge
+                    .registry
+                    .read()
+                    .ok()
+                    .and_then(|reg| reg.get(&id).map(|a| a.name.clone()))
             });
             for mut text in activity_heading_q.iter_mut() {
                 **text = match &agent_name {
@@ -1133,10 +1142,18 @@ pub fn handle_card_clicks(
 
 // ── See All toggle handler ───────────────────────────────────────────────────
 
+#[allow(clippy::type_complexity)]
 pub fn handle_see_all_clicks(
     mut mc_state: ResMut<MissionControlState>,
     activity_btn_q: Query<&Interaction, (Changed<Interaction>, With<McSeeAllActivity>)>,
-    task_btn_q: Query<&Interaction, (Changed<Interaction>, With<McSeeAllTasks>, Without<McSeeAllActivity>)>,
+    task_btn_q: Query<
+        &Interaction,
+        (
+            Changed<Interaction>,
+            With<McSeeAllTasks>,
+            Without<McSeeAllActivity>,
+        ),
+    >,
 ) {
     if !mc_state.open {
         return;
@@ -1193,7 +1210,7 @@ pub fn handle_task_popup(
     for (interaction, btn) in task_row_q.iter() {
         if *interaction == Interaction::Pressed {
             mc_state.popup_open = true;
-            spawn_task_popup(&mut commands, &btn, theme.is_dark, mc_state.zoom);
+            spawn_task_popup(&mut commands, btn, theme.is_dark, mc_state.zoom);
             return;
         }
     }
@@ -1211,12 +1228,18 @@ macro_rules! field_node {
             .with_children(|field| {
                 field.spawn((
                     Text::new($label),
-                    TextFont { font_size: 11.0 * $zoom, ..default() },
+                    TextFont {
+                        font_size: 11.0 * $zoom,
+                        ..default()
+                    },
                     TextColor($theme.text_muted),
                 ));
                 field.spawn((
                     Text::new($value),
-                    TextFont { font_size: 13.0 * $zoom, ..default() },
+                    TextFont {
+                        font_size: 13.0 * $zoom,
+                        ..default()
+                    },
                     TextColor($theme.text_primary),
                 ));
             });
@@ -1225,7 +1248,10 @@ macro_rules! field_node {
 
 fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: bool, zoom: f32) {
     let t = mc_theme(is_dark);
-    let font = |size: f32| TextFont { font_size: size * zoom, ..default() };
+    let font = |size: f32| TextFont {
+        font_size: size * zoom,
+        ..default()
+    };
     let px = |v: f32| Val::Px(v * zoom);
     let task_color = match btn.state.as_str() {
         "completed" => Color::srgb(0.2, 0.8, 0.2),
@@ -1317,11 +1343,7 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                             ..default()
                         })
                         .with_children(|field| {
-                            field.spawn((
-                                Text::new("State"),
-                                font(11.0),
-                                TextColor(t.text_muted),
-                            ));
+                            field.spawn((Text::new("State"), font(11.0), TextColor(t.text_muted)));
                             field
                                 .spawn(Node {
                                     flex_direction: FlexDirection::Row,

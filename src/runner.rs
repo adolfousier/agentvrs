@@ -74,7 +74,12 @@ async fn setup_inner(
                             agent.inbox = inbox;
                         }
                         g.place_agent(row.position, row.id);
-                        tracing::info!("Restored agent '{}' at ({},{})", row.name, row.position.x, row.position.y);
+                        tracing::info!(
+                            "Restored agent '{}' at ({},{})",
+                            row.name,
+                            row.position.x,
+                            row.position.y
+                        );
                         r.register(agent);
                     } else {
                         // Position invalid, place on any empty floor

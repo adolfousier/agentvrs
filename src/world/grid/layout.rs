@@ -1,5 +1,5 @@
-use crate::world::grid::{FloorKind, Grid, Tile};
 use crate::world::Position;
+use crate::world::grid::{FloorKind, Grid, Tile};
 
 /// Build a compact, densely furnished office.
 /// Every zone has furniture but also walkable paths between items.

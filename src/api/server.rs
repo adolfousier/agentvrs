@@ -1,6 +1,6 @@
+use crate::agent::AgentRegistry;
 use crate::api::observability::AgentObserver;
 use crate::api::routes::{self, ApiState};
-use crate::agent::AgentRegistry;
 use crate::config::ServerConfig;
 use crate::db::Database;
 use crate::world::{Grid, WorldEvent};
@@ -53,7 +53,10 @@ pub fn build_router(
         .route("/agents/{id}/activity", get(routes::get_agent_activity))
         .route("/agents/{id}/heartbeat", post(routes::post_agent_heartbeat))
         .route("/agents/{id}/status", get(routes::get_agent_status))
-        .route("/agents/{id}/tasks", get(routes::get_agent_tasks).post(routes::report_task))
+        .route(
+            "/agents/{id}/tasks",
+            get(routes::get_agent_tasks).post(routes::report_task),
+        )
         .route("/agents/{id}/tasks/{task_id}", delete(routes::delete_task))
         .route("/agents/{id}/dashboard", get(routes::get_agent_dashboard))
         // Agent inbox

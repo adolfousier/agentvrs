@@ -170,8 +170,10 @@ impl AgentObserver {
 
     /// Returns true if the agent has any tasks in submitted or running state.
     pub fn has_active_tasks(&self, agent_id: &AgentId) -> bool {
-        self.tasks.get(agent_id).map_or(false, |records| {
-            records.iter().any(|t| t.state == "submitted" || t.state == "running")
+        self.tasks.get(agent_id).is_some_and(|records| {
+            records
+                .iter()
+                .any(|t| t.state == "submitted" || t.state == "running")
         })
     }
 

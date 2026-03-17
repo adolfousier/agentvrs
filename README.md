@@ -12,6 +12,8 @@
 
 ![Agentverse Demo](src/assets/demo.png)
 
+![Mission Control](src/assets/mc.png)
+
 **Author:** [Adolfo Usier](https://github.com/adolfousier) | **Website:** [agentvrs.com](https://agentvrs.com)
 
 ---
@@ -57,7 +59,7 @@
 - **A2A protocol** — wire-compatible A2A client for connecting OpenCrabs agents
 - **Agent control** — move agents, set goals, change states, send messages between agents via API
 - **Agent inbox** — messages between agents are stored in-world; agents poll their inbox or receive push via webhook
-- **Mission Control** — press `M` for full-screen overlay with agent cards, activity feed, and task list — follows system light/dark mode
+- **Mission Control** — press `M` for full-screen overlay with clickable agent cards, scrollable activity feed and task list, task detail popups, See All toggles, `Ctrl+/-` zoom — follows system light/dark mode
 - **SQLite persistence** — agents, messages, activity, tasks, and heartbeats survive restarts (`~/.config/agentverse/agentverse.db`)
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
 
@@ -158,7 +160,8 @@ discovery_interval_secs = 30
 | `R` | Rotate view (4 angles) |
 | `H` | Toggle sidebar |
 | `M` | Toggle Mission Control |
-| `Escape` | Deselect agent |
+| `Ctrl+` / `Ctrl-` | Zoom Mission Control UI |
+| `Escape` | Deselect agent / close popup |
 | `Enter` | Send message to selected agent |
 | Drag sidebar edge | Resize sidebar width |
 | Drag separator | Resize detail panel |
@@ -592,7 +595,7 @@ src/
 ├── tui/              # Terminal UI alternative (ratatui)
 ├── error/            # AppError + ApiError with JSON responses
 ├── runner.rs         # Shared setup (grid, registry, sim, API, SSE broadcast)
-└── tests/            # 217 tests across 10 modules
+└── tests/            # 226 tests across 10 modules
 ```
 
 ---

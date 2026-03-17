@@ -7,7 +7,9 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
-    let Ok(registry) = app.registry.read() else { return };
+    let Ok(registry) = app.registry.read() else {
+        return;
+    };
     let agents: Vec<_> = registry.agents().collect();
 
     let items: Vec<ListItem> = agents

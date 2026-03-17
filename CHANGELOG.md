@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.5] - 2026-03-17
+
+### Added
+- **Mission Control scrolling** — all panels (agent cards, activity feed, task list, popup dialog) now scroll via mouse wheel with Interaction-based hover detection and Bevy 0.18 ScrollPosition wiring
+- **Mission Control zoom** — `Ctrl+/Ctrl-` scales all text, padding, gaps, borders, and widths; fully responsive layout
+- **See All / Show Less** — activity and task panels show limited items by default with expandable toggle buttons
+- **Task duration tracking** — completed/failed tasks show human-readable duration (e.g. "3m 23s") in both task list rows and detail popup, calculated from `submitted_at` to `last_updated`
+- **Task detail popup** — click any task row to open a centered dialog with full task info (ID, agent, state badge, summary, timestamps, duration); press Esc to close
+- **Clickable agent cards** — click an agent card in MC to filter the activity feed and task list to that agent; click again to deselect
+- **DELETE task endpoint** — `DELETE /agents/{id}/tasks/{task_id}` removes a task from DB and observer
+- **Agent state sync with tasks** — task reports auto-set agent visual state (submitted→Thinking, running→Working, completed→Idle) with `api_locked` flag preventing simulation override
+- **Concurrent task management** — completing one task no longer clears `api_locked` when other tasks are still running/submitted
+- **Task reporting API docs** — README now documents the task reporting endpoint with curl, Python, and TypeScript examples
+- Test count: 226 tests across 10 modules
+
+### Fixed
+- Scroll wheel no longer hijacks MC zoom (scroll is for content, Ctrl+/- for zoom)
+- Task duration showing "0s" — DB now uses `ON CONFLICT` to preserve original `submitted_at`
+- Agent state flickering during concurrent tasks (checks for other active tasks before unlocking)
+- Camera zoom/pan blocked when Mission Control is open
+- MC content clipping instead of scrolling (proper height constraints + ScrollPosition)
+- `send().await` replaced with `try_send()` in API handlers to prevent channel blocking
+
 ## [0.1.4] - 2026-03-16
 
 ### Added

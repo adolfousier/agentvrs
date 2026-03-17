@@ -95,7 +95,10 @@ impl Database {
         let kind_json = serde_json::to_string(&agent.kind)?;
         tracing::debug!(
             "DB: saving agent '{}' (id={}, pos=({},{}))",
-            agent.name, agent.id, agent.position.x, agent.position.y
+            agent.name,
+            agent.id,
+            agent.position.x,
+            agent.position.y
         );
         self.conn.execute(
             "INSERT OR REPLACE INTO agents (id, name, kind, pos_x, pos_y, color_index) \
@@ -223,7 +226,12 @@ impl Database {
     // ── Activity ─────────────────────────────────────────────────────────
 
     pub fn save_activity(&self, agent_id: AgentId, entry: &ActivityEntry) -> Result<()> {
-        tracing::debug!("DB: saving activity for agent {} — {:?}: {}", agent_id, entry.kind, entry.detail);
+        tracing::debug!(
+            "DB: saving activity for agent {} — {:?}: {}",
+            agent_id,
+            entry.kind,
+            entry.detail
+        );
         let kind_str = serde_json::to_string(&entry.kind)?;
         self.conn.execute(
             "INSERT INTO activity_log (agent_id, kind, detail, timestamp) \
@@ -269,7 +277,12 @@ impl Database {
     // ── Tasks ────────────────────────────────────────────────────────────
 
     pub fn save_task(&self, agent_id: AgentId, task: &TaskRecord) -> Result<()> {
-        tracing::debug!("DB: saving task '{}' state={} for agent {}", task.task_id, task.state, agent_id);
+        tracing::debug!(
+            "DB: saving task '{}' state={} for agent {}",
+            task.task_id,
+            task.state,
+            agent_id
+        );
         // Use INSERT ON CONFLICT to preserve submitted_at from the original insert
         self.conn.execute(
             "INSERT INTO tasks (task_id, agent_id, state, submitted_at, last_updated, response_summary) \

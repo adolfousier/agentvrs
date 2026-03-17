@@ -1,5 +1,5 @@
-use crate::world::Position;
 use crate::agent::AgentId;
+use crate::world::Position;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]

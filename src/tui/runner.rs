@@ -1,9 +1,9 @@
+use crate::config::AppConfig;
+use crate::runner;
 use crate::tui::app::App;
 use crate::tui::events::{EventHandler, TuiEvent};
 use crate::tui::input::handle_key;
 use crate::tui::render;
-use crate::config::AppConfig;
-use crate::runner;
 use anyhow::Result;
 use crossterm::event::KeyEventKind;
 use crossterm::execute;

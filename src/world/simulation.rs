@@ -1,6 +1,6 @@
+use crate::agent::{AgentGoal, AgentId, AgentRegistry, AgentState, Facing};
 use crate::world::pathfind::find_path;
 use crate::world::{Grid, WorldEvent};
-use crate::agent::{AgentGoal, AgentId, AgentRegistry, AgentState, Facing};
 use crate::world::{Position, Tile};
 use std::sync::{Arc, RwLock};
 use tokio::sync::{broadcast, mpsc};
@@ -58,7 +58,9 @@ impl Simulation {
         // Single lock scope: grid.read + registry.write for all agent processing
         {
             let Ok(grid) = self.grid.read() else { return };
-            let Ok(mut reg) = self.registry.write() else { return };
+            let Ok(mut reg) = self.registry.write() else {
+                return;
+            };
 
             let agent_data: Vec<(AgentId, AgentState, Position)> = reg
                 .agents()
@@ -216,7 +218,9 @@ impl Simulation {
     fn assign_random_goal(&self, id: AgentId) {
         use rand::RngExt;
         let Ok(grid) = self.grid.read() else { return };
-        let Ok(mut reg) = self.registry.write() else { return };
+        let Ok(mut reg) = self.registry.write() else {
+            return;
+        };
 
         // Reset activity_ticks so we don't retry every tick if assignment fails
         if let Some(agent) = reg.get_mut(&id) {

@@ -4,8 +4,8 @@ mod tiles;
 pub use layout::*;
 pub use tiles::*;
 
-use crate::world::Position;
 use crate::agent::AgentId;
+use crate::world::Position;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

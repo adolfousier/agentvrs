@@ -725,7 +725,9 @@ pub fn sync_agents(
     // so locks are never contended from the Bevy side.
     let (cx, cz, current_agents) = {
         let Ok(grid) = bridge.grid.read() else { return };
-        let Ok(registry) = bridge.registry.read() else { return };
+        let Ok(registry) = bridge.registry.read() else {
+            return;
+        };
         let (w, h) = grid.bounds();
         let mut agents: HashMap<AgentId, (Position, u8, Option<Position>)> = HashMap::new();
         for agent in registry.agents() {

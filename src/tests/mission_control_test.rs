@@ -146,7 +146,14 @@ mod bevy_tests {
         }
 
         app.insert_resource(bridge);
-        app.insert_resource(MissionControlState { open: false, selected_agent: None, popup_open: false, zoom: 1.0, show_all_activity: false, show_all_tasks: false });
+        app.insert_resource(MissionControlState {
+            open: false,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
+        });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
@@ -178,7 +185,14 @@ mod bevy_tests {
         }
 
         app.insert_resource(bridge);
-        app.insert_resource(MissionControlState { open: true, selected_agent: None, popup_open: false, zoom: 1.0, show_all_activity: false, show_all_tasks: false });
+        app.insert_resource(MissionControlState {
+            open: true,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
+        });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
@@ -222,7 +236,14 @@ mod bevy_tests {
         }
 
         app.insert_resource(bridge);
-        app.insert_resource(MissionControlState { open: true, selected_agent: None, popup_open: false, zoom: 1.0, show_all_activity: false, show_all_tasks: false });
+        app.insert_resource(MissionControlState {
+            open: true,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
+        });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
@@ -268,7 +289,14 @@ mod bevy_tests {
         }
 
         app.insert_resource(bridge);
-        app.insert_resource(MissionControlState { open: true, selected_agent: None, popup_open: false, zoom: 1.0, show_all_activity: false, show_all_tasks: false });
+        app.insert_resource(MissionControlState {
+            open: true,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
+        });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
@@ -300,7 +328,14 @@ mod bevy_tests {
         }
 
         app.insert_resource(bridge);
-        app.insert_resource(MissionControlState { open: true, selected_agent: None, popup_open: false, zoom: 1.0, show_all_activity: false, show_all_tasks: false });
+        app.insert_resource(MissionControlState {
+            open: true,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
+        });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);
@@ -322,7 +357,14 @@ mod bevy_tests {
         let bridge = test_bridge();
 
         app.insert_resource(bridge);
-        app.insert_resource(MissionControlState { open: true, selected_agent: None, popup_open: false, zoom: 1.0, show_all_activity: false, show_all_tasks: false });
+        app.insert_resource(MissionControlState {
+            open: true,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+            show_all_activity: false,
+            show_all_tasks: false,
+        });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
         app.add_systems(Update, update_mission_control);

@@ -682,16 +682,16 @@ async fn test_inbox_multiple_senders() {
 
 #[tokio::test]
 async fn test_move_agent() {
-    let (router, registry, _) = test_state();
+    let (router, registry, grid) = test_state();
     let agent_id = connect_helper(&router, "mover").await;
 
-    // Get agent's current position, then pick an adjacent floor
+    // Get agent's current position, then pick an adjacent walkable cell
     let target = {
         let reg = registry.read().unwrap();
         let agent = reg.agents().next().unwrap();
         let pos = agent.position;
-        // Try to find a nearby walkable cell
-        Position::new(pos.x + 1, pos.y)
+        let g = grid.read().unwrap();
+        g.find_adjacent_floor(pos).expect("no adjacent floor found")
     };
 
     let req = Request::builder()
@@ -1185,7 +1185,8 @@ async fn test_report_task_completed() {
         .header("content-type", "application/json")
         .header("X-API-Key", TEST_KEY)
         .body(Body::from(
-            serde_json::json!({"task_id": "t1", "state": "completed", "summary": "Done"}).to_string(),
+            serde_json::json!({"task_id": "t1", "state": "completed", "summary": "Done"})
+                .to_string(),
         ))
         .unwrap();
     let resp = router.clone().oneshot(req).await.unwrap();
@@ -1267,7 +1268,10 @@ async fn test_connect_persists_activity_to_db() {
     let aid = db_agent_id(&db, "activity-agent");
     let dbl = db.lock().unwrap();
     let activity = dbl.load_activity(&aid, 10).unwrap();
-    assert!(!activity.is_empty(), "connect should persist activity to DB");
+    assert!(
+        !activity.is_empty(),
+        "connect should persist activity to DB"
+    );
     assert!(activity[0].detail.contains("connected"));
 }
 

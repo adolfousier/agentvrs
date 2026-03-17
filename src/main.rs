@@ -14,8 +14,7 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(default_level.parse()?),
+            tracing_subscriber::EnvFilter::from_default_env().add_directive(default_level.parse()?),
         )
         .with_target(false)
         .init();
@@ -24,7 +23,11 @@ async fn main() -> Result<()> {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
         let db_path = format!("{}/.config/agentverse/agentverse.db", home);
         tracing::debug!("Debug logging enabled");
-        tracing::debug!("Config: host={}, port={}", config.server.host, config.server.port);
+        tracing::debug!(
+            "Config: host={}, port={}",
+            config.server.host,
+            config.server.port
+        );
         tracing::debug!("Database path: {}", db_path);
     }
 
