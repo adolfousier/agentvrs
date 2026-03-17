@@ -222,7 +222,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Px(32.0)),
                 row_gap: Val::Px(20.0),
-                overflow: Overflow::scroll_y(),
+                overflow: Overflow::clip(),
                 ..default()
             },
             BackgroundColor(Color::srgb(0.09, 0.09, 0.11)),
@@ -264,17 +264,17 @@ pub fn setup_mission_control(mut commands: Commands) {
                 flex_direction: FlexDirection::Row,
                 flex_grow: 1.0,
                 column_gap: Val::Px(20.0),
-                overflow: Overflow::scroll_y(),
+                overflow: Overflow::clip(),
                 ..default()
             })
             .with_children(|content| {
-                // Left column: Agent cards (grid layout)
+                // Left column: Agent cards (scrollable)
                 content
                     .spawn(Node {
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(45.0),
                         row_gap: Val::Px(12.0),
-                        overflow: Overflow::scroll_y(),
+                        overflow: Overflow::clip(),
                         ..default()
                     })
                     .with_children(|left| {
@@ -288,7 +288,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                             TextColor(Color::srgb(0.58, 0.68, 0.90)),
                             McHeading,
                         ));
-                        // Agent cards container — wrapping row for grid
+                        // Agent cards container — wrapping row, scrollable
                         left.spawn((
                             Node {
                                 flex_direction: FlexDirection::Row,
@@ -296,6 +296,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                                 row_gap: Val::Px(10.0),
                                 column_gap: Val::Px(10.0),
                                 flex_grow: 1.0,
+                                align_content: AlignContent::FlexStart,
                                 overflow: Overflow::scroll_y(),
                                 ..default()
                             },
@@ -309,7 +310,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                         flex_direction: FlexDirection::Column,
                         flex_grow: 1.0,
                         row_gap: Val::Px(16.0),
-                        overflow: Overflow::scroll_y(),
+                        overflow: Overflow::clip(),
                         ..default()
                     })
                     .with_children(|right| {
