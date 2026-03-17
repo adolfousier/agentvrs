@@ -45,37 +45,22 @@ async fn setup_inner(
     // Broadcast channel for SSE subscribers
     let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(256);
 
-    // Spawn demo agents on empty floors
-    {
-        let mut g = grid.write().unwrap();
-        let mut r = registry.write().unwrap();
-        let names = ["crab-alpha", "crab-beta", "crab-gamma", "crab-delta"];
-        for name in &names {
-            if let Some(pos) = g.find_empty_floor() {
-                let agent = Agent::new(*name, AgentKind::Local, pos);
-                let id = agent.id;
-                g.place_agent(pos, id);
-                r.register(agent);
-            }
-        }
-    }
-
-    // Open SQLite database and restore persisted agents
+    // Open SQLite database and restore persisted agents (or spawn demo agents)
     let db = Database::open()?;
     tracing::debug!("Database opened successfully");
     {
         let mut g = grid.write().unwrap();
         let mut r = registry.write().unwrap();
-        match db.load_agents() {
-            Ok(agents) => {
-                tracing::debug!("Found {} agents in database to restore", agents.len());
+        let restored = match db.load_agents() {
+            Ok(agents) if !agents.is_empty() => {
+                tracing::info!("Restoring {} agents from database", agents.len());
                 for row in agents {
                     // Only restore if the position is valid and floor is available
                     if g.get(row.position)
                         .map(|c| !c.tile.is_solid() && c.occupant.is_none())
                         .unwrap_or(false)
                     {
-                        let agent = Agent::restore(
+                        let mut agent = Agent::restore(
                             row.id,
                             row.name.clone(),
                             row.kind,
@@ -84,15 +69,11 @@ async fn setup_inner(
                         );
                         // Restore inbox from DB
                         if let Ok(inbox) = db.load_messages_for(&row.id, 500) {
-                            let mut agent = agent;
                             agent.inbox = inbox;
-                            g.place_agent(row.position, row.id);
-                            r.register(agent);
-                            tracing::info!("Restored agent '{}' from database", row.name);
-                        } else {
-                            g.place_agent(row.position, row.id);
-                            r.register(agent);
                         }
+                        g.place_agent(row.position, row.id);
+                        tracing::info!("Restored agent '{}' at ({},{})", row.name, row.position.x, row.position.y);
+                        r.register(agent);
                     } else {
                         // Position invalid, place on any empty floor
                         if let Some(pos) = g.find_empty_floor() {
@@ -114,9 +95,36 @@ async fn setup_inner(
                         }
                     }
                 }
+                true
+            }
+            Ok(_) => {
+                tracing::debug!("No agents in database");
+                false
             }
             Err(e) => {
                 tracing::warn!("Failed to load agents from database: {}", e);
+                false
+            }
+        };
+
+        // Only spawn demo agents if nothing was restored from DB
+        if !restored {
+            let names = ["crab-alpha", "crab-beta", "crab-gamma", "crab-delta"];
+            for name in &names {
+                if let Some(pos) = g.find_empty_floor() {
+                    let agent = Agent::new(*name, AgentKind::Local, pos);
+                    let id = agent.id;
+                    g.place_agent(pos, id);
+                    r.register(agent);
+                }
+            }
+            tracing::info!("Spawned {} demo agents", names.len());
+        }
+
+        // Persist all agents to DB (saves demo agents on first run, updates positions on restore)
+        for agent in r.agents() {
+            if let Err(e) = db.save_agent(agent) {
+                tracing::warn!("Failed to persist agent '{}': {}", agent.name, e);
             }
         }
     }

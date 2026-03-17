@@ -48,13 +48,12 @@ pub fn build_router(
         .route("/agents/{id}/goal", post(routes::set_agent_goal))
         .route("/agents/{id}/state", post(routes::set_agent_state))
         .route("/agents/{id}/rename", post(routes::rename_agent))
-        .route("/agents/{id}/tasks", post(routes::report_task))
         // Observability endpoints
         .route("/agents/{id}/detail", get(routes::get_agent))
         .route("/agents/{id}/activity", get(routes::get_agent_activity))
         .route("/agents/{id}/heartbeat", post(routes::post_agent_heartbeat))
         .route("/agents/{id}/status", get(routes::get_agent_status))
-        .route("/agents/{id}/tasks", get(routes::get_agent_tasks))
+        .route("/agents/{id}/tasks", get(routes::get_agent_tasks).post(routes::report_task))
         .route("/agents/{id}/dashboard", get(routes::get_agent_dashboard))
         // Agent inbox
         .route("/agents/{id}/messages", get(routes::get_agent_messages))
