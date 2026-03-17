@@ -406,6 +406,7 @@ pub fn update_mission_control(
     let t = mc_theme(theme.is_dark);
     let z = mc_state.zoom;
     let font = |size: f32| TextFont { font_size: size * z, ..default() };
+    let px = |v: f32| Val::Px(v * z);
 
     // Update root background for theme
     for mut bg in root_q.iter_mut() {
@@ -420,7 +421,7 @@ pub fn update_mission_control(
         tc.0 = t.text_muted;
         let zoom_pct = (z * 100.0) as u32;
         commands.entity(entity).insert(Text::new(format!(
-            "M:close  +/-:zoom ({zoom_pct}%)  click:select"
+            "M:close  Ctrl+/-:zoom ({zoom_pct}%)  scroll:navigate  click:select"
         )));
     }
     for mut tc in heading_q.iter_mut() {
@@ -481,11 +482,11 @@ pub fn update_mission_control(
                 .spawn((
                     Node {
                         flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(14.0)),
-                        row_gap: Val::Px(6.0),
-                        width: Val::Px(280.0),
-                        border: UiRect::all(Val::Px(if is_selected { 2.0 } else { 1.0 })),
-                        border_radius: BorderRadius::all(Val::Px(8.0)),
+                        padding: UiRect::all(px(14.0)),
+                        row_gap: px(6.0),
+                        width: px(280.0),
+                        border: UiRect::all(px(if is_selected { 2.0 } else { 1.0 })),
+                        border_radius: BorderRadius::all(px(8.0)),
                         overflow: Overflow::clip(),
                         ..default()
                     },
@@ -506,16 +507,16 @@ pub fn update_mission_control(
                     .with_children(|top| {
                         top.spawn(Node {
                             flex_direction: FlexDirection::Row,
-                            column_gap: Val::Px(8.0),
+                            column_gap: px(8.0),
                             align_items: AlignItems::Center,
                             ..default()
                         })
                         .with_children(|name_row| {
                             name_row.spawn((
                                 Node {
-                                    width: Val::Px(10.0),
-                                    height: Val::Px(10.0),
-                                    border_radius: BorderRadius::all(Val::Px(5.0)),
+                                    width: px(10.0),
+                                    height: px(10.0),
+                                    border_radius: BorderRadius::all(px(5.0)),
                                     ..default()
                                 },
                                 BackgroundColor(dot_color),
@@ -529,9 +530,9 @@ pub fn update_mission_control(
                         // Kind badge
                         top.spawn((
                             Node {
-                                padding: UiRect::new(Val::Px(8.0), Val::Px(8.0), Val::Px(2.0), Val::Px(2.0)),
-                                border: UiRect::all(Val::Px(1.0)),
-                                border_radius: BorderRadius::all(Val::Px(12.0)),
+                                padding: UiRect::new(px(8.0), px(8.0), px(2.0), px(2.0)),
+                                border: UiRect::all(px(1.0)),
+                                border_radius: BorderRadius::all(px(12.0)),
                                 ..default()
                             },
                             BackgroundColor(Color::NONE),
@@ -567,8 +568,8 @@ pub fn update_mission_control(
                         if !agent.inbox.is_empty() {
                             row.spawn((
                                 Node {
-                                    padding: UiRect::new(Val::Px(7.0), Val::Px(7.0), Val::Px(2.0), Val::Px(2.0)),
-                                    border_radius: BorderRadius::all(Val::Px(10.0)),
+                                    padding: UiRect::new(px(7.0), px(7.0), px(2.0), px(2.0)),
+                                    border_radius: BorderRadius::all(px(10.0)),
                                     ..default()
                                 },
                                 BackgroundColor(t.badge_bg),
@@ -588,7 +589,7 @@ pub fn update_mission_control(
                         if !tasks.is_empty() {
                             // Separator
                             card.spawn((
-                                Node { height: Val::Px(1.0), ..default() },
+                                Node { height: px(1.0), ..default() },
                                 BackgroundColor(t.separator),
                             ));
                             card.spawn((
@@ -604,17 +605,17 @@ pub fn update_mission_control(
                                 };
                                 card.spawn(Node {
                                     flex_direction: FlexDirection::Row,
-                                    column_gap: Val::Px(6.0),
+                                    column_gap: px(6.0),
                                     align_items: AlignItems::FlexStart,
                                     ..default()
                                 })
                                 .with_children(|row| {
                                     row.spawn((
                                         Node {
-                                            width: Val::Px(6.0),
-                                            height: Val::Px(6.0),
-                                            border_radius: BorderRadius::all(Val::Px(3.0)),
-                                            margin: UiRect::top(Val::Px(4.0)),
+                                            width: px(6.0),
+                                            height: px(6.0),
+                                            border_radius: BorderRadius::all(px(3.0)),
+                                            margin: UiRect::top(px(4.0)),
                                             ..default()
                                         },
                                         BackgroundColor(task_dot),
@@ -622,9 +623,9 @@ pub fn update_mission_control(
                                     // State badge
                                     row.spawn((
                                         Node {
-                                            padding: UiRect::new(Val::Px(5.0), Val::Px(5.0), Val::Px(1.0), Val::Px(1.0)),
-                                            border: UiRect::all(Val::Px(1.0)),
-                                            border_radius: BorderRadius::all(Val::Px(8.0)),
+                                            padding: UiRect::new(px(5.0), px(5.0), px(1.0), px(1.0)),
+                                            border: UiRect::all(px(1.0)),
+                                            border_radius: BorderRadius::all(px(8.0)),
                                             ..default()
                                         },
                                         BackgroundColor(Color::NONE),
@@ -658,7 +659,7 @@ pub fn update_mission_control(
                     if let Some(entries) = activity {
                         if !entries.is_empty() {
                             card.spawn((
-                                Node { height: Val::Px(1.0), ..default() },
+                                Node { height: px(1.0), ..default() },
                                 BackgroundColor(t.separator),
                             ));
                             card.spawn((
@@ -677,7 +678,7 @@ pub fn update_mission_control(
                                 };
                                 card.spawn(Node {
                                     flex_direction: FlexDirection::Row,
-                                    column_gap: Val::Px(6.0),
+                                    column_gap: px(6.0),
                                     align_items: AlignItems::FlexStart,
                                     ..default()
                                 })
@@ -686,7 +687,7 @@ pub fn update_mission_control(
                                         Text::new(&ago),
                                         font(9.0),
                                         TextColor(t.text_muted),
-                                        Node { min_width: Val::Px(28.0), ..default() },
+                                        Node { min_width: px(28.0), ..default() },
                                     ));
                                     row.spawn((
                                         Text::new(&entry.detail),
@@ -738,7 +739,7 @@ pub fn update_mission_control(
             let empty = commands
                 .spawn((
                     Node {
-                        padding: UiRect::all(Val::Px(16.0)),
+                        padding: UiRect::all(px(16.0)),
                         justify_content: JustifyContent::Center,
                         ..default()
                     },
@@ -775,13 +776,13 @@ pub fn update_mission_control(
                 .spawn((
                     Node {
                         flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(12.0),
+                        column_gap: px(12.0),
                         align_items: AlignItems::Center,
                         padding: UiRect::new(
-                            Val::Px(14.0),
-                            Val::Px(14.0),
-                            Val::Px(6.0),
-                            Val::Px(6.0),
+                            px(14.0),
+                            px(14.0),
+                            px(6.0),
+                            px(6.0),
                         ),
                         ..default()
                     },
@@ -794,7 +795,7 @@ pub fn update_mission_control(
                         font(11.0),
                         TextColor(t.text_muted),
                         Node {
-                            min_width: Val::Px(55.0),
+                            min_width: px(55.0),
                             ..default()
                         },
                     ));
@@ -803,7 +804,7 @@ pub fn update_mission_control(
                         font(11.0),
                         TextColor(t.link),
                         Node {
-                            min_width: Val::Px(90.0),
+                            min_width: px(90.0),
                             ..default()
                         },
                     ));
@@ -828,7 +829,7 @@ pub fn update_mission_control(
             let btn = commands
                 .spawn((
                     Node {
-                        padding: UiRect::new(Val::Px(14.0), Val::Px(14.0), Val::Px(8.0), Val::Px(8.0)),
+                        padding: UiRect::new(px(14.0), px(14.0), px(8.0), px(8.0)),
                         justify_content: JustifyContent::Center,
                         ..default()
                     },
@@ -881,7 +882,7 @@ pub fn update_mission_control(
             let empty = commands
                 .spawn((
                     Node {
-                        padding: UiRect::all(Val::Px(16.0)),
+                        padding: UiRect::all(px(16.0)),
                         justify_content: JustifyContent::Center,
                         ..default()
                     },
@@ -916,13 +917,13 @@ pub fn update_mission_control(
                 .spawn((
                     Node {
                         flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(12.0),
+                        column_gap: px(12.0),
                         align_items: AlignItems::Center,
                         padding: UiRect::new(
-                            Val::Px(14.0),
-                            Val::Px(14.0),
-                            Val::Px(6.0),
-                            Val::Px(6.0),
+                            px(14.0),
+                            px(14.0),
+                            px(6.0),
+                            px(6.0),
                         ),
                         ..default()
                     },
@@ -943,9 +944,9 @@ pub fn update_mission_control(
                     // State dot
                     row.spawn((
                         Node {
-                            width: Val::Px(8.0),
-                            height: Val::Px(8.0),
-                            border_radius: BorderRadius::all(Val::Px(4.0)),
+                            width: px(8.0),
+                            height: px(8.0),
+                            border_radius: BorderRadius::all(px(4.0)),
                             ..default()
                         },
                         BackgroundColor(task_state_color),
@@ -955,7 +956,7 @@ pub fn update_mission_control(
                         font(11.0),
                         TextColor(t.link),
                         Node {
-                            min_width: Val::Px(90.0),
+                            min_width: px(90.0),
                             ..default()
                         },
                     ));
@@ -963,13 +964,13 @@ pub fn update_mission_control(
                     row.spawn((
                         Node {
                             padding: UiRect::new(
-                                Val::Px(7.0),
-                                Val::Px(7.0),
-                                Val::Px(1.0),
-                                Val::Px(1.0),
+                                px(7.0),
+                                px(7.0),
+                                px(1.0),
+                                px(1.0),
                             ),
-                            border: UiRect::all(Val::Px(1.0)),
-                            border_radius: BorderRadius::all(Val::Px(10.0)),
+                            border: UiRect::all(px(1.0)),
+                            border_radius: BorderRadius::all(px(10.0)),
                             ..default()
                         },
                         BackgroundColor(Color::NONE),
@@ -1003,7 +1004,7 @@ pub fn update_mission_control(
             let btn = commands
                 .spawn((
                     Node {
-                        padding: UiRect::new(Val::Px(14.0), Val::Px(14.0), Val::Px(8.0), Val::Px(8.0)),
+                        padding: UiRect::new(px(14.0), px(14.0), px(8.0), px(8.0)),
                         justify_content: JustifyContent::Center,
                         ..default()
                     },
@@ -1140,7 +1141,7 @@ macro_rules! field_node {
         $parent
             .spawn(Node {
                 flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(4.0),
+                row_gap: Val::Px(4.0 * $zoom),
                 ..default()
             })
             .with_children(|field| {
@@ -1161,6 +1162,7 @@ macro_rules! field_node {
 fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: bool, zoom: f32) {
     let t = mc_theme(is_dark);
     let font = |size: f32| TextFont { font_size: size * zoom, ..default() };
+    let px = |v: f32| Val::Px(v * zoom);
     let task_color = match btn.state.as_str() {
         "completed" => Color::srgb(0.2, 0.8, 0.2),
         "failed" => Color::srgb(1.0, 0.3, 0.3),
@@ -1173,10 +1175,10 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
             // Full-screen semi-transparent backdrop
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(0.0),
-                left: Val::Px(0.0),
-                right: Val::Px(0.0),
-                bottom: Val::Px(0.0),
+                top: px(0.0),
+                left: px(0.0),
+                right: px(0.0),
+                bottom: px(0.0),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 ..default()
@@ -1191,13 +1193,13 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                 .spawn((
                     Node {
                         flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(24.0)),
-                        row_gap: Val::Px(14.0),
-                        width: Val::Px(480.0),
+                        padding: UiRect::all(px(24.0)),
+                        row_gap: px(14.0),
+                        width: px(480.0),
                         max_height: Val::Percent(70.0),
                         overflow: Overflow::scroll_y(),
-                        border: UiRect::all(Val::Px(1.0)),
-                        border_radius: BorderRadius::all(Val::Px(12.0)),
+                        border: UiRect::all(px(1.0)),
+                        border_radius: BorderRadius::all(px(12.0)),
                         ..default()
                     },
                     BackgroundColor(t.card_bg),
@@ -1228,7 +1230,7 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                     // Separator
                     dialog.spawn((
                         Node {
-                            height: Val::Px(1.0),
+                            height: px(1.0),
                             ..default()
                         },
                         BackgroundColor(t.separator),
@@ -1244,7 +1246,7 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                     dialog
                         .spawn(Node {
                             flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(4.0),
+                            row_gap: px(4.0),
                             ..default()
                         })
                         .with_children(|field| {
@@ -1256,16 +1258,16 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                             field
                                 .spawn(Node {
                                     flex_direction: FlexDirection::Row,
-                                    column_gap: Val::Px(8.0),
+                                    column_gap: px(8.0),
                                     align_items: AlignItems::Center,
                                     ..default()
                                 })
                                 .with_children(|row| {
                                     row.spawn((
                                         Node {
-                                            width: Val::Px(10.0),
-                                            height: Val::Px(10.0),
-                                            border_radius: BorderRadius::all(Val::Px(5.0)),
+                                            width: px(10.0),
+                                            height: px(10.0),
+                                            border_radius: BorderRadius::all(px(5.0)),
                                             ..default()
                                         },
                                         BackgroundColor(task_color),
@@ -1273,13 +1275,13 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                                     row.spawn((
                                         Node {
                                             padding: UiRect::new(
-                                                Val::Px(8.0),
-                                                Val::Px(8.0),
-                                                Val::Px(2.0),
-                                                Val::Px(2.0),
+                                                px(8.0),
+                                                px(8.0),
+                                                px(2.0),
+                                                px(2.0),
                                             ),
-                                            border: UiRect::all(Val::Px(1.0)),
-                                            border_radius: BorderRadius::all(Val::Px(10.0)),
+                                            border: UiRect::all(px(1.0)),
+                                            border_radius: BorderRadius::all(px(10.0)),
                                             ..default()
                                         },
                                         BackgroundColor(Color::NONE),
