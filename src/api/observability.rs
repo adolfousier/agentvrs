@@ -168,6 +168,13 @@ impl AgentObserver {
         }
     }
 
+    /// Returns true if the agent has any tasks in submitted or running state.
+    pub fn has_active_tasks(&self, agent_id: &AgentId) -> bool {
+        self.tasks.get(agent_id).map_or(false, |records| {
+            records.iter().any(|t| t.state == "submitted" || t.state == "running")
+        })
+    }
+
     pub fn delete_task(&mut self, agent_id: &AgentId, task_id: &str) -> bool {
         if let Some(records) = self.tasks.get_mut(agent_id) {
             let before = records.len();

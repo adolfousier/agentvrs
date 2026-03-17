@@ -554,34 +554,43 @@ pub async fn report_task(
         )));
     }
 
-    let agent_id = {
+    // Record in observer FIRST so we can check for other active tasks
+    let agent_id;
+    {
         let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
         if req.state == "completed" || req.state == "submitted" {
             agent.task_count += 1;
         }
-        // Auto-sync visual state with task lifecycle.
-        // api_locked prevents the simulation from overriding this state.
-        let new_state = match req.state.as_str() {
-            "submitted" => Some(AgentState::Thinking),
-            "running" => Some(AgentState::Working),
-            "completed" => Some(AgentState::Idle),
-            "failed" => Some(AgentState::Idle),
-            _ => None,
-        };
-        if let Some(s) = new_state {
-            agent.set_state(s.clone());
-            agent.anim.activity_ticks = 0;
-            // Lock state during active tasks, unlock on completion
-            agent.api_locked = s != AgentState::Idle;
-        }
-        agent.id
-    };
+        agent_id = agent.id;
+    }
 
-    // Record in observer
     {
         let mut obs = state.observer.write().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
         obs.record_task(agent_id, &task_id, &req.state, req.summary.clone());
+
+        // Auto-sync visual state with task lifecycle.
+        // api_locked prevents the simulation from overriding this state.
+        let is_terminal = req.state == "completed" || req.state == "failed";
+        let has_other_active = is_terminal && obs.has_active_tasks(&agent_id);
+
+        let new_state = match req.state.as_str() {
+            "submitted" => Some(AgentState::Thinking),
+            "running" => Some(AgentState::Working),
+            // Only go Idle if no other tasks are still active
+            "completed" | "failed" if !has_other_active => Some(AgentState::Idle),
+            "completed" | "failed" => None, // keep current state, other tasks still active
+            _ => None,
+        };
+
+        if let Some(s) = new_state {
+            let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
+            if let Some(agent) = reg.get_mut(&agent_id) {
+                agent.set_state(s.clone());
+                agent.anim.activity_ticks = 0;
+                agent.api_locked = s != AgentState::Idle;
+            }
+        }
     }
 
     // Build activity kind based on task state
