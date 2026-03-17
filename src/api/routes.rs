@@ -86,10 +86,9 @@ pub async fn connect_agent(
         reg.register(agent);
     }
 
-    let _ = state
-        .event_tx
-        .send(WorldEvent::AgentSpawned { agent_id, position })
-        .await;
+    if let Err(e) = state.event_tx.try_send(WorldEvent::AgentSpawned { agent_id, position }) {
+        tracing::error!("Failed to send AgentSpawned event: {}", e);
+    }
 
     persist_activity(
         &state.observer,
@@ -140,12 +139,9 @@ pub async fn delete_agent(
         reg.remove(&target_id);
     }
 
-    let _ = state
-        .event_tx
-        .send(WorldEvent::AgentRemoved {
-            agent_id: target_id,
-        })
-        .await;
+    if let Err(e) = state.event_tx.try_send(WorldEvent::AgentRemoved { agent_id: target_id }) {
+        tracing::error!("Failed to send AgentRemoved event: {}", e);
+    }
 
     persist_activity(
         &state.observer,
@@ -226,14 +222,13 @@ pub async fn send_agent_message(
     };
 
     if let Some((target_id, to_str)) = target_info {
-        let _ = state
-            .event_tx
-            .send(WorldEvent::MessageSent {
-                from: sender_id,
-                to: target_id,
-                text: msg.text.clone(),
-            })
-            .await;
+        if let Err(e) = state.event_tx.try_send(WorldEvent::MessageSent {
+            from: sender_id,
+            to: target_id,
+            text: msg.text.clone(),
+        }) {
+            tracing::error!("Failed to send MessageSent event: {}", e);
+        }
 
         persist_activity(
             &state.observer,
