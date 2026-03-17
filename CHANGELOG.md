@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.6] - 2026-03-17
+
+### Added
+- **MC Inbox viewer** — click the msg badge on agent cards to open a scrollable popup listing all messages (sender, time ago, full text); press Escape to close
+- **Task scope field** — optional `scope` field on task API for full task descriptions beyond summary; displayed in MC task popup between Summary and Timestamps
+- **Authorization: Bearer auth** — standard `Authorization: Bearer <token>` header (legacy `X-API-Key` still accepted for backward compatibility)
+- **API accepts agent names** — all `{id}` endpoints also accept agent name; UUID/prefix tried first, then name fallback
+- **Task state filter** — `GET /agents/{id}/tasks?state=running` filters tasks by state
+- **Agent ID on MC cards** — short ID (8 chars) displayed on each Mission Control agent card
+- **Agent card scrolling** — MC agent cards scroll for long content (tasks, activity, scope)
+- **VPS deployment docs** — nginx reverse proxy config with SSE support, systemd service file, Let's Encrypt HTTPS one-liner
+- 5 new DB tests (scope persistence), 2 new API tests (scope round-trip) — 231 tests across 10 modules
+
+### Fixed
+- Agents randomly walking/eating while working on API tasks (`api_locked` agents skip random goal assignment, path/goal cleared when API locks)
+- Sidebar and status bar rendering on top of Mission Control overlay (hidden when MC opens, restored on close)
+- Sidebar top padding and Agents title left padding alignment
+
 ## [0.1.5] - 2026-03-17
 
 ### Added

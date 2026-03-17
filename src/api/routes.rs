@@ -1178,11 +1178,7 @@ pub async fn auth_middleware(
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
-        .or_else(|| {
-            req.headers()
-                .get("X-API-Key")
-                .and_then(|v| v.to_str().ok())
-        });
+        .or_else(|| req.headers().get("X-API-Key").and_then(|v| v.to_str().ok()));
     if provided != Some(state.api_key.as_str()) {
         return Err(ApiError::Unauthorized);
     }

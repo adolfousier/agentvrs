@@ -1173,20 +1173,8 @@ pub fn handle_card_clicks(
     mut mc_state: ResMut<MissionControlState>,
     card_q: Query<(&Interaction, &McCardButton), Changed<Interaction>>,
     bridge: Res<WorldBridge>,
-    mut activity_heading_q: Query<
-        &mut Text,
-        (
-            With<McActivityHeading>,
-            Without<McTaskHeading>,
-        ),
-    >,
-    mut task_heading_q: Query<
-        &mut Text,
-        (
-            With<McTaskHeading>,
-            Without<McActivityHeading>,
-        ),
-    >,
+    mut activity_heading_q: Query<&mut Text, (With<McActivityHeading>, Without<McTaskHeading>)>,
+    mut task_heading_q: Query<&mut Text, (With<McTaskHeading>, Without<McActivityHeading>)>,
 ) {
     if !mc_state.open {
         return;

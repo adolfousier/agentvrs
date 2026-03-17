@@ -195,6 +195,8 @@ curl -H "Authorization: Bearer your-secret-key" http://127.0.0.1:18800/agents
 
 ### Endpoints
 
+> **Tip:** All `{id}` parameters accept either the agent's short ID (e.g. `a1b2c3d4`) or agent name (e.g. `crab-alpha`).
+
 #### Health (no auth required)
 
 ```bash
@@ -318,10 +320,10 @@ POST /agents/{id}/tasks
 # Each report creates an activity log entry and persists to SQLite
 # Mission Control shows colored badges: 🔵 submitted, 🟡 running, 🟢 completed, 🔴 failed
 
-# Task history
-GET /agents/{id}/tasks?limit=50
+# Task history (optional filters: ?limit=50&state=running)
+GET /agents/{id}/tasks?limit=50&state=running
 # Response: {"agent_id":"a1b2c3d4","count":1,"tasks":[
-#   {"task_id":"t1","submitted_at":"...","state":"completed","last_updated":"...","response_summary":"Done","scope":"..."}]}
+#   {"task_id":"t1","submitted_at":"...","state":"running","last_updated":"...","response_summary":"In progress","scope":"..."}]}
 
 # Full dashboard (detail + recent activity + tasks + heartbeat in one call)
 GET /agents/{id}/dashboard
@@ -663,7 +665,7 @@ src/
 ├── tui/              # Terminal UI alternative (ratatui)
 ├── error/            # AppError + ApiError with JSON responses
 ├── runner.rs         # Shared setup (grid, registry, sim, API, SSE broadcast)
-└── tests/            # 226 tests across 10 modules
+└── tests/            # 231 tests across 10 modules
 ```
 
 ---
