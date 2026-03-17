@@ -210,6 +210,7 @@ fn test_save_and_load_task() {
         state: "submitted".to_string(),
         last_updated: Utc::now(),
         response_summary: Some("processing".to_string()),
+        scope: None,
     };
     db.save_task(id, &task).unwrap();
 
@@ -229,6 +230,7 @@ fn test_task_upsert() {
         state: "submitted".to_string(),
         last_updated: Utc::now(),
         response_summary: None,
+        scope: None,
     };
     db.save_task(id, &task).unwrap();
 
@@ -243,6 +245,74 @@ fn test_task_upsert() {
     let loaded = db.load_tasks(&id, 10).unwrap();
     assert_eq!(loaded.len(), 1);
     assert_eq!(loaded[0].state, "completed");
+}
+
+#[test]
+fn test_task_scope_persists() {
+    let db = test_db();
+    let id = AgentId::new();
+    let task = TaskRecord {
+        task_id: "scoped-task".to_string(),
+        submitted_at: Utc::now(),
+        state: "submitted".to_string(),
+        last_updated: Utc::now(),
+        response_summary: Some("short summary".to_string()),
+        scope: Some("Full description of the task scope with details".to_string()),
+    };
+    db.save_task(id, &task).unwrap();
+
+    let loaded = db.load_tasks(&id, 10).unwrap();
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].scope.as_deref(), Some("Full description of the task scope with details"));
+    assert_eq!(loaded[0].response_summary.as_deref(), Some("short summary"));
+}
+
+#[test]
+fn test_task_scope_preserved_on_upsert() {
+    let db = test_db();
+    let id = AgentId::new();
+    let task = TaskRecord {
+        task_id: "scope-upsert".to_string(),
+        submitted_at: Utc::now(),
+        state: "submitted".to_string(),
+        last_updated: Utc::now(),
+        response_summary: None,
+        scope: Some("Original scope".to_string()),
+    };
+    db.save_task(id, &task).unwrap();
+
+    // Update without scope — original scope should be preserved via COALESCE
+    let updated = TaskRecord {
+        state: "completed".to_string(),
+        response_summary: Some("done".to_string()),
+        scope: None,
+        ..task
+    };
+    db.save_task(id, &updated).unwrap();
+
+    let loaded = db.load_tasks(&id, 10).unwrap();
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].state, "completed");
+    assert_eq!(loaded[0].scope.as_deref(), Some("Original scope"));
+}
+
+#[test]
+fn test_task_scope_none() {
+    let db = test_db();
+    let id = AgentId::new();
+    let task = TaskRecord {
+        task_id: "no-scope".to_string(),
+        submitted_at: Utc::now(),
+        state: "running".to_string(),
+        last_updated: Utc::now(),
+        response_summary: None,
+        scope: None,
+    };
+    db.save_task(id, &task).unwrap();
+
+    let loaded = db.load_tasks(&id, 10).unwrap();
+    assert_eq!(loaded.len(), 1);
+    assert!(loaded[0].scope.is_none());
 }
 
 // ── Heartbeat persistence ────────────────────────────────────
@@ -318,6 +388,7 @@ fn test_purge_agent_removes_all_data() {
             state: "done".to_string(),
             last_updated: Utc::now(),
             response_summary: None,
+            scope: None,
         },
     )
     .unwrap();

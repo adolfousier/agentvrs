@@ -1201,6 +1201,90 @@ async fn test_report_task_completed() {
 }
 
 #[tokio::test]
+async fn test_report_task_with_scope() {
+    let (router, _, _, db) = test_state_full();
+    let agent_id = connect_helper(&router, "scope-agent").await;
+
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({
+                "task_id": "scoped-t1",
+                "state": "submitted",
+                "summary": "Short summary",
+                "scope": "Full detailed scope of what this task covers"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+    let resp = router.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Verify scope persisted to DB
+    let aid = db_agent_id(&db, "scope-agent");
+    let dbl = db.lock().unwrap();
+    let tasks = dbl.load_tasks(&aid, 10).unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].task_id, "scoped-t1");
+    assert_eq!(tasks[0].response_summary.as_deref(), Some("Short summary"));
+    assert_eq!(
+        tasks[0].scope.as_deref(),
+        Some("Full detailed scope of what this task covers")
+    );
+}
+
+#[tokio::test]
+async fn test_report_task_scope_preserved_on_update() {
+    let (router, _, _, db) = test_state_full();
+    let agent_id = connect_helper(&router, "scope-keep").await;
+
+    // Submit with scope
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({
+                "task_id": "scope-keep-t1",
+                "state": "submitted",
+                "summary": "Initial",
+                "scope": "Original scope text"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // Update without scope — should preserve original
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({
+                "task_id": "scope-keep-t1",
+                "state": "completed",
+                "summary": "Done"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    let aid = db_agent_id(&db, "scope-keep");
+    let dbl = db.lock().unwrap();
+    let tasks = dbl.load_tasks(&aid, 10).unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].state, "completed");
+    assert_eq!(tasks[0].scope.as_deref(), Some("Original scope text"));
+}
+
+#[tokio::test]
 async fn test_report_task_invalid_state() {
     let (router, _, _) = test_state();
     let agent_id = connect_helper(&router, "task-agent").await;

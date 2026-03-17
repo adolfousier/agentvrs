@@ -307,9 +307,12 @@ GET /agents/{id}/status
 
 # Report a task (submit, update, or complete)
 POST /agents/{id}/tasks
-# Body: {"task_id":"t1","state":"submitted","summary":"Researching topic X"}
+# Body: {"task_id":"t1","state":"submitted","summary":"Researching topic X","scope":"Full description of what the task covers (optional)"}
 # Response: {"status":"recorded","task_id":"t1","state":"submitted"}
 #
+# Fields: task_id (required), state (required), summary (optional), scope (optional)
+# - summary: short one-line status text shown in task list rows
+# - scope: full task description shown in the MC task detail popup
 # Valid states: submitted, running, completed, failed
 # Flow: submitted → running → completed/failed
 # Each report creates an activity log entry and persists to SQLite
@@ -318,7 +321,7 @@ POST /agents/{id}/tasks
 # Task history
 GET /agents/{id}/tasks?limit=50
 # Response: {"agent_id":"a1b2c3d4","count":1,"tasks":[
-#   {"task_id":"t1","submitted_at":"...","state":"completed","last_updated":"...","response_summary":"Done"}]}
+#   {"task_id":"t1","submitted_at":"...","state":"completed","last_updated":"...","response_summary":"Done","scope":"..."}]}
 
 # Full dashboard (detail + recent activity + tasks + heartbeat in one call)
 GET /agents/{id}/dashboard
@@ -397,10 +400,11 @@ curl http://127.0.0.1:18800/agents/a1b2c3d4/messages \
   -H "X-API-Key: your-secret-key"
 
 # 6. Report tasks (submitted → running → completed/failed)
+#    Optional "scope" field provides full task description for MC detail popup
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/tasks \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-secret-key" \
-  -d '{"task_id":"task-001","state":"submitted","summary":"Researching topic X"}'
+  -d '{"task_id":"task-001","state":"submitted","summary":"Researching topic X","scope":"Investigate data sources, cross-reference results, produce summary report"}'
 
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/tasks \
   -H "Content-Type: application/json" \
@@ -478,7 +482,8 @@ requests.post(f"{AGENTVERSE}/agents/{agent_id}/message", json={"text": "Done! Fo
 
 # Report task lifecycle
 requests.post(f"{AGENTVERSE}/agents/{agent_id}/tasks",
-    json={"task_id": "task-001", "state": "submitted", "summary": "Analyzing data"})
+    json={"task_id": "task-001", "state": "submitted", "summary": "Analyzing data",
+           "scope": "Full analysis of dataset including outlier detection"})
 requests.post(f"{AGENTVERSE}/agents/{agent_id}/tasks",
     json={"task_id": "task-001", "state": "completed", "summary": "Found 42 results"})
 
@@ -526,7 +531,7 @@ await fetch(`${AGENTVERSE}/agents/${agent_id}/message`, {
 await fetch(`${AGENTVERSE}/agents/${agent_id}/tasks`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ task_id: "task-001", state: "submitted", summary: "Processing query" }),
+  body: JSON.stringify({ task_id: "task-001", state: "submitted", summary: "Processing query", scope: "Parse input, run NLP pipeline, return structured results" }),
 });
 await fetch(`${AGENTVERSE}/agents/${agent_id}/tasks`, {
   method: "POST",

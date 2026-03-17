@@ -42,6 +42,8 @@ pub struct TaskRecord {
     pub last_updated: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 /// Central observability store for all agents.
@@ -101,6 +103,7 @@ impl AgentObserver {
         task_id: impl Into<String>,
         state: impl Into<String>,
         response_summary: Option<String>,
+        scope: Option<String>,
     ) {
         let now = Utc::now();
         let records = self.tasks.entry(agent_id).or_default();
@@ -114,6 +117,9 @@ impl AgentObserver {
             if response_summary.is_some() {
                 existing.response_summary = response_summary;
             }
+            if scope.is_some() {
+                existing.scope = scope;
+            }
         } else {
             records.push_back(TaskRecord {
                 task_id,
@@ -121,6 +127,7 @@ impl AgentObserver {
                 state,
                 last_updated: now,
                 response_summary,
+                scope,
             });
             while records.len() > self.max_tasks {
                 records.pop_front();

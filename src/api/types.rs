@@ -175,6 +175,8 @@ pub struct TaskReportRequest {
     pub state: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

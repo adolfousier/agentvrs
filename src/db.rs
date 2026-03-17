@@ -74,6 +74,7 @@ impl Database {
                 submitted_at TEXT NOT NULL,
                 last_updated TEXT NOT NULL,
                 response_summary TEXT,
+                scope TEXT,
                 PRIMARY KEY (task_id, agent_id)
             );
             CREATE TABLE IF NOT EXISTS heartbeats (
@@ -86,6 +87,22 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_activity_agent ON activity_log(agent_id);
             CREATE INDEX IF NOT EXISTS idx_activity_ts ON activity_log(timestamp);",
         )?;
+        self.migrate()?;
+        Ok(())
+    }
+
+    /// Run forward-only migrations for columns added after the initial schema.
+    fn migrate(&self) -> Result<()> {
+        // Add scope column to tasks table (v0.1.6+)
+        let has_scope: bool = self
+            .conn
+            .prepare("PRAGMA table_info(tasks)")?
+            .query_map([], |row| row.get::<_, String>(1))?
+            .any(|name| name.as_deref() == Ok("scope"));
+        if !has_scope {
+            self.conn
+                .execute_batch("ALTER TABLE tasks ADD COLUMN scope TEXT;")?;
+        }
         Ok(())
     }
 
@@ -285,12 +302,13 @@ impl Database {
         );
         // Use INSERT ON CONFLICT to preserve submitted_at from the original insert
         self.conn.execute(
-            "INSERT INTO tasks (task_id, agent_id, state, submitted_at, last_updated, response_summary) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+            "INSERT INTO tasks (task_id, agent_id, state, submitted_at, last_updated, response_summary, scope) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) \
              ON CONFLICT(task_id, agent_id) DO UPDATE SET \
                state = excluded.state, \
                last_updated = excluded.last_updated, \
-               response_summary = COALESCE(excluded.response_summary, tasks.response_summary)",
+               response_summary = COALESCE(excluded.response_summary, tasks.response_summary), \
+               scope = COALESCE(excluded.scope, tasks.scope)",
             params![
                 task.task_id,
                 agent_id.0.to_string(),
@@ -298,6 +316,7 @@ impl Database {
                 task.submitted_at.to_rfc3339(),
                 task.last_updated.to_rfc3339(),
                 task.response_summary,
+                task.scope,
             ],
         )?;
         Ok(())
@@ -314,7 +333,7 @@ impl Database {
 
     pub fn load_tasks(&self, agent_id: &AgentId, limit: usize) -> Result<Vec<TaskRecord>> {
         let mut stmt = self.conn.prepare(
-            "SELECT task_id, state, submitted_at, last_updated, response_summary FROM tasks \
+            "SELECT task_id, state, submitted_at, last_updated, response_summary, scope FROM tasks \
              WHERE agent_id = ?1 ORDER BY last_updated DESC LIMIT ?2",
         )?;
         let rows = stmt.query_map(params![agent_id.0.to_string(), limit as i64], |row| {
@@ -324,12 +343,13 @@ impl Database {
                 row.get::<_, String>(2)?,
                 row.get::<_, String>(3)?,
                 row.get::<_, Option<String>>(4)?,
+                row.get::<_, Option<String>>(5)?,
             ))
         })?;
 
         let mut tasks = Vec::new();
         for row in rows {
-            let (task_id, state, sub_str, upd_str, summary) = row?;
+            let (task_id, state, sub_str, upd_str, summary, scope) = row?;
             let submitted_at: DateTime<Utc> = sub_str.parse()?;
             let last_updated: DateTime<Utc> = upd_str.parse()?;
             tasks.push(TaskRecord {
@@ -338,6 +358,7 @@ impl Database {
                 state,
                 last_updated,
                 response_summary: summary,
+                scope,
             });
         }
         tasks.reverse();

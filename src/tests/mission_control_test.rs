@@ -283,6 +283,7 @@ mod bevy_tests {
                     state: "completed".to_string(),
                     last_updated: Utc::now(),
                     response_summary: Some(format!("done-{}", i)),
+                    scope: None,
                 };
                 db.save_task(agent_id, &task).unwrap();
             }
