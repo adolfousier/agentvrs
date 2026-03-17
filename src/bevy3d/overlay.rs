@@ -198,11 +198,11 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.9)),
                         Node {
-                            padding: UiRect::new(
+                            margin: UiRect::new(
                                 Val::Px(14.0),
                                 Val::Px(14.0),
-                                Val::Px(14.0),
-                                Val::Px(8.0),
+                                Val::Px(6.0),
+                                Val::Px(4.0),
                             ),
                             ..default()
                         },
