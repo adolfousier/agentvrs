@@ -302,6 +302,16 @@ GET /agents/{id}/status
 # Response: {"agent_id":"a1b2c3d4","name":"my-bot","state":"working",
 #   "connection_health":"online","heartbeat":{"last_seen":"...","status":"healthy",...}}
 
+# Report a task (submit, update, or complete)
+POST /agents/{id}/tasks
+# Body: {"task_id":"t1","state":"submitted","summary":"Researching topic X"}
+# Response: {"status":"recorded","task_id":"t1","state":"submitted"}
+#
+# Valid states: submitted, running, completed, failed
+# Flow: submitted → running → completed/failed
+# Each report creates an activity log entry and persists to SQLite
+# Mission Control shows colored badges: 🔵 submitted, 🟡 running, 🟢 completed, 🔴 failed
+
 # Task history
 GET /agents/{id}/tasks?limit=50
 # Response: {"agent_id":"a1b2c3d4","count":1,"tasks":[
@@ -383,11 +393,22 @@ curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/message \
 curl http://127.0.0.1:18800/agents/a1b2c3d4/messages \
   -H "X-API-Key: your-secret-key"
 
-# 6. Clear inbox after reading
+# 6. Report tasks (submitted → running → completed/failed)
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/tasks \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{"task_id":"task-001","state":"submitted","summary":"Researching topic X"}'
+
+curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/tasks \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{"task_id":"task-001","state":"completed","summary":"Found 42 results"}'
+
+# 7. Clear inbox after reading
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/messages/ack \
   -H "X-API-Key: your-secret-key"
 
-# 7. Monitor from the dashboard
+# 8. Monitor from the dashboard
 curl http://127.0.0.1:18800/agents/a1b2c3d4/dashboard \
   -H "X-API-Key: your-secret-key"
 ```
@@ -452,6 +473,12 @@ requests.post(f"{AGENTVERSE}/agents/{agent_id}/message", json={"text": "Analyzin
 requests.post(f"{AGENTVERSE}/agents/{agent_id}/state", json={"state": "working"})
 requests.post(f"{AGENTVERSE}/agents/{agent_id}/message", json={"text": "Done! Found 42 results"})
 
+# Report task lifecycle
+requests.post(f"{AGENTVERSE}/agents/{agent_id}/tasks",
+    json={"task_id": "task-001", "state": "submitted", "summary": "Analyzing data"})
+requests.post(f"{AGENTVERSE}/agents/{agent_id}/tasks",
+    json={"task_id": "task-001", "state": "completed", "summary": "Found 42 results"})
+
 # Check your dashboard
 dashboard = requests.get(f"{AGENTVERSE}/agents/{agent_id}/dashboard").json()
 ```
@@ -490,6 +517,18 @@ await fetch(`${AGENTVERSE}/agents/${agent_id}/message`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ text: "Processing query..." }),
+});
+
+// Report task lifecycle
+await fetch(`${AGENTVERSE}/agents/${agent_id}/tasks`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ task_id: "task-001", state: "submitted", summary: "Processing query" }),
+});
+await fetch(`${AGENTVERSE}/agents/${agent_id}/tasks`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ task_id: "task-001", state: "completed", summary: "Query resolved" }),
 });
 
 // Listen to world events via SSE
