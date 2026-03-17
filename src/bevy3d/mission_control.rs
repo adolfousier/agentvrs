@@ -988,7 +988,18 @@ pub fn update_mission_control(
                         Text::new(summary),
                         font(11.0),
                         TextColor(t.text_secondary),
+                        Node { flex_shrink: 1.0, ..default() },
                     ));
+                    // Duration for completed/failed tasks
+                    if task.state == "completed" || task.state == "failed" {
+                        let dur = format_duration(task.last_updated - task.submitted_at);
+                        row.spawn((
+                            Text::new(dur),
+                            font(10.0),
+                            TextColor(t.text_muted),
+                            Node { min_width: px(50.0), ..default() },
+                        ));
+                    }
                 })
                 .id();
             commands.entity(task_parent).add_child(row);

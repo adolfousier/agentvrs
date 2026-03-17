@@ -270,10 +270,14 @@ impl Database {
 
     pub fn save_task(&self, agent_id: AgentId, task: &TaskRecord) -> Result<()> {
         tracing::debug!("DB: saving task '{}' state={} for agent {}", task.task_id, task.state, agent_id);
+        // Use INSERT ON CONFLICT to preserve submitted_at from the original insert
         self.conn.execute(
-            "INSERT OR REPLACE INTO tasks \
-             (task_id, agent_id, state, submitted_at, last_updated, response_summary) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO tasks (task_id, agent_id, state, submitted_at, last_updated, response_summary) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+             ON CONFLICT(task_id, agent_id) DO UPDATE SET \
+               state = excluded.state, \
+               last_updated = excluded.last_updated, \
+               response_summary = COALESCE(excluded.response_summary, tasks.response_summary)",
             params![
                 task.task_id,
                 agent_id.0.to_string(),
