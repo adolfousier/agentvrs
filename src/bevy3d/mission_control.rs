@@ -705,6 +705,13 @@ pub fn update_mission_control(
                         }
                     });
 
+                    // Agent ID
+                    card.spawn((
+                        Text::new(format!("ID: {:.8}", agent.id)),
+                        font(9.0),
+                        TextColor(t.text_muted),
+                    ));
+
                     // ── Recent tasks section ──
                     if let Some(tasks) = tasks
                         && !tasks.is_empty()
