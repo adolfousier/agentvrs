@@ -1,6 +1,50 @@
 use crate::bevy3d::bridge::WorldBridge;
 use crate::bevy3d::runner::ThemeState;
+use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
+
+// ── Scroll system (Bevy 0.18 requires manual scroll wiring) ─────────────────
+
+const LINE_HEIGHT: f32 = 20.0;
+
+/// Marker for nodes that should be scrollable in MC.
+#[derive(Component)]
+pub struct McScrollable;
+
+/// Reads mouse wheel and applies scroll to any hovered McScrollable node.
+pub fn ui_scroll_system(
+    mut mouse_wheel_reader: MessageReader<MouseWheel>,
+    mc_state: Res<MissionControlState>,
+    mut scroll_q: Query<
+        (&Interaction, &mut ScrollPosition, &Node, &ComputedNode),
+        With<McScrollable>,
+    >,
+) {
+    if !mc_state.open {
+        for _ in mouse_wheel_reader.read() {}
+        return;
+    }
+
+    let mut total_delta = 0.0_f32;
+    for ev in mouse_wheel_reader.read() {
+        match ev.unit {
+            MouseScrollUnit::Line => total_delta -= ev.y * LINE_HEIGHT,
+            MouseScrollUnit::Pixel => total_delta -= ev.y,
+        }
+    }
+    if total_delta == 0.0 {
+        return;
+    }
+
+    for (interaction, mut scroll_pos, _node, computed) in scroll_q.iter_mut() {
+        if *interaction == Interaction::Hovered || *interaction == Interaction::Pressed {
+            let max_y = (computed.content_size().y - computed.size().y)
+                * computed.inverse_scale_factor();
+            scroll_pos.y = (scroll_pos.y + total_delta).clamp(0.0, max_y.max(0.0));
+            return;
+        }
+    }
+}
 
 // ── Marker components ────────────────────────────────────────────────────────
 
@@ -274,7 +318,7 @@ pub fn setup_mission_control(mut commands: Commands) {
             // ── Content: two columns ─────────────────────────────────
             root.spawn(Node {
                 flex_direction: FlexDirection::Row,
-                flex_grow: 1.0,
+                height: Val::Percent(100.0),
                 column_gap: Val::Px(20.0),
                 overflow: Overflow::clip(),
                 ..default()
@@ -285,6 +329,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                     .spawn(Node {
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(45.0),
+                        height: Val::Percent(100.0),
                         row_gap: Val::Px(12.0),
                         overflow: Overflow::clip(),
                         ..default()
@@ -307,11 +352,14 @@ pub fn setup_mission_control(mut commands: Commands) {
                                 flex_wrap: FlexWrap::Wrap,
                                 row_gap: Val::Px(10.0),
                                 column_gap: Val::Px(10.0),
-                                flex_grow: 1.0,
+                                height: Val::Percent(100.0),
                                 align_content: AlignContent::FlexStart,
                                 overflow: Overflow::scroll_y(),
                                 ..default()
                             },
+                            ScrollPosition::default(),
+                            Interaction::default(),
+                            McScrollable,
                             McAgentCard,
                         ));
                     });
@@ -320,7 +368,8 @@ pub fn setup_mission_control(mut commands: Commands) {
                 content
                     .spawn(Node {
                         flex_direction: FlexDirection::Column,
-                        flex_grow: 1.0,
+                        width: Val::Percent(55.0),
+                        height: Val::Percent(100.0),
                         row_gap: Val::Px(16.0),
                         overflow: Overflow::clip(),
                         ..default()
@@ -340,13 +389,15 @@ pub fn setup_mission_control(mut commands: Commands) {
                         right.spawn((
                             Node {
                                 flex_direction: FlexDirection::Column,
-                                row_gap: Val::Px(0.0),
-                                height: Val::Percent(50.0),
+                                height: Val::Percent(45.0),
                                 overflow: Overflow::scroll_y(),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(8.0)),
                                 ..default()
                             },
+                            ScrollPosition::default(),
+                            Interaction::default(),
+                            McScrollable,
                             BackgroundColor(Color::srgb(0.11, 0.12, 0.14)),
                             BorderColor::all(Color::srgb(0.18, 0.19, 0.23)),
                             McActivityFeed,
@@ -366,13 +417,15 @@ pub fn setup_mission_control(mut commands: Commands) {
                         right.spawn((
                             Node {
                                 flex_direction: FlexDirection::Column,
-                                row_gap: Val::Px(0.0),
-                                flex_grow: 1.0,
+                                height: Val::Percent(45.0),
                                 overflow: Overflow::scroll_y(),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(8.0)),
                                 ..default()
                             },
+                            ScrollPosition::default(),
+                            Interaction::default(),
+                            McScrollable,
                             BackgroundColor(Color::srgb(0.11, 0.12, 0.14)),
                             BorderColor::all(Color::srgb(0.18, 0.19, 0.23)),
                             McTaskList,
@@ -1213,6 +1266,9 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                         border_radius: BorderRadius::all(px(12.0)),
                         ..default()
                     },
+                    ScrollPosition::default(),
+                    Interaction::default(),
+                    McScrollable,
                     BackgroundColor(t.card_bg),
                     BorderColor::all(t.card_border),
                 ))

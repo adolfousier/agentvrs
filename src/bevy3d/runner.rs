@@ -139,6 +139,9 @@ pub async fn run(config: AppConfig) -> Result<()> {
             .run_if(resource_exists::<super::materials::MaterialLib>),
     );
 
+    // UI scroll (Bevy 0.18 requires manual scroll wiring)
+    app.add_systems(Update, super::mission_control::ui_scroll_system);
+
     app.run();
 
     Ok(())
