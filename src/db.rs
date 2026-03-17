@@ -93,6 +93,10 @@ impl Database {
 
     pub fn save_agent(&self, agent: &crate::agent::Agent) -> Result<()> {
         let kind_json = serde_json::to_string(&agent.kind)?;
+        tracing::debug!(
+            "DB: saving agent '{}' (id={}, pos=({},{}))",
+            agent.name, agent.id, agent.position.x, agent.position.y
+        );
         self.conn.execute(
             "INSERT OR REPLACE INTO agents (id, name, kind, pos_x, pos_y, color_index) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -105,10 +109,12 @@ impl Database {
                 agent.color_index as i32,
             ],
         )?;
+        tracing::debug!("DB: agent '{}' saved successfully", agent.name);
         Ok(())
     }
 
     pub fn load_agents(&self) -> Result<Vec<AgentRow>> {
+        tracing::debug!("DB: loading agents from database");
         let mut stmt = self
             .conn
             .prepare("SELECT id, name, kind, pos_x, pos_y, color_index FROM agents")?;
@@ -136,6 +142,7 @@ impl Database {
                 color_index: color_index as u8,
             });
         }
+        tracing::debug!("DB: loaded {} agents", agents.len());
         Ok(agents)
     }
 
@@ -216,6 +223,7 @@ impl Database {
     // ── Activity ─────────────────────────────────────────────────────────
 
     pub fn save_activity(&self, agent_id: AgentId, entry: &ActivityEntry) -> Result<()> {
+        tracing::debug!("DB: saving activity for agent {} — {:?}: {}", agent_id, entry.kind, entry.detail);
         let kind_str = serde_json::to_string(&entry.kind)?;
         self.conn.execute(
             "INSERT INTO activity_log (agent_id, kind, detail, timestamp) \
@@ -261,6 +269,7 @@ impl Database {
     // ── Tasks ────────────────────────────────────────────────────────────
 
     pub fn save_task(&self, agent_id: AgentId, task: &TaskRecord) -> Result<()> {
+        tracing::debug!("DB: saving task '{}' state={} for agent {}", task.task_id, task.state, agent_id);
         self.conn.execute(
             "INSERT OR REPLACE INTO tasks \
              (task_id, agent_id, state, submitted_at, last_updated, response_summary) \
@@ -372,6 +381,7 @@ impl Database {
 
     /// Remove all data associated with an agent.
     pub fn purge_agent(&self, id: &AgentId) -> Result<()> {
+        tracing::debug!("DB: purging all data for agent {}", id);
         let id_str = id.0.to_string();
         self.conn
             .execute("DELETE FROM agents WHERE id = ?1", params![id_str])?;

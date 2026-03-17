@@ -108,7 +108,9 @@ pub async fn connect_agent(
         if let Some(agent) = reg.get(&agent_id)
             && let Ok(db) = state.db.lock()
         {
-            let _ = db.save_agent(agent);
+            if let Err(e) = db.save_agent(agent) {
+                tracing::error!("Failed to save agent to DB: {}", e);
+            }
         }
     }
 
@@ -159,7 +161,9 @@ pub async fn delete_agent(
 
     // Remove from database
     if let Ok(db) = state.db.lock() {
-        let _ = db.purge_agent(&target_id);
+        if let Err(e) = db.purge_agent(&target_id) {
+            tracing::error!("Failed to purge agent from DB: {}", e);
+        }
     }
 
     Ok(Json(DeleteResponse {
@@ -249,7 +253,9 @@ pub async fn send_agent_message(
         // Persist message to database
         if let Ok(db) = state.db.lock() {
             let msg = AgentMessage::new(sender_id, target_id, &msg.text);
-            let _ = db.save_message(&msg);
+            if let Err(e) = db.save_message(&msg) {
+                tracing::error!("Failed to save message to DB: {}", e);
+            }
         }
 
         // Push via webhook if target has an endpoint
@@ -513,7 +519,9 @@ pub async fn rename_agent(
     if let Ok(db) = state.db.lock() {
         let reg = state.registry.read().unwrap();
         if let Some(agent) = reg.get(&agent_id) {
-            let _ = db.save_agent(agent);
+            if let Err(e) = db.save_agent(agent) {
+                tracing::error!("Failed to save agent to DB: {}", e);
+            }
         }
     }
 
@@ -588,14 +596,18 @@ pub async fn report_task(
             last_updated: Utc::now(),
             response_summary: req.summary.clone(),
         };
-        let _ = db.save_task(agent_id, &task);
+        if let Err(e) = db.save_task(agent_id, &task) {
+                tracing::error!("Failed to save task to DB: {}", e);
+            }
     }
 
     // Persist updated agent (task_count)
     if let Ok(db) = state.db.lock() {
         let reg = state.registry.read().unwrap();
         if let Some(agent) = reg.get(&agent_id) {
-            let _ = db.save_agent(agent);
+            if let Err(e) = db.save_agent(agent) {
+                tracing::error!("Failed to save agent to DB: {}", e);
+            }
         }
     }
 
@@ -711,7 +723,9 @@ pub async fn ack_agent_messages(
 
     // Clear messages from database
     if let Ok(db) = state.db.lock() {
-        let _ = db.clear_messages_for(&agent_id);
+        if let Err(e) = db.clear_messages_for(&agent_id) {
+                tracing::error!("Failed to clear messages from DB: {}", e);
+            }
     }
 
     Ok(Json(serde_json::json!({
@@ -818,7 +832,9 @@ pub async fn post_agent_heartbeat(
 
     // Persist heartbeat to database
     if let Ok(db) = state.db.lock() {
-        let _ = db.save_heartbeat(agent_id, &hb_clone);
+        if let Err(e) = db.save_heartbeat(agent_id, &hb_clone) {
+                tracing::error!("Failed to save heartbeat to DB: {}", e);
+            }
     }
 
     Ok(Json(HeartbeatResponse {
@@ -991,7 +1007,9 @@ fn persist_activity(
         }
     };
     if let Ok(db) = db.lock() {
-        let _ = db.save_activity(agent_id, &entry);
+        if let Err(e) = db.save_activity(agent_id, &entry) {
+            tracing::error!("Failed to save activity to DB: {}", e);
+        }
     }
 }
 

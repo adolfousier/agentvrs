@@ -14,7 +14,34 @@ use tower::ServiceExt;
 const TEST_KEY: &str = "test-key";
 
 fn test_state() -> (axum::Router, Arc<RwLock<AgentRegistry>>, Arc<RwLock<Grid>>) {
-    test_state_with_auth(TEST_KEY)
+    let (router, registry, grid, _db) = test_state_full();
+    (router, registry, grid)
+}
+
+fn test_state_full() -> (
+    axum::Router,
+    Arc<RwLock<AgentRegistry>>,
+    Arc<RwLock<Grid>>,
+    Arc<Mutex<Database>>,
+) {
+    let registry = Arc::new(RwLock::new(AgentRegistry::new()));
+    let grid = Arc::new(RwLock::new(Grid::with_walls(16, 12)));
+    let (event_tx, _rx) = mpsc::channel::<WorldEvent>(64);
+    let (broadcast_tx, _) = broadcast::channel::<WorldEvent>(64);
+    let tick_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let observer = Arc::new(RwLock::new(AgentObserver::new(500, 200)));
+    let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
+    let router = build_router(
+        Arc::clone(&registry),
+        Arc::clone(&grid),
+        event_tx,
+        broadcast_tx,
+        TEST_KEY.to_string(),
+        tick_count,
+        observer,
+        Arc::clone(&db),
+    );
+    (router, registry, grid, db)
 }
 
 fn test_state_with_auth(
@@ -1093,4 +1120,230 @@ async fn test_event_stream_endpoint_exists() {
         .to_str()
         .unwrap();
     assert!(ct.contains("text/event-stream"));
+}
+
+// ─── Task Reporting ──────────────────────────────────────────
+
+#[tokio::test]
+async fn test_report_task_submitted() {
+    let (router, _, _, db) = test_state_full();
+    let agent_id = connect_helper(&router, "task-agent").await;
+
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({
+                "task_id": "task-001",
+                "state": "submitted",
+                "summary": "Parse CSV data"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+    let resp = router.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+    let val: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(val["status"], "recorded");
+    assert_eq!(val["task_id"], "task-001");
+    assert_eq!(val["state"], "submitted");
+
+    // Verify task persisted to DB
+    let aid = db_agent_id(&db, "task-agent");
+    let dbl = db.lock().unwrap();
+    let tasks = dbl.load_tasks(&aid, 10).unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].task_id, "task-001");
+    assert_eq!(tasks[0].state, "submitted");
+    assert_eq!(tasks[0].response_summary.as_deref(), Some("Parse CSV data"));
+}
+
+#[tokio::test]
+async fn test_report_task_completed() {
+    let (router, _, _, db) = test_state_full();
+    let agent_id = connect_helper(&router, "task-agent").await;
+
+    // Submit
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({"task_id": "t1", "state": "submitted"}).to_string(),
+        ))
+        .unwrap();
+    router.clone().oneshot(req).await.unwrap();
+
+    // Complete
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({"task_id": "t1", "state": "completed", "summary": "Done"}).to_string(),
+        ))
+        .unwrap();
+    let resp = router.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // DB should have latest state
+    let aid = db_agent_id(&db, "task-agent");
+    let dbl = db.lock().unwrap();
+    let tasks = dbl.load_tasks(&aid, 10).unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].state, "completed");
+}
+
+#[tokio::test]
+async fn test_report_task_invalid_state() {
+    let (router, _, _) = test_state();
+    let agent_id = connect_helper(&router, "task-agent").await;
+
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({"task_id": "t1", "state": "bogus"}).to_string(),
+        ))
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_report_task_empty_id() {
+    let (router, _, _) = test_state();
+    let agent_id = connect_helper(&router, "task-agent").await;
+
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/tasks", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({"task_id": "", "state": "submitted"}).to_string(),
+        ))
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// ─── Activity Persistence ────────────────────────────────────
+
+/// Helper: get full AgentId from DB by agent name
+fn db_agent_id(db: &Arc<Mutex<Database>>, name: &str) -> crate::agent::AgentId {
+    let db = db.lock().unwrap();
+    db.load_agents()
+        .unwrap()
+        .into_iter()
+        .find(|a| a.name == name)
+        .unwrap_or_else(|| panic!("agent '{}' not in DB", name))
+        .id
+}
+
+#[tokio::test]
+async fn test_connect_persists_agent_to_db() {
+    let (router, _, _, db) = test_state_full();
+    connect_helper(&router, "persist-me").await;
+
+    let dbl = db.lock().unwrap();
+    let agents = dbl.load_agents().unwrap();
+    assert_eq!(agents.len(), 1);
+    assert_eq!(agents[0].name, "persist-me");
+}
+
+#[tokio::test]
+async fn test_connect_persists_activity_to_db() {
+    let (router, _, _, db) = test_state_full();
+    connect_helper(&router, "activity-agent").await;
+
+    let aid = db_agent_id(&db, "activity-agent");
+    let dbl = db.lock().unwrap();
+    let activity = dbl.load_activity(&aid, 10).unwrap();
+    assert!(!activity.is_empty(), "connect should persist activity to DB");
+    assert!(activity[0].detail.contains("connected"));
+}
+
+#[tokio::test]
+async fn test_message_persists_activity_to_db() {
+    let (router, _, _, db) = test_state_full();
+    let sender = connect_helper(&router, "sender").await;
+    let receiver = connect_helper(&router, "receiver").await;
+
+    // Send message
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/message", sender))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({"text": "hello!", "to": receiver}).to_string(),
+        ))
+        .unwrap();
+    let resp = router.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Both sender and receiver should have activity in DB
+    let sender_aid = db_agent_id(&db, "sender");
+    let receiver_aid = db_agent_id(&db, "receiver");
+    let dbl = db.lock().unwrap();
+    let sender_activity = dbl.load_activity(&sender_aid, 10).unwrap();
+    let receiver_activity = dbl.load_activity(&receiver_aid, 10).unwrap();
+    assert!(sender_activity.iter().any(|a| a.detail.contains("Sent to")));
+    assert!(receiver_activity.iter().any(|a| a.detail.contains("From")));
+}
+
+#[tokio::test]
+async fn test_delete_purges_agent_from_db() {
+    let (router, _, _, db) = test_state_full();
+    let agent_id = connect_helper(&router, "delete-me").await;
+
+    // Verify agent exists in DB
+    {
+        let db = db.lock().unwrap();
+        assert_eq!(db.load_agents().unwrap().len(), 1);
+    }
+
+    // Delete
+    let req = Request::builder()
+        .method("DELETE")
+        .uri(&format!("/agents/{}", agent_id))
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::empty())
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Agent should be purged from DB
+    let db = db.lock().unwrap();
+    assert_eq!(db.load_agents().unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn test_rename_persists_to_db() {
+    let (router, _, _, db) = test_state_full();
+    let agent_id = connect_helper(&router, "old-name").await;
+
+    let req = Request::builder()
+        .method("POST")
+        .uri(&format!("/agents/{}/rename", agent_id))
+        .header("content-type", "application/json")
+        .header("X-API-Key", TEST_KEY)
+        .body(Body::from(
+            serde_json::json!({"name": "new-name"}).to_string(),
+        ))
+        .unwrap();
+    let resp = router.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let db = db.lock().unwrap();
+    let agents = db.load_agents().unwrap();
+    assert_eq!(agents[0].name, "new-name");
 }
