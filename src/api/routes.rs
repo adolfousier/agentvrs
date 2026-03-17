@@ -302,7 +302,7 @@ pub async fn send_agent_message(
                 let client = reqwest::Client::new();
                 let res = client
                     .post(format!("{}/messages", url))
-                    .header("X-API-Key", api_key)
+                    .header("Authorization", format!("Bearer {}", api_key))
                     .json(&payload)
                     .send()
                     .await;
@@ -1171,7 +1171,17 @@ pub async fn auth_middleware(
     req: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Result<axum::response::Response, ApiError> {
-    let provided = req.headers().get("X-API-Key").and_then(|v| v.to_str().ok());
+    // Accept both "Authorization: Bearer <token>" and legacy "X-API-Key: <token>"
+    let provided = req
+        .headers()
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .or_else(|| {
+            req.headers()
+                .get("X-API-Key")
+                .and_then(|v| v.to_str().ok())
+        });
     if provided != Some(state.api_key.as_str()) {
         return Err(ApiError::Unauthorized);
     }

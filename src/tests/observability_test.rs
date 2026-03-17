@@ -37,7 +37,7 @@ async fn connect(router: &axum::Router, name: &str) -> String {
         .method("POST")
         .uri("/agents/connect")
         .header("content-type", "application/json")
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::from(format!(r#"{{"name":"{}"}}"#, name)))
         .unwrap();
     let resp = router.clone().oneshot(req).await.unwrap();
@@ -51,7 +51,7 @@ async fn set_state(router: &axum::Router, id: &str, state: &str) {
         .method("POST")
         .uri(format!("/agents/{}/state", id))
         .header("content-type", "application/json")
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::from(format!(r#"{{"state":"{}"}}"#, state)))
         .unwrap();
     router.clone().oneshot(req).await.unwrap();
@@ -66,7 +66,7 @@ async fn test_agent_detail() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/detail", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -83,7 +83,7 @@ async fn test_agent_detail_not_found() {
     let router = test_state();
     let req = Request::builder()
         .uri("/agents/nonexistent/detail")
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -99,7 +99,7 @@ async fn test_activity_from_connect() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/activity", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -121,7 +121,7 @@ async fn test_activity_limit() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/activity?limit=2", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -138,7 +138,7 @@ async fn test_state_change_recorded() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/activity", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -156,14 +156,14 @@ async fn test_message_recorded() {
         .method("POST")
         .uri(format!("/agents/{}/message", id))
         .header("content-type", "application/json")
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::from(r#"{"text":"hello world"}"#))
         .unwrap();
     router.clone().oneshot(req).await.unwrap();
 
     let req = Request::builder()
         .uri(format!("/agents/{}/activity", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -183,7 +183,7 @@ async fn test_heartbeat() {
         .method("POST")
         .uri(format!("/agents/{}/heartbeat", id))
         .header("content-type", "application/json")
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::from(
             r#"{"status":"healthy","metadata":{"cpu":0.42}}"#,
         ))
@@ -209,14 +209,14 @@ async fn test_status_with_heartbeat() {
         .method("POST")
         .uri(format!("/agents/{}/heartbeat", id))
         .header("content-type", "application/json")
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::from(r#"{"status":"ok"}"#))
         .unwrap();
     router.clone().oneshot(req).await.unwrap();
 
     let req = Request::builder()
         .uri(format!("/agents/{}/status", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -233,7 +233,7 @@ async fn test_status_unknown_without_heartbeat() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/status", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -252,7 +252,7 @@ async fn test_tasks_empty() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/tasks", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();
@@ -271,7 +271,7 @@ async fn test_dashboard() {
 
     let req = Request::builder()
         .uri(format!("/agents/{}/dashboard", id))
-        .header("X-API-Key", TEST_KEY)
+        .header("Authorization", format!("Bearer {}", TEST_KEY))
         .body(Body::empty())
         .unwrap();
     let resp = router.oneshot(req).await.unwrap();

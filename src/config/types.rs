@@ -30,7 +30,7 @@ pub struct ServerConfig {
     pub port: u16,
     #[serde(default = "default_enabled")]
     pub enabled: bool,
-    /// API key for authentication. All endpoints (except /health) require X-API-Key header.
+    /// API key for authentication. All endpoints (except /health) require `Authorization: Bearer` header (legacy `X-API-Key` also accepted).
     pub api_key: String,
 }
 

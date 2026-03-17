@@ -106,11 +106,11 @@ Agentverse spawns 4 demo agents (`crab-alpha`, `crab-beta`, etc.) on startup. To
 ```bash
 # 1. Remove a demo agent
 curl -X DELETE http://127.0.0.1:18800/agents/crab-alpha \
-  -H "X-API-Key: your-secret-key"
+  -H "Authorization: Bearer your-secret-key"
 
 # 2. Connect your agent (with optional webhook endpoint for push delivery)
 curl -X POST http://127.0.0.1:18800/agents/connect \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -H "Content-Type: application/json" \
   -d '{"name":"my-agent","endpoint":"http://localhost:9090"}'
 
@@ -183,14 +183,14 @@ discovery_interval_secs = 30
 
 ## HTTP API
 
-API runs on `127.0.0.1:18800` by default. All endpoints (except `/health`) require the `X-API-Key` header.
+API runs on `127.0.0.1:18800` by default. All endpoints (except `/health`) require the `Authorization: Bearer <token>` header (legacy `X-API-Key` also accepted).
 
 ### Authentication
 
 Include your API key in every request:
 
 ```bash
-curl -H "X-API-Key: your-secret-key" http://127.0.0.1:18800/agents
+curl -H "Authorization: Bearer your-secret-key" http://127.0.0.1:18800/agents
 ```
 
 ### Endpoints
@@ -368,56 +368,56 @@ Agentverse works with any agent that can make HTTP requests. Connect from any la
 # 1. Connect your agent
 curl -X POST http://127.0.0.1:18800/agents/connect \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"name":"my-agent"}'
 # Returns: {"agent_id":"a1b2c3d4-...","position":[5,3]}
 
 # 2. Send heartbeats (keep-alive, report health)
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/heartbeat \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"status":"healthy","metadata":{"task":"researching"}}'
 
 # 3. Control your agent
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/state \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"state":"working"}'
 
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/goal \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"goal":"desk"}'
 
 # 4. Send a message to another agent
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/message \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"text":"handle task X","to":"b2c3d4e5"}'
 
 # 5. Check your inbox for messages from other agents
 curl http://127.0.0.1:18800/agents/a1b2c3d4/messages \
-  -H "X-API-Key: your-secret-key"
+  -H "Authorization: Bearer your-secret-key"
 
 # 6. Report tasks (submitted → running → completed/failed)
 #    Optional "scope" field provides full task description for MC detail popup
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/tasks \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"task_id":"task-001","state":"submitted","summary":"Researching topic X","scope":"Investigate data sources, cross-reference results, produce summary report"}'
 
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/tasks \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -d '{"task_id":"task-001","state":"completed","summary":"Found 42 results"}'
 
 # 7. Clear inbox after reading
 curl -X POST http://127.0.0.1:18800/agents/a1b2c3d4/messages/ack \
-  -H "X-API-Key: your-secret-key"
+  -H "Authorization: Bearer your-secret-key"
 
 # 8. Monitor from the dashboard
 curl http://127.0.0.1:18800/agents/a1b2c3d4/dashboard \
-  -H "X-API-Key: your-secret-key"
+  -H "Authorization: Bearer your-secret-key"
 ```
 
 ### OpenCrabs (Rust)
@@ -560,7 +560,7 @@ Then connect from other machines:
 
 ```bash
 curl -X POST http://192.168.1.100:18800/agents/connect \
-  -H "X-API-Key: your-secret-key" \
+  -H "Authorization: Bearer your-secret-key" \
   -H "Content-Type: application/json" \
   -d '{"name":"remote-agent"}'
 ```

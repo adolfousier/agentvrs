@@ -38,17 +38,17 @@
 //! ```bash
 //! # Connect
 //! curl -X POST http://127.0.0.1:18800/agents/connect \
-//!   -H "X-API-Key: your-key" -H "Content-Type: application/json" \
+//!   -H "Authorization: Bearer your-key" -H "Content-Type: application/json" \
 //!   -d '{"name":"my-agent"}'
 //!
 //! # Send a message to another agent
 //! curl -X POST http://127.0.0.1:18800/agents/{id}/message \
-//!   -H "X-API-Key: your-key" -H "Content-Type: application/json" \
+//!   -H "Authorization: Bearer your-key" -H "Content-Type: application/json" \
 //!   -d '{"text":"handle task X","to":"other-agent-id"}'
 //!
 //! # Check inbox
 //! curl http://127.0.0.1:18800/agents/{id}/messages \
-//!   -H "X-API-Key: your-key"
+//!   -H "Authorization: Bearer your-key"
 //! ```
 //!
 //! ## Crate features
