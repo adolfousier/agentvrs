@@ -116,7 +116,7 @@ async fn setup_inner(
 
         // Only spawn demo agents if nothing was restored from DB
         if !restored {
-            let names = ["crab-alpha", "crab-beta"];
+            let names = ["crab-alpha", "crab-beta", "crab-gamma", "crab-delta"];
             for name in &names {
                 if let Some(pos) = g.find_empty_floor() {
                     let agent = Agent::new(*name, AgentKind::Local, pos);
