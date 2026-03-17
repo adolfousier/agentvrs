@@ -98,7 +98,13 @@ pub fn camera_zoom(
     mut scroll_evr: MessageReader<MouseWheel>,
     mut cam_state: ResMut<CameraState>,
     mut camera_q: Query<(&mut Transform, &mut Projection), With<MainCamera>>,
+    mc_state: Res<crate::bevy3d::mission_control::MissionControlState>,
 ) {
+    if mc_state.open {
+        // Consume events so they don't queue up, but don't zoom
+        for _ in scroll_evr.read() {}
+        return;
+    }
     for ev in scroll_evr.read() {
         let delta = match ev.unit {
             MouseScrollUnit::Line => ev.y * 1.0,
@@ -122,7 +128,11 @@ pub fn camera_pan(
     mut cam_state: ResMut<CameraState>,
     mut camera_q: Query<(&mut Transform, &mut Projection), With<MainCamera>>,
     windows: Query<&Window>,
+    mc_state: Res<crate::bevy3d::mission_control::MissionControlState>,
 ) {
+    if mc_state.open {
+        return;
+    }
     let panning = mouse_btn.pressed(MouseButton::Left) || mouse_btn.pressed(MouseButton::Middle);
 
     if panning {

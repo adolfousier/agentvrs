@@ -128,7 +128,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Px(32.0)),
                 row_gap: Val::Px(20.0),
-                overflow: Overflow::clip(),
+                overflow: Overflow::scroll_y(),
                 ..default()
             },
             BackgroundColor(Color::srgb(0.09, 0.09, 0.11)),
@@ -170,7 +170,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                 flex_direction: FlexDirection::Row,
                 flex_grow: 1.0,
                 column_gap: Val::Px(20.0),
-                overflow: Overflow::clip(),
+                overflow: Overflow::scroll_y(),
                 ..default()
             })
             .with_children(|content| {
@@ -180,7 +180,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(45.0),
                         row_gap: Val::Px(12.0),
-                        overflow: Overflow::clip(),
+                        overflow: Overflow::scroll_y(),
                         ..default()
                     })
                     .with_children(|left| {
@@ -202,7 +202,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                                 row_gap: Val::Px(10.0),
                                 column_gap: Val::Px(10.0),
                                 flex_grow: 1.0,
-                                overflow: Overflow::clip(),
+                                overflow: Overflow::scroll_y(),
                                 ..default()
                             },
                             McAgentCard,
@@ -215,7 +215,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                         flex_direction: FlexDirection::Column,
                         flex_grow: 1.0,
                         row_gap: Val::Px(16.0),
-                        overflow: Overflow::clip(),
+                        overflow: Overflow::scroll_y(),
                         ..default()
                     })
                     .with_children(|right| {
@@ -234,7 +234,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                                 flex_direction: FlexDirection::Column,
                                 row_gap: Val::Px(0.0),
                                 height: Val::Percent(50.0),
-                                overflow: Overflow::clip(),
+                                overflow: Overflow::scroll_y(),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(8.0)),
                                 ..default()
@@ -259,7 +259,7 @@ pub fn setup_mission_control(mut commands: Commands) {
                                 flex_direction: FlexDirection::Column,
                                 row_gap: Val::Px(0.0),
                                 flex_grow: 1.0,
-                                overflow: Overflow::clip(),
+                                overflow: Overflow::scroll_y(),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(8.0)),
                                 ..default()
