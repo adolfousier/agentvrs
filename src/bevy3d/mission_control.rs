@@ -49,6 +49,8 @@ pub struct McTaskRowButton {
     pub summary: String,
     pub submitted_at: String,
     pub last_updated: String,
+    /// Human-readable duration from submitted_at to last_updated (e.g. "2m 30s").
+    pub duration: String,
 }
 
 /// Marker for the task detail popup overlay.
@@ -888,6 +890,7 @@ pub fn update_mission_control(
                         summary: task.response_summary.clone().unwrap_or_default(),
                         submitted_at: task.submitted_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
                         last_updated: task.last_updated.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        duration: format_duration(task.last_updated - task.submitted_at),
                     },
                     McChild,
                 ))
@@ -1204,11 +1207,31 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                     // Timestamps
                     field_node!(dialog, &t, "Submitted", &btn.submitted_at, zoom);
                     field_node!(dialog, &t, "Last Updated", &btn.last_updated, zoom);
+
+                    // Duration (for completed/failed tasks)
+                    if btn.state == "completed" || btn.state == "failed" {
+                        field_node!(dialog, &t, "Duration", &btn.duration, zoom);
+                    }
                 });
         });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/// Format a chrono::TimeDelta as a human-readable duration string.
+fn format_duration(d: chrono::TimeDelta) -> String {
+    let total_secs = d.num_seconds().max(0);
+    let hours = total_secs / 3600;
+    let mins = (total_secs % 3600) / 60;
+    let secs = total_secs % 60;
+    if hours > 0 {
+        format!("{}h {}m {}s", hours, mins, secs)
+    } else if mins > 0 {
+        format!("{}m {}s", mins, secs)
+    } else {
+        format!("{}s", secs)
+    }
+}
 
 pub(crate) fn state_color(state: &crate::agent::AgentState) -> Color {
     use crate::agent::AgentState;

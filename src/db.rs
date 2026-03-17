@@ -286,6 +286,15 @@ impl Database {
         Ok(())
     }
 
+    pub fn delete_task(&self, agent_id: AgentId, task_id: &str) -> Result<bool> {
+        tracing::debug!("DB: deleting task '{}' for agent {}", task_id, agent_id);
+        let changes = self.conn.execute(
+            "DELETE FROM tasks WHERE agent_id = ?1 AND task_id = ?2",
+            params![agent_id.0.to_string(), task_id],
+        )?;
+        Ok(changes > 0)
+    }
+
     pub fn load_tasks(&self, agent_id: &AgentId, limit: usize) -> Result<Vec<TaskRecord>> {
         let mut stmt = self.conn.prepare(
             "SELECT task_id, state, submitted_at, last_updated, response_summary FROM tasks \

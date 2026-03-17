@@ -168,6 +168,15 @@ impl AgentObserver {
         }
     }
 
+    pub fn delete_task(&mut self, agent_id: &AgentId, task_id: &str) -> bool {
+        if let Some(records) = self.tasks.get_mut(agent_id) {
+            let before = records.len();
+            records.retain(|t| t.task_id != task_id);
+            return records.len() < before;
+        }
+        false
+    }
+
     pub fn remove_agent(&mut self, agent_id: &AgentId) {
         self.activity.remove(agent_id);
         self.heartbeats.remove(agent_id);

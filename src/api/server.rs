@@ -54,6 +54,7 @@ pub fn build_router(
         .route("/agents/{id}/heartbeat", post(routes::post_agent_heartbeat))
         .route("/agents/{id}/status", get(routes::get_agent_status))
         .route("/agents/{id}/tasks", get(routes::get_agent_tasks).post(routes::report_task))
+        .route("/agents/{id}/tasks/{task_id}", delete(routes::delete_task))
         .route("/agents/{id}/dashboard", get(routes::get_agent_dashboard))
         // Agent inbox
         .route("/agents/{id}/messages", get(routes::get_agent_messages))
