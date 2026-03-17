@@ -95,6 +95,8 @@ pub struct McTaskRowButton {
     pub last_updated: String,
     /// Human-readable duration from submitted_at to last_updated (e.g. "2m 30s").
     pub duration: String,
+    /// Optional full scope/description of the task.
+    pub scope: String,
 }
 
 /// Marker for the task detail popup overlay.
@@ -201,11 +203,35 @@ fn mc_theme(is_dark: bool) -> McTheme {
 
 // ── Toggle with M key ────────────────────────────────────────────────────────
 
+#[allow(clippy::type_complexity)]
 pub fn toggle_mission_control(
     mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
     mut mc_state: ResMut<MissionControlState>,
-    mut mc_root_q: Query<&mut Visibility, With<MissionControlRoot>>,
+    mut mc_root_q: Query<
+        &mut Visibility,
+        (
+            With<MissionControlRoot>,
+            Without<super::overlay::StatusBarRoot>,
+            Without<super::overlay::SidebarRoot>,
+        ),
+    >,
+    mut statusbar_q: Query<
+        &mut Visibility,
+        (
+            With<super::overlay::StatusBarRoot>,
+            Without<MissionControlRoot>,
+            Without<super::overlay::SidebarRoot>,
+        ),
+    >,
+    mut sidebar_q: Query<
+        &mut Visibility,
+        (
+            With<super::overlay::SidebarRoot>,
+            Without<MissionControlRoot>,
+            Without<super::overlay::StatusBarRoot>,
+        ),
+    >,
     popup_q: Query<Entity, With<McTaskPopup>>,
 ) {
     if keys.just_pressed(KeyCode::KeyM) {
@@ -227,6 +253,18 @@ pub fn toggle_mission_control(
             } else {
                 Visibility::Hidden
             };
+        }
+        // Hide sidebar and status bar when MC is open
+        let gui_vis = if mc_state.open {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        };
+        for mut vis in statusbar_q.iter_mut() {
+            *vis = gui_vis;
+        }
+        for mut vis in sidebar_q.iter_mut() {
+            *vis = gui_vis;
         }
     }
 }
@@ -544,14 +582,17 @@ pub fn update_mission_control(
                         padding: UiRect::all(px(14.0)),
                         row_gap: px(6.0),
                         width: px(280.0),
+                        max_height: Val::Percent(90.0),
                         border: UiRect::all(px(if is_selected { 2.0 } else { 1.0 })),
                         border_radius: BorderRadius::all(px(8.0)),
-                        overflow: Overflow::clip(),
+                        overflow: Overflow::scroll_y(),
                         ..default()
                     },
+                    ScrollPosition::default(),
                     BackgroundColor(t.card_bg),
                     BorderColor::all(card_border_color),
                     Interaction::default(),
+                    McScrollable,
                     McCardButton(agent.id),
                     McChild,
                 ))
@@ -996,6 +1037,7 @@ pub fn update_mission_control(
                             .format("%Y-%m-%d %H:%M:%S UTC")
                             .to_string(),
                         duration: format_duration(task.last_updated - task.submitted_at),
+                        scope: task.scope.clone().unwrap_or_default(),
                     },
                     McChild,
                 ))
@@ -1389,6 +1431,11 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                     // Summary
                     if !btn.summary.is_empty() {
                         field_node!(dialog, &t, "Summary", &btn.summary, zoom);
+                    }
+
+                    // Scope
+                    if !btn.scope.is_empty() {
+                        field_node!(dialog, &t, "Scope", &btn.scope, zoom);
                     }
 
                     // Timestamps
