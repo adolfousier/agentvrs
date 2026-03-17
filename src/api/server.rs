@@ -47,6 +47,7 @@ pub fn build_router(
         .route("/agents/{id}/move", post(routes::move_agent))
         .route("/agents/{id}/goal", post(routes::set_agent_goal))
         .route("/agents/{id}/state", post(routes::set_agent_state))
+        .route("/agents/{id}/rename", post(routes::rename_agent))
         // Observability endpoints
         .route("/agents/{id}/detail", get(routes::get_agent))
         .route("/agents/{id}/activity", get(routes::get_agent_activity))

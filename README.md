@@ -238,6 +238,11 @@ POST /agents/{id}/goal
 POST /agents/{id}/state
 # Body: {"state":"working"}
 # Response: {"status":"state_changed","state":"working"}
+
+# Rename agent
+POST /agents/{id}/rename
+# Body: {"name":"new-name"}
+# Response: {"status":"renamed","name":"new-name"}
 ```
 
 #### Agent Inbox

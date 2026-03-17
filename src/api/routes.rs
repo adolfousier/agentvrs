@@ -487,6 +487,46 @@ pub async fn set_agent_state(
     })))
 }
 
+pub async fn rename_agent(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+    Json(req): Json<RenameRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let name = req.name.trim().to_string();
+    if name.is_empty() {
+        return Err(ApiError::BadRequest("name cannot be empty".into()));
+    }
+
+    let agent_id = {
+        let mut reg = state.registry.write().unwrap();
+        let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
+        agent.name = name.clone();
+        agent.id
+    };
+
+    // Persist name change to DB
+    if let Ok(db) = state.db.lock() {
+        let reg = state.registry.read().unwrap();
+        if let Some(agent) = reg.get(&agent_id) {
+            let _ = db.save_agent(agent);
+        }
+    }
+
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_activity(
+            agent_id,
+            ActivityKind::StateChange,
+            format!("Renamed to '{}'", name),
+        );
+    }
+
+    Ok(Json(serde_json::json!({
+        "status": "renamed",
+        "name": name
+    })))
+}
+
 // --- World ---
 
 pub async fn world_snapshot(State(state): State<ApiState>) -> Json<WorldSnapshot> {

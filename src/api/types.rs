@@ -67,6 +67,11 @@ pub struct StateRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RenameRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiCell {
     pub tile: String,
     #[serde(skip_serializing_if = "Option::is_none")]
