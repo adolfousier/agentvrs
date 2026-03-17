@@ -184,6 +184,12 @@ pub struct LimitQuery {
     pub limit: Option<usize>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskQuery {
+    pub limit: Option<usize>,
+    pub state: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardResponse {
     pub agent: ApiAgentDetail,

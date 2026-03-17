@@ -1080,7 +1080,7 @@ pub async fn get_agent_status(
 pub async fn get_agent_tasks(
     State(state): State<ApiState>,
     Path(agent_id_str): Path<String>,
-    Query(query): Query<LimitQuery>,
+    Query(query): Query<TaskQuery>,
 ) -> Result<Json<TaskHistoryResponse>, ApiError> {
     let reg = state
         .registry
@@ -1098,6 +1098,7 @@ pub async fn get_agent_tasks(
     let tasks: Vec<_> = obs
         .get_tasks(&agent_id, limit)
         .into_iter()
+        .filter(|t| query.state.as_ref().is_none_or(|s| t.state == *s))
         .cloned()
         .collect();
 
