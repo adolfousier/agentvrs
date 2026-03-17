@@ -71,8 +71,8 @@ fn mc_theme(is_dark: bool) -> McTheme {
             text_secondary: Color::srgb(0.56, 0.58, 0.63),
             text_muted: Color::srgb(0.38, 0.40, 0.45),
             link: Color::srgb(0.35, 0.60, 1.0),
-            badge_bg: Color::srgb(0.15, 0.30, 0.55),
-            badge_text: Color::srgb(0.55, 0.75, 1.0),
+            badge_bg: Color::srgb(0.20, 0.35, 0.65),
+            badge_text: Color::srgb(0.85, 0.90, 1.0),
             separator: Color::srgb(0.18, 0.19, 0.23),
         }
     } else {
@@ -88,8 +88,8 @@ fn mc_theme(is_dark: bool) -> McTheme {
             text_secondary: Color::srgb(0.38, 0.40, 0.46),
             text_muted: Color::srgb(0.55, 0.57, 0.62),
             link: Color::srgb(0.08, 0.38, 0.78),
-            badge_bg: Color::srgb(0.87, 0.92, 1.0),
-            badge_text: Color::srgb(0.08, 0.38, 0.78),
+            badge_bg: Color::srgb(0.22, 0.44, 0.72),
+            badge_text: Color::WHITE,
             separator: Color::srgb(0.85, 0.86, 0.89),
         }
     }
@@ -336,6 +336,22 @@ pub fn update_mission_control(
             commands.entity(card_parent).add_child(empty);
         }
 
+        // Load per-agent tasks and activity from DB
+        let mut agent_tasks: std::collections::HashMap<crate::agent::AgentId, Vec<crate::api::observability::TaskRecord>> =
+            std::collections::HashMap::new();
+        let mut agent_activity: std::collections::HashMap<crate::agent::AgentId, Vec<crate::api::observability::ActivityEntry>> =
+            std::collections::HashMap::new();
+        if let Ok(db) = bridge.db.lock() {
+            for agent in registry.agents() {
+                if let Ok(tasks) = db.load_tasks(&agent.id, 3) {
+                    agent_tasks.insert(agent.id, tasks);
+                }
+                if let Ok(entries) = db.load_activity(&agent.id, 3) {
+                    agent_activity.insert(agent.id, entries);
+                }
+            }
+        }
+
         for agent in registry.agents() {
             let dot_color = state_color(&agent.state);
             let kind_label = match &agent.kind {
@@ -344,15 +360,19 @@ pub fn update_mission_control(
                 crate::agent::AgentKind::OpenCrabs { .. } => "opencrabs",
             };
 
+            let tasks = agent_tasks.get(&agent.id);
+            let activity = agent_activity.get(&agent.id);
+
             let card = commands
                 .spawn((
                     Node {
                         flex_direction: FlexDirection::Column,
                         padding: UiRect::all(Val::Px(14.0)),
-                        row_gap: Val::Px(8.0),
-                        width: Val::Px(220.0),
+                        row_gap: Val::Px(6.0),
+                        width: Val::Px(280.0),
                         border: UiRect::all(Val::Px(1.0)),
                         border_radius: BorderRadius::all(Val::Px(8.0)),
+                        overflow: Overflow::clip(),
                         ..default()
                     },
                     BackgroundColor(t.card_bg),
@@ -368,7 +388,6 @@ pub fn update_mission_control(
                         ..default()
                     })
                     .with_children(|top| {
-                        // Name with status dot
                         top.spawn(Node {
                             flex_direction: FlexDirection::Row,
                             column_gap: Val::Px(8.0),
@@ -387,22 +406,14 @@ pub fn update_mission_control(
                             ));
                             name_row.spawn((
                                 Text::new(&agent.name),
-                                TextFont {
-                                    font_size: 14.0,
-                                    ..default()
-                                },
+                                TextFont { font_size: 14.0, ..default() },
                                 TextColor(t.text_primary),
                             ));
                         });
                         // Kind badge
                         top.spawn((
                             Node {
-                                padding: UiRect::new(
-                                    Val::Px(8.0),
-                                    Val::Px(8.0),
-                                    Val::Px(2.0),
-                                    Val::Px(2.0),
-                                ),
+                                padding: UiRect::new(Val::Px(8.0), Val::Px(8.0), Val::Px(2.0), Val::Px(2.0)),
                                 border: UiRect::all(Val::Px(1.0)),
                                 border_radius: BorderRadius::all(Val::Px(12.0)),
                                 ..default()
@@ -413,77 +424,164 @@ pub fn update_mission_control(
                         .with_children(|badge| {
                             badge.spawn((
                                 Text::new(kind_label),
-                                TextFont {
-                                    font_size: 10.0,
-                                    ..default()
-                                },
+                                TextFont { font_size: 10.0, ..default() },
                                 TextColor(t.text_secondary),
                             ));
                         });
                     });
 
-                    // State label
-                    card.spawn((
-                        Text::new(agent.state.label()),
-                        TextFont {
-                            font_size: 12.0,
-                            ..default()
-                        },
-                        TextColor(t.text_secondary),
-                    ));
-
-                    // Separator
-                    card.spawn((
-                        Node {
-                            height: Val::Px(1.0),
-                            ..default()
-                        },
-                        BackgroundColor(t.separator),
-                    ));
-
-                    // Bottom row: position + inbox
+                    // State + position row
                     card.spawn(Node {
                         flex_direction: FlexDirection::Row,
                         justify_content: JustifyContent::SpaceBetween,
                         align_items: AlignItems::Center,
                         ..default()
                     })
-                    .with_children(|bottom| {
-                        bottom.spawn((
-                            Text::new(format!("({}, {})", agent.position.x, agent.position.y)),
-                            TextFont {
-                                font_size: 11.0,
-                                ..default()
-                            },
+                    .with_children(|row| {
+                        row.spawn((
+                            Text::new(agent.state.label()),
+                            TextFont { font_size: 12.0, ..default() },
+                            TextColor(t.text_secondary),
+                        ));
+                        row.spawn((
+                            Text::new(format!("({},{})", agent.position.x, agent.position.y)),
+                            TextFont { font_size: 10.0, ..default() },
                             TextColor(t.text_muted),
                         ));
                         if !agent.inbox.is_empty() {
-                            bottom
-                                .spawn((
-                                    Node {
-                                        padding: UiRect::new(
-                                            Val::Px(7.0),
-                                            Val::Px(7.0),
-                                            Val::Px(2.0),
-                                            Val::Px(2.0),
-                                        ),
-                                        border_radius: BorderRadius::all(Val::Px(10.0)),
-                                        ..default()
-                                    },
-                                    BackgroundColor(t.badge_bg),
-                                ))
-                                .with_children(|badge| {
-                                    badge.spawn((
-                                        Text::new(format!("{} msg", agent.inbox.len())),
-                                        TextFont {
-                                            font_size: 10.0,
-                                            ..default()
-                                        },
-                                        TextColor(t.badge_text),
-                                    ));
-                                });
+                            row.spawn((
+                                Node {
+                                    padding: UiRect::new(Val::Px(7.0), Val::Px(7.0), Val::Px(2.0), Val::Px(2.0)),
+                                    border_radius: BorderRadius::all(Val::Px(10.0)),
+                                    ..default()
+                                },
+                                BackgroundColor(t.badge_bg),
+                            ))
+                            .with_children(|badge| {
+                                badge.spawn((
+                                    Text::new(format!("{} msg", agent.inbox.len())),
+                                    TextFont { font_size: 10.0, ..default() },
+                                    TextColor(t.badge_text),
+                                ));
+                            });
                         }
                     });
+
+                    // ── Recent tasks section ──
+                    if let Some(tasks) = tasks {
+                        if !tasks.is_empty() {
+                            // Separator
+                            card.spawn((
+                                Node { height: Val::Px(1.0), ..default() },
+                                BackgroundColor(t.separator),
+                            ));
+                            card.spawn((
+                                Text::new("Tasks"),
+                                TextFont { font_size: 10.0, ..default() },
+                                TextColor(t.heading),
+                            ));
+                            for task in tasks.iter().rev().take(3) {
+                                let task_dot = match task.state.as_str() {
+                                    "completed" => Color::srgb(0.2, 0.8, 0.2),
+                                    "failed" => Color::srgb(1.0, 0.3, 0.3),
+                                    _ => Color::srgb(0.3, 0.7, 1.0),
+                                };
+                                card.spawn(Node {
+                                    flex_direction: FlexDirection::Row,
+                                    column_gap: Val::Px(6.0),
+                                    align_items: AlignItems::FlexStart,
+                                    ..default()
+                                })
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Node {
+                                            width: Val::Px(6.0),
+                                            height: Val::Px(6.0),
+                                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                                            margin: UiRect::top(Val::Px(4.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(task_dot),
+                                    ));
+                                    // State badge
+                                    row.spawn((
+                                        Node {
+                                            padding: UiRect::new(Val::Px(5.0), Val::Px(5.0), Val::Px(1.0), Val::Px(1.0)),
+                                            border: UiRect::all(Val::Px(1.0)),
+                                            border_radius: BorderRadius::all(Val::Px(8.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(Color::NONE),
+                                        BorderColor::all(task_dot),
+                                    ))
+                                    .with_children(|b| {
+                                        b.spawn((
+                                            Text::new(&task.state),
+                                            TextFont { font_size: 9.0, ..default() },
+                                            TextColor(task_dot),
+                                        ));
+                                    });
+                                    // Summary — full text, wrapping
+                                    let summary = task.response_summary.as_deref()
+                                        .unwrap_or(&task.task_id);
+                                    row.spawn((
+                                        Text::new(summary),
+                                        TextFont { font_size: 10.0, ..default() },
+                                        TextColor(t.text_secondary),
+                                        Node {
+                                            flex_shrink: 1.0,
+                                            ..default()
+                                        },
+                                    ));
+                                });
+                            }
+                        }
+                    }
+
+                    // ── Recent activity section ──
+                    if let Some(entries) = activity {
+                        if !entries.is_empty() {
+                            card.spawn((
+                                Node { height: Val::Px(1.0), ..default() },
+                                BackgroundColor(t.separator),
+                            ));
+                            card.spawn((
+                                Text::new("Activity"),
+                                TextFont { font_size: 10.0, ..default() },
+                                TextColor(t.heading),
+                            ));
+                            for entry in entries.iter().rev().take(3) {
+                                let secs = (chrono::Utc::now() - entry.timestamp).num_seconds();
+                                let ago = if secs < 60 {
+                                    format!("{}s", secs)
+                                } else if secs < 3600 {
+                                    format!("{}m", secs / 60)
+                                } else {
+                                    format!("{}h", secs / 3600)
+                                };
+                                card.spawn(Node {
+                                    flex_direction: FlexDirection::Row,
+                                    column_gap: Val::Px(6.0),
+                                    align_items: AlignItems::FlexStart,
+                                    ..default()
+                                })
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Text::new(&ago),
+                                        TextFont { font_size: 9.0, ..default() },
+                                        TextColor(t.text_muted),
+                                        Node { min_width: Val::Px(28.0), ..default() },
+                                    ));
+                                    row.spawn((
+                                        Text::new(&entry.detail),
+                                        TextFont { font_size: 10.0, ..default() },
+                                        TextColor(t.text_secondary),
+                                        Node { flex_shrink: 1.0, ..default() },
+                                    ));
+                                });
+                            }
+                        }
+                    }
                 })
                 .id();
             commands.entity(card_parent).add_child(card);
@@ -593,11 +691,7 @@ pub fn update_mission_control(
                             ..default()
                         },
                     ));
-                    let detail = if entry.detail.len() > 60 {
-                        format!("{}...", &entry.detail[..57])
-                    } else {
-                        entry.detail.clone()
-                    };
+                    let detail = entry.detail.clone();
                     row.spawn((
                         Text::new(detail),
                         TextFont {
@@ -736,12 +830,7 @@ pub fn update_mission_control(
                             TextColor(task_state_color),
                         ));
                     });
-                    let summary = task.response_summary.as_deref().unwrap_or(&task.task_id);
-                    let summary = if summary.len() > 50 {
-                        format!("{}...", &summary[..47])
-                    } else {
-                        summary.to_string()
-                    };
+                    let summary = task.response_summary.as_deref().unwrap_or(&task.task_id).to_string();
                     row.spawn((
                         Text::new(summary),
                         TextFont {
