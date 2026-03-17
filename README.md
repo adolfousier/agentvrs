@@ -567,6 +567,69 @@ curl -X POST http://192.168.1.100:18800/agents/connect \
 
 All agents appear in the same world. Monitor everything from a single dashboard.
 
+### VPS Deployment with Nginx
+
+Serve Agentverse behind nginx on a VPS with HTTPS and SSE support.
+
+**1. Create the nginx config:**
+
+```nginx
+# /etc/nginx/sites-available/agentverse
+server {
+    listen 80;
+    server_name agentverse.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:18800;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE support for /events endpoint
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
+```
+
+**2. Enable and restart nginx (one-liner):**
+
+```bash
+sudo cp /etc/nginx/sites-available/agentverse /etc/nginx/sites-available/agentverse && sudo ln -sf /etc/nginx/sites-available/agentverse /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl restart nginx
+```
+
+**3. Optional: systemd service for Agentverse:**
+
+```ini
+# /etc/systemd/system/agentverse.service
+[Unit]
+Description=Agentverse
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/agentverse
+WorkingDirectory=/home/deploy
+Restart=always
+RestartSec=5
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now agentverse
+```
+
+**4. Add HTTPS with Let's Encrypt (one-liner):**
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx && sudo certbot --nginx -d agentverse.example.com
+```
+
 ---
 
 ## Architecture
