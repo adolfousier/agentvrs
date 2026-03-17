@@ -1,4 +1,4 @@
-use super::{Agent, AgentId};
+use crate::agent::{Agent, AgentId};
 use std::collections::HashMap;
 
 #[derive(Debug, Default)]

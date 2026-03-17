@@ -1,4 +1,4 @@
-use super::AgentMessage;
+use crate::agent::AgentMessage;
 use crate::world::Position;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;

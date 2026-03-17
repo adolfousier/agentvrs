@@ -1,5 +1,5 @@
-use super::client::A2aClient;
-use super::types::*;
+use crate::a2a::client::A2aClient;
+use crate::a2a::types::*;
 use crate::agent::{Agent, AgentId, AgentKind, AgentRegistry, AgentState};
 use crate::world::{Grid, Position, WorldEvent};
 use anyhow::Result;

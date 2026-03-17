@@ -1,5 +1,5 @@
-use super::observability::{ActivityKind, AgentObserver};
-use super::types::*;
+use crate::api::observability::{ActivityKind, AgentObserver};
+use crate::api::types::*;
 use crate::agent::{Agent, AgentGoal, AgentKind, AgentMessage, AgentRegistry, AgentState};
 use crate::db::Database;
 use crate::error::ApiError;

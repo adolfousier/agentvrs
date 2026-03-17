@@ -1,4 +1,4 @@
-use super::app::{App, AppMode};
+use crate::tui::app::{App, AppMode};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub fn handle_key(app: &mut App, key: KeyEvent) {

@@ -1,4 +1,4 @@
-use super::observability::{ActivityEntry, HeartbeatInfo, TaskRecord};
+use crate::api::observability::{ActivityEntry, HeartbeatInfo, TaskRecord};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

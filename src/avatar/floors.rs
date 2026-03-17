@@ -1,5 +1,5 @@
-use super::palette::{floor_colors, wall_color};
-use super::sprite::{SpriteFrame, StyledCell};
+use crate::avatar::palette::{floor_colors, wall_color};
+use crate::avatar::sprite::{SpriteFrame, StyledCell};
 use crate::world::{FloorKind, Tile, WallKind};
 use ratatui::style::Color;
 

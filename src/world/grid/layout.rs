@@ -1,4 +1,4 @@
-use super::{FloorKind, Grid, Tile};
+use crate::world::grid::{FloorKind, Grid, Tile};
 use crate::world::Position;
 
 /// Build a compact, densely furnished office.

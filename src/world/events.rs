@@ -1,4 +1,4 @@
-use super::Position;
+use crate::world::Position;
 use crate::agent::AgentId;
 use serde::Serialize;
 

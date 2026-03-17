@@ -1,4 +1,4 @@
-use super::{Grid, Position};
+use crate::world::{Grid, Position};
 use std::collections::{HashMap, VecDeque};
 
 /// BFS pathfinding on the grid. Returns the path excluding `from`, including `to`.

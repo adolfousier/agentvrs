@@ -1,4 +1,4 @@
-use super::AgentId;
+use crate::agent::AgentId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

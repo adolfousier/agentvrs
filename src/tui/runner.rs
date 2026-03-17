@@ -1,7 +1,7 @@
-use super::app::App;
-use super::events::{EventHandler, TuiEvent};
-use super::input::handle_key;
-use super::render;
+use crate::tui::app::App;
+use crate::tui::events::{EventHandler, TuiEvent};
+use crate::tui::input::handle_key;
+use crate::tui::render;
 use crate::config::AppConfig;
 use crate::runner;
 use anyhow::Result;

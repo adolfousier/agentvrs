@@ -1,4 +1,4 @@
-use super::types::*;
+use crate::a2a::types::*;
 use anyhow::Result;
 
 pub struct A2aClient {

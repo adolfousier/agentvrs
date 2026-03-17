@@ -1,4 +1,4 @@
-use super::sprite::{SpriteFrame, StyledCell};
+use crate::avatar::sprite::{SpriteFrame, StyledCell};
 use crate::world::Tile;
 use ratatui::style::Color;
 

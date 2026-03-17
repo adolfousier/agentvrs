@@ -1,5 +1,5 @@
-use super::palette::{hair_color, shirt_color, skin_color};
-use super::sprite::{BigSpriteFrame, StyledCell};
+use crate::avatar::palette::{hair_color, shirt_color, skin_color};
+use crate::avatar::sprite::{BigSpriteFrame, StyledCell};
 use crate::agent::{AgentState, Facing};
 use ratatui::style::Color;
 

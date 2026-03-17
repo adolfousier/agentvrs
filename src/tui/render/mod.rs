@@ -4,7 +4,7 @@ mod sidebar;
 mod status_bar;
 mod world_view;
 
-use super::app::{App, AppMode};
+use crate::tui::app::{App, AppMode};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
 

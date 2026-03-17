@@ -1,5 +1,5 @@
-use super::pathfind::find_path;
-use super::{Grid, WorldEvent};
+use crate::world::pathfind::find_path;
+use crate::world::{Grid, WorldEvent};
 use crate::agent::{AgentGoal, AgentId, AgentRegistry, AgentState, Facing};
 use crate::world::{Position, Tile};
 use std::sync::{Arc, RwLock};

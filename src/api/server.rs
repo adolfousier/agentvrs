@@ -1,5 +1,5 @@
-use super::observability::AgentObserver;
-use super::routes::{self, ApiState};
+use crate::api::observability::AgentObserver;
+use crate::api::routes::{self, ApiState};
 use crate::agent::AgentRegistry;
 use crate::config::ServerConfig;
 use crate::db::Database;
