@@ -134,6 +134,9 @@ pub struct Agent {
     pub goal: Option<AgentGoal>,
     pub path: Vec<Position>,
     pub inbox: VecDeque<AgentMessage>,
+    /// When true, the simulation won't override this agent's state.
+    /// Set by API task reports; cleared when agent returns to Idle.
+    pub api_locked: bool,
 }
 
 impl Agent {
@@ -152,6 +155,7 @@ impl Agent {
             goal: None,
             path: Vec::new(),
             inbox: VecDeque::new(),
+            api_locked: false,
         }
     }
 
@@ -182,6 +186,7 @@ impl Agent {
             goal: None,
             path: Vec::new(),
             inbox: VecDeque::new(),
+            api_locked: false,
         }
     }
 

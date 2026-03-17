@@ -69,6 +69,8 @@ impl Simulation {
                 match state {
                     AgentState::Idle => {
                         if let Some(agent) = reg.get_mut(&id) {
+                            // Clear api_locked when agent returns to Idle
+                            agent.api_locked = false;
                             agent.anim.activity_ticks += 1;
                             if agent.anim.activity_ticks >= 15 {
                                 needs_goal.push(id);
@@ -148,21 +150,25 @@ impl Simulation {
                     | AgentState::Thinking => {
                         if let Some(agent) = reg.get_mut(&id) {
                             agent.anim.activity_ticks += 1;
-                            let min_ticks = match agent.state {
-                                AgentState::Working => 40,
-                                AgentState::Eating => 20,
-                                AgentState::Playing => 30,
-                                AgentState::Exercising => 35,
-                                AgentState::Thinking => 25,
-                                _ => 25,
-                            };
-                            if agent.anim.activity_ticks > min_ticks
-                                && rand::rng().random_range(0..10u8) < 2
-                            {
-                                agent.set_state(AgentState::Idle);
-                                agent.goal = None;
-                                agent.path.clear();
-                                agent.anim.activity_ticks = 0;
+                            // If api_locked (set by task report), don't auto-return to Idle.
+                            // The agent stays in its task state until the API changes it.
+                            if !agent.api_locked {
+                                let min_ticks = match agent.state {
+                                    AgentState::Working => 40,
+                                    AgentState::Eating => 20,
+                                    AgentState::Playing => 30,
+                                    AgentState::Exercising => 35,
+                                    AgentState::Thinking => 25,
+                                    _ => 25,
+                                };
+                                if agent.anim.activity_ticks > min_ticks
+                                    && rand::rng().random_range(0..10u8) < 2
+                                {
+                                    agent.set_state(AgentState::Idle);
+                                    agent.goal = None;
+                                    agent.path.clear();
+                                    agent.anim.activity_ticks = 0;
+                                }
                             }
                         }
                     }

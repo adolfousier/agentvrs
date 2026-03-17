@@ -560,6 +560,21 @@ pub async fn report_task(
         if req.state == "completed" || req.state == "submitted" {
             agent.task_count += 1;
         }
+        // Auto-sync visual state with task lifecycle.
+        // api_locked prevents the simulation from overriding this state.
+        let new_state = match req.state.as_str() {
+            "submitted" => Some(AgentState::Thinking),
+            "running" => Some(AgentState::Working),
+            "completed" => Some(AgentState::Idle),
+            "failed" => Some(AgentState::Idle),
+            _ => None,
+        };
+        if let Some(s) = new_state {
+            agent.set_state(s.clone());
+            agent.anim.activity_ticks = 0;
+            // Lock state during active tasks, unlock on completion
+            agent.api_locked = s != AgentState::Idle;
+        }
         agent.id
     };
 
@@ -610,6 +625,47 @@ pub async fn report_task(
         "status": "recorded",
         "task_id": task_id,
         "state": req.state
+    })))
+}
+
+// --- Task Deletion ---
+
+pub async fn delete_task(
+    State(state): State<ApiState>,
+    Path((agent_id_str, task_id)): Path<(String, String)>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let task_id = task_id.trim().to_string();
+    if task_id.is_empty() {
+        return Err(ApiError::BadRequest("task_id cannot be empty".into()));
+    }
+
+    let agent_id = {
+        let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
+        find_agent_by_id(&reg, &agent_id_str)?.id
+    };
+
+    // Remove from observer
+    let found = {
+        let mut obs = state.observer.write().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
+        obs.delete_task(&agent_id, &task_id)
+    };
+
+    if !found {
+        return Err(ApiError::NotFound(format!("task '{}' not found", task_id)));
+    }
+
+    // Remove from database
+    if let Ok(db) = state.db.lock() {
+        if let Err(e) = db.delete_task(agent_id, &task_id) {
+            tracing::error!("Failed to delete task from DB: {}", e);
+        }
+    }
+
+    persist_activity(&state.observer, &state.db, agent_id, ActivityKind::TaskFailed, &format!("Task {} deleted", task_id));
+
+    Ok(Json(serde_json::json!({
+        "status": "deleted",
+        "task_id": task_id
     })))
 }
 
