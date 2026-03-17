@@ -5,13 +5,28 @@ use anyhow::Result;
 async fn main() -> Result<()> {
     let config = AppConfig::load()?;
 
+    let debug_mode = std::env::args().any(|a| a == "--debug" || a == "-d");
+    let default_level = if debug_mode {
+        "agentverse=debug"
+    } else {
+        "agentverse=info"
+    };
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("agentverse=info".parse()?),
+                .add_directive(default_level.parse()?),
         )
         .with_target(false)
         .init();
+
+    if debug_mode {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let db_path = format!("{}/.config/agentverse/agentverse.db", home);
+        tracing::debug!("Debug logging enabled");
+        tracing::debug!("Config: host={}, port={}", config.server.host, config.server.port);
+        tracing::debug!("Database path: {}", db_path);
+    }
 
     let use_tui = std::env::args().any(|a| a == "--tui");
 

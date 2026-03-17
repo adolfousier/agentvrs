@@ -62,11 +62,13 @@ async fn setup_inner(
 
     // Open SQLite database and restore persisted agents
     let db = Database::open()?;
+    tracing::debug!("Database opened successfully");
     {
         let mut g = grid.write().unwrap();
         let mut r = registry.write().unwrap();
         match db.load_agents() {
             Ok(agents) => {
+                tracing::debug!("Found {} agents in database to restore", agents.len());
                 for row in agents {
                     // Only restore if the position is valid and floor is available
                     if g.get(row.position)
