@@ -1194,12 +1194,13 @@ fn find_agent_by_id<'a>(
     reg: &'a AgentRegistry,
     id_str: &str,
 ) -> Result<&'a crate::agent::Agent, ApiError> {
-    // Try full UUID first, then prefix match
+    // Try full UUID or prefix match first, then fall back to name match
     reg.agents()
         .find(|a| {
             let full = a.id.0.to_string();
             full == id_str || full.starts_with(id_str)
         })
+        .or_else(|| reg.agents().find(|a| a.name == id_str))
         .ok_or_else(|| ApiError::NotFound(format!("agent '{}' not found", id_str)))
 }
 
@@ -1207,13 +1208,14 @@ fn find_agent_by_id_mut<'a>(
     reg: &'a mut AgentRegistry,
     id_str: &str,
 ) -> Result<&'a mut crate::agent::Agent, ApiError> {
-    // Find the ID first, then get mutable ref
+    // Find the ID first (by UUID/prefix or name), then get mutable ref
     let target_id = {
         reg.agents()
             .find(|a| {
                 let full = a.id.0.to_string();
                 full == id_str || full.starts_with(id_str)
             })
+            .or_else(|| reg.agents().find(|a| a.name == id_str))
             .map(|a| a.id)
             .ok_or_else(|| ApiError::NotFound(format!("agent '{}' not found", id_str)))?
     };
