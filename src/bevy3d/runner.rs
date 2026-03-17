@@ -130,6 +130,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
         (
             super::mission_control::toggle_mission_control,
             super::mission_control::handle_card_clicks,
+            super::mission_control::handle_task_popup,
             super::mission_control::update_mission_control,
         )
             .chain()

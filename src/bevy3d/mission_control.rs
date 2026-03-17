@@ -40,12 +40,29 @@ pub(crate) struct McActivityHeading;
 #[derive(Component)]
 pub(crate) struct McTaskHeading;
 
+/// Marker for a clickable task row — stores agent name + task record data.
+#[derive(Component, Clone)]
+pub struct McTaskRowButton {
+    pub agent_name: String,
+    pub task_id: String,
+    pub state: String,
+    pub summary: String,
+    pub submitted_at: String,
+    pub last_updated: String,
+}
+
+/// Marker for the task detail popup overlay.
+#[derive(Component)]
+pub struct McTaskPopup;
+
 /// Resource: mission control panel open/closed state.
 #[derive(Resource, Default)]
 pub struct MissionControlState {
     pub open: bool,
     /// Currently selected agent in Mission Control (filters right panel).
     pub selected_agent: Option<crate::agent::AgentId>,
+    /// Whether a task detail popup is currently shown.
+    pub popup_open: bool,
 }
 
 /// Marker component on clickable agent cards, stores the agent ID.
@@ -112,11 +129,21 @@ fn mc_theme(is_dark: bool) -> McTheme {
 // ── Toggle with M key ────────────────────────────────────────────────────────
 
 pub fn toggle_mission_control(
+    mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
     mut mc_state: ResMut<MissionControlState>,
     mut mc_root_q: Query<&mut Visibility, With<MissionControlRoot>>,
+    popup_q: Query<Entity, With<McTaskPopup>>,
 ) {
     if keys.just_pressed(KeyCode::KeyM) {
+        // If popup is open, M closes the popup first (not the whole MC)
+        if mc_state.popup_open {
+            for entity in popup_q.iter() {
+                commands.entity(entity).despawn();
+            }
+            mc_state.popup_open = false;
+            return;
+        }
         mc_state.open = !mc_state.open;
         if !mc_state.open {
             mc_state.selected_agent = None;
@@ -814,6 +841,15 @@ pub fn update_mission_control(
                         ..default()
                     },
                     BackgroundColor(row_bg),
+                    Interaction::default(),
+                    McTaskRowButton {
+                        agent_name: agent_name.clone(),
+                        task_id: task.task_id.clone(),
+                        state: task.state.clone(),
+                        summary: task.response_summary.clone().unwrap_or_default(),
+                        submitted_at: task.submitted_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        last_updated: task.last_updated.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    },
                     McChild,
                 ))
                 .with_children(|row| {
@@ -921,6 +957,236 @@ pub fn handle_card_clicks(
             }
         }
     }
+}
+
+// ── Task popup handler ───────────────────────────────────────────────────────
+
+pub fn handle_task_popup(
+    mut commands: Commands,
+    mut mc_state: ResMut<MissionControlState>,
+    theme: Res<ThemeState>,
+    task_row_q: Query<(&Interaction, &McTaskRowButton), Changed<Interaction>>,
+    popup_q: Query<Entity, With<McTaskPopup>>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    // Dismiss popup on Escape
+    if mc_state.popup_open && keys.just_pressed(KeyCode::Escape) {
+        for entity in popup_q.iter() {
+            commands.entity(entity).despawn();
+        }
+        mc_state.popup_open = false;
+        return;
+    }
+
+    // Open popup on task row click
+    if mc_state.popup_open {
+        // If popup is open and user clicks a task row, close existing and open new
+        let mut clicked = None;
+        for (interaction, btn) in task_row_q.iter() {
+            if *interaction == Interaction::Pressed {
+                clicked = Some(btn.clone());
+            }
+        }
+        if let Some(btn) = clicked {
+            for entity in popup_q.iter() {
+                commands.entity(entity).despawn();
+            }
+            spawn_task_popup(&mut commands, &btn, theme.is_dark);
+        }
+        return;
+    }
+
+    for (interaction, btn) in task_row_q.iter() {
+        if *interaction == Interaction::Pressed {
+            mc_state.popup_open = true;
+            spawn_task_popup(&mut commands, &btn, theme.is_dark);
+            return;
+        }
+    }
+}
+
+/// Spawn a label + value field pair inside a dialog.
+macro_rules! field_node {
+    ($parent:expr, $theme:expr, $label:expr, $value:expr) => {
+        $parent
+            .spawn(Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(4.0),
+                ..default()
+            })
+            .with_children(|field| {
+                field.spawn((
+                    Text::new($label),
+                    TextFont { font_size: 11.0, ..default() },
+                    TextColor($theme.text_muted),
+                ));
+                field.spawn((
+                    Text::new($value),
+                    TextFont { font_size: 13.0, ..default() },
+                    TextColor($theme.text_primary),
+                ));
+            });
+    };
+}
+
+fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: bool) {
+    let t = mc_theme(is_dark);
+    let task_color = match btn.state.as_str() {
+        "completed" => Color::srgb(0.2, 0.8, 0.2),
+        "failed" => Color::srgb(1.0, 0.3, 0.3),
+        "running" => Color::srgb(1.0, 0.85, 0.0),
+        _ => Color::srgb(0.3, 0.7, 1.0),
+    };
+
+    commands
+        .spawn((
+            // Full-screen semi-transparent backdrop
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.0),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                bottom: Val::Px(0.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+            GlobalZIndex(100),
+            McTaskPopup,
+        ))
+        .with_children(|backdrop| {
+            // Dialog card
+            backdrop
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(Val::Px(24.0)),
+                        row_gap: Val::Px(14.0),
+                        width: Val::Px(480.0),
+                        max_height: Val::Percent(70.0),
+                        overflow: Overflow::scroll_y(),
+                        border: UiRect::all(Val::Px(1.0)),
+                        border_radius: BorderRadius::all(Val::Px(12.0)),
+                        ..default()
+                    },
+                    BackgroundColor(t.card_bg),
+                    BorderColor::all(t.card_border),
+                ))
+                .with_children(|dialog| {
+                    // Header row: title + close hint
+                    dialog
+                        .spawn(Node {
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        })
+                        .with_children(|header| {
+                            header.spawn((
+                                Text::new("Task Detail"),
+                                TextFont {
+                                    font_size: 18.0,
+                                    ..default()
+                                },
+                                TextColor(t.title),
+                            ));
+                            header.spawn((
+                                Text::new("press Esc to close"),
+                                TextFont {
+                                    font_size: 11.0,
+                                    ..default()
+                                },
+                                TextColor(t.text_muted),
+                            ));
+                        });
+
+                    // Separator
+                    dialog.spawn((
+                        Node {
+                            height: Val::Px(1.0),
+                            ..default()
+                        },
+                        BackgroundColor(t.separator),
+                    ));
+
+                    // Task ID
+                    field_node!(dialog, &t, "Task ID", &btn.task_id);
+
+                    // Agent
+                    field_node!(dialog, &t, "Agent", &btn.agent_name);
+
+                    // State with colored badge
+                    dialog
+                        .spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            row_gap: Val::Px(4.0),
+                            ..default()
+                        })
+                        .with_children(|field| {
+                            field.spawn((
+                                Text::new("State"),
+                                TextFont {
+                                    font_size: 11.0,
+                                    ..default()
+                                },
+                                TextColor(t.text_muted),
+                            ));
+                            field
+                                .spawn(Node {
+                                    flex_direction: FlexDirection::Row,
+                                    column_gap: Val::Px(8.0),
+                                    align_items: AlignItems::Center,
+                                    ..default()
+                                })
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Node {
+                                            width: Val::Px(10.0),
+                                            height: Val::Px(10.0),
+                                            border_radius: BorderRadius::all(Val::Px(5.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(task_color),
+                                    ));
+                                    row.spawn((
+                                        Node {
+                                            padding: UiRect::new(
+                                                Val::Px(8.0),
+                                                Val::Px(8.0),
+                                                Val::Px(2.0),
+                                                Val::Px(2.0),
+                                            ),
+                                            border: UiRect::all(Val::Px(1.0)),
+                                            border_radius: BorderRadius::all(Val::Px(10.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(Color::NONE),
+                                        BorderColor::all(task_color),
+                                    ))
+                                    .with_children(|badge| {
+                                        badge.spawn((
+                                            Text::new(&btn.state),
+                                            TextFont {
+                                                font_size: 12.0,
+                                                ..default()
+                                            },
+                                            TextColor(task_color),
+                                        ));
+                                    });
+                                });
+                        });
+
+                    // Summary
+                    if !btn.summary.is_empty() {
+                        field_node!(dialog, &t, "Summary", &btn.summary);
+                    }
+
+                    // Timestamps
+                    field_node!(dialog, &t, "Submitted", &btn.submitted_at);
+                    field_node!(dialog, &t, "Last Updated", &btn.last_updated);
+                });
+        });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
