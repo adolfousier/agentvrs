@@ -91,17 +91,16 @@ pub async fn connect_agent(
         .send(WorldEvent::AgentSpawned { agent_id, position })
         .await;
 
-    {
-        let mut obs = state.observer.write().unwrap();
-        obs.record_activity(
-            agent_id,
-            ActivityKind::Spawned,
-            format!(
-                "Agent '{}' connected at ({},{})",
-                req.name, position.x, position.y
-            ),
-        );
-    }
+    persist_activity(
+        &state.observer,
+        &state.db,
+        agent_id,
+        ActivityKind::Spawned,
+        &format!(
+            "Agent '{}' connected at ({},{})",
+            req.name, position.x, position.y
+        ),
+    );
 
     // Persist to database
     {
@@ -146,9 +145,15 @@ pub async fn delete_agent(
         })
         .await;
 
+    persist_activity(
+        &state.observer,
+        &state.db,
+        target_id,
+        ActivityKind::Removed,
+        "Agent disconnected",
+    );
     {
         let mut obs = state.observer.write().unwrap();
-        obs.record_activity(target_id, ActivityKind::Removed, "Agent disconnected");
         obs.remove_agent(&target_id);
     }
 
@@ -226,19 +231,20 @@ pub async fn send_agent_message(
             })
             .await;
 
-        {
-            let mut obs = state.observer.write().unwrap();
-            obs.record_activity(
-                sender_id,
-                ActivityKind::MessageSent,
-                format!("Sent to {}: {}", &to_str[..8.min(to_str.len())], &msg.text),
-            );
-            obs.record_activity(
-                target_id,
-                ActivityKind::MessageReceived,
-                format!("From {}: {}", &sender_id.to_string()[..8], &msg.text),
-            );
-        }
+        persist_activity(
+            &state.observer,
+            &state.db,
+            sender_id,
+            ActivityKind::MessageSent,
+            &format!("Sent to {}: {}", &to_str[..8.min(to_str.len())], &msg.text),
+        );
+        persist_activity(
+            &state.observer,
+            &state.db,
+            target_id,
+            ActivityKind::MessageReceived,
+            &format!("From {}: {}", &sender_id.to_string()[..8], &msg.text),
+        );
 
         // Persist message to database
         if let Ok(db) = state.db.lock() {
@@ -274,14 +280,13 @@ pub async fn send_agent_message(
         }));
     }
 
-    {
-        let mut obs = state.observer.write().unwrap();
-        obs.record_activity(
-            sender_id,
-            ActivityKind::MessageSent,
-            format!("Speech: {}", &msg.text),
-        );
-    }
+    persist_activity(
+        &state.observer,
+        &state.db,
+        sender_id,
+        ActivityKind::MessageSent,
+        &format!("Speech: {}", &msg.text),
+    );
 
     Ok(Json(MessageResponse {
         status: "delivered".to_string(),
@@ -326,14 +331,13 @@ pub async fn move_agent(
         agent.id
     };
 
-    {
-        let mut obs = state.observer.write().unwrap();
-        obs.record_activity(
-            agent_id,
-            ActivityKind::Movement,
-            format!("Moving to ({},{})", req.x, req.y),
-        );
-    }
+    persist_activity(
+        &state.observer,
+        &state.db,
+        agent_id,
+        ActivityKind::Movement,
+        &format!("Moving to ({},{})", req.x, req.y),
+    );
 
     Ok(Json(serde_json::json!({
         "status": "moving",
@@ -373,10 +377,13 @@ pub async fn set_agent_goal(
                 agent.anim.activity_ticks = 0;
             }
             drop(reg);
-            {
-                let mut obs = state.observer.write().unwrap();
-                obs.record_activity(agent_id, ActivityKind::GoalAssigned, "Goal: wander");
-            }
+            persist_activity(
+                &state.observer,
+                &state.db,
+                agent_id,
+                ActivityKind::GoalAssigned,
+                "Goal: wander",
+            );
             return Ok(Json(serde_json::json!({
                 "status": "wandering",
                 "goal": "wander"
@@ -435,14 +442,13 @@ pub async fn set_agent_goal(
         agent.id
     };
 
-    {
-        let mut obs = state.observer.write().unwrap();
-        obs.record_activity(
-            agent_id,
-            ActivityKind::GoalAssigned,
-            format!("Goal: {}", req.goal),
-        );
-    }
+    persist_activity(
+        &state.observer,
+        &state.db,
+        agent_id,
+        ActivityKind::GoalAssigned,
+        &format!("Goal: {}", req.goal),
+    );
 
     Ok(Json(serde_json::json!({
         "status": "heading_to_goal",
@@ -472,14 +478,13 @@ pub async fn set_agent_state(
         agent.id
     };
 
-    {
-        let mut obs = state.observer.write().unwrap();
-        obs.record_activity(
-            agent_id,
-            ActivityKind::StateChange,
-            format!("State → {}", req.state),
-        );
-    }
+    persist_activity(
+        &state.observer,
+        &state.db,
+        agent_id,
+        ActivityKind::StateChange,
+        &format!("State → {}", req.state),
+    );
 
     Ok(Json(serde_json::json!({
         "status": "state_changed",
@@ -512,18 +517,92 @@ pub async fn rename_agent(
         }
     }
 
-    {
-        let mut obs = state.observer.write().unwrap();
-        obs.record_activity(
-            agent_id,
-            ActivityKind::StateChange,
-            format!("Renamed to '{}'", name),
-        );
-    }
+    persist_activity(
+        &state.observer,
+        &state.db,
+        agent_id,
+        ActivityKind::StateChange,
+        &format!("Renamed to '{}'", name),
+    );
 
     Ok(Json(serde_json::json!({
         "status": "renamed",
         "name": name
+    })))
+}
+
+// --- Task Reporting ---
+
+pub async fn report_task(
+    State(state): State<ApiState>,
+    Path(agent_id_str): Path<String>,
+    Json(req): Json<TaskReportRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let task_id = req.task_id.trim().to_string();
+    if task_id.is_empty() {
+        return Err(ApiError::BadRequest("task_id cannot be empty".into()));
+    }
+
+    let valid_states = ["submitted", "running", "completed", "failed"];
+    if !valid_states.contains(&req.state.as_str()) {
+        return Err(ApiError::BadRequest(format!(
+            "invalid task state '{}'. Valid: submitted, running, completed, failed",
+            req.state
+        )));
+    }
+
+    let agent_id = {
+        let mut reg = state.registry.write().unwrap();
+        let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
+        if req.state == "completed" || req.state == "submitted" {
+            agent.task_count += 1;
+        }
+        agent.id
+    };
+
+    // Record in observer
+    {
+        let mut obs = state.observer.write().unwrap();
+        obs.record_task(agent_id, &task_id, &req.state, req.summary.clone());
+    }
+
+    // Build activity kind based on task state
+    let activity_kind = match req.state.as_str() {
+        "submitted" => ActivityKind::TaskSubmitted,
+        "completed" => ActivityKind::TaskCompleted,
+        "failed" => ActivityKind::TaskFailed,
+        _ => ActivityKind::TaskSubmitted,
+    };
+    let detail = match &req.summary {
+        Some(s) => format!("Task {}: {} — {}", task_id, req.state, s),
+        None => format!("Task {}: {}", task_id, req.state),
+    };
+    persist_activity(&state.observer, &state.db, agent_id, activity_kind, &detail);
+
+    // Persist task to database
+    if let Ok(db) = state.db.lock() {
+        let task = crate::api::observability::TaskRecord {
+            task_id: task_id.clone(),
+            submitted_at: Utc::now(),
+            state: req.state.clone(),
+            last_updated: Utc::now(),
+            response_summary: req.summary.clone(),
+        };
+        let _ = db.save_task(agent_id, &task);
+    }
+
+    // Persist updated agent (task_count)
+    if let Ok(db) = state.db.lock() {
+        let reg = state.registry.read().unwrap();
+        if let Some(agent) = reg.get(&agent_id) {
+            let _ = db.save_agent(agent);
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "status": "recorded",
+        "task_id": task_id,
+        "state": req.state
     })))
 }
 
@@ -892,6 +971,28 @@ fn find_agent_by_id_mut<'a>(
     };
     reg.get_mut(&target_id)
         .ok_or_else(|| ApiError::NotFound(format!("agent '{}' not found", id_str)))
+}
+
+/// Record activity in both in-memory observer AND SQLite database.
+fn persist_activity(
+    observer: &Arc<RwLock<AgentObserver>>,
+    db: &Arc<Mutex<crate::db::Database>>,
+    agent_id: crate::agent::AgentId,
+    kind: ActivityKind,
+    detail: &str,
+) {
+    let entry = {
+        let mut obs = observer.write().unwrap();
+        obs.record_activity(agent_id, kind.clone(), detail);
+        crate::api::observability::ActivityEntry {
+            timestamp: Utc::now(),
+            kind,
+            detail: detail.to_string(),
+        }
+    };
+    if let Ok(db) = db.lock() {
+        let _ = db.save_activity(agent_id, &entry);
+    }
 }
 
 fn parse_agent_state(s: &str) -> Result<AgentState, ApiError> {

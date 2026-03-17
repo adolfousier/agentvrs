@@ -168,6 +168,15 @@ pub struct TaskHistoryResponse {
     pub tasks: Vec<TaskRecord>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskReportRequest {
+    pub task_id: String,
+    /// One of: "submitted", "running", "completed", "failed"
+    pub state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct LimitQuery {
     pub limit: Option<usize>,
