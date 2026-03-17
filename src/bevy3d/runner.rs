@@ -7,6 +7,7 @@ use crate::config::AppConfig;
 use crate::runner;
 use anyhow::Result;
 use bevy::prelude::*;
+use bevy::text::CosmicFontSystem;
 
 pub async fn run(config: AppConfig) -> Result<()> {
     let world_w = config.world.width;
@@ -75,6 +76,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
     app.add_systems(
         Startup,
         (
+            load_system_fonts,
             super::materials::setup_materials,
             super::meshes::setup_meshes,
             super::lighting::setup_lighting,
@@ -263,6 +265,18 @@ fn poll_system_theme(
             }
         }
     }
+}
+
+/// Load system fonts (including emoji fonts) into Bevy's font system.
+/// By default Bevy creates an empty font database — this loads OS-installed fonts
+/// (Apple Color Emoji on macOS, Noto Color Emoji on Linux, Segoe UI Emoji on Windows)
+/// so emoji glyphs render correctly in agent names and text.
+fn load_system_fonts(mut font_system: ResMut<CosmicFontSystem>) {
+    font_system.db_mut().load_system_fonts();
+    tracing::info!(
+        "Loaded {} system fonts for emoji support",
+        font_system.db().faces().count()
+    );
 }
 
 /// Detect system dark/light mode preference.
