@@ -7,7 +7,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
-    let registry = app.registry.read().unwrap();
+    let Ok(registry) = app.registry.read() else { return };
 
     let agents: Vec<_> = registry.agents().collect();
     let agent = if app.selected_index < agents.len() {

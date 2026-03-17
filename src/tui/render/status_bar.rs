@@ -7,7 +7,7 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let agent_count = {
-        let registry = app.registry.read().unwrap();
+        let Ok(registry) = app.registry.read() else { return };
         registry.count()
     };
 

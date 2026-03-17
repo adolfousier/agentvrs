@@ -57,7 +57,7 @@ impl A2aBridge {
         let client = A2aClient::new(&endpoint);
 
         let position = {
-            let grid = self.grid.read().unwrap();
+            let grid = self.grid.read().map_err(|_| anyhow::anyhow!("grid lock poisoned"))?;
             grid.find_empty_floor().unwrap_or(Position::new(1, 1))
         };
 
@@ -71,12 +71,12 @@ impl A2aBridge {
         let agent_id = agent.id;
 
         {
-            let mut grid = self.grid.write().unwrap();
+            let mut grid = self.grid.write().map_err(|_| anyhow::anyhow!("grid lock poisoned"))?;
             grid.place_agent(position, agent_id);
         }
 
         {
-            let mut reg = self.registry.write().unwrap();
+            let mut reg = self.registry.write().map_err(|_| anyhow::anyhow!("registry lock poisoned"))?;
             reg.register(agent);
         }
 
@@ -98,7 +98,7 @@ impl A2aBridge {
             .ok_or_else(|| anyhow::anyhow!("no A2A client for agent {}", agent_id))?;
 
         {
-            let mut reg = self.registry.write().unwrap();
+            let mut reg = self.registry.write().map_err(|_| anyhow::anyhow!("registry lock poisoned"))?;
             if let Some(agent) = reg.get_mut(agent_id) {
                 agent.set_state(AgentState::Thinking);
             }
@@ -128,7 +128,7 @@ impl A2aBridge {
 
         let new_state = task_state_to_agent_state(&task.status.state);
         {
-            let mut reg = self.registry.write().unwrap();
+            let mut reg = self.registry.write().map_err(|_| anyhow::anyhow!("registry lock poisoned"))?;
             if let Some(agent) = reg.get_mut(agent_id) {
                 agent.set_state(new_state.clone());
                 agent.task_count += 1;
@@ -157,9 +157,9 @@ impl A2aBridge {
         self.clients.remove(agent_id);
 
         {
-            let mut reg = self.registry.write().unwrap();
+            let mut reg = self.registry.write().map_err(|_| anyhow::anyhow!("registry lock poisoned"))?;
             if let Some(agent) = reg.remove(agent_id) {
-                let mut grid = self.grid.write().unwrap();
+                let mut grid = self.grid.write().map_err(|_| anyhow::anyhow!("grid lock poisoned"))?;
                 grid.remove_agent(agent.position);
             }
         }

@@ -41,8 +41,8 @@ pub fn sim_tick(bridge: Res<WorldBridge>, mut sim: ResMut<SimState>) {
 
     // Single lock scope for all agent processing
     {
-        let grid = bridge.grid.read().unwrap();
-        let mut reg = bridge.registry.write().unwrap();
+        let Ok(grid) = bridge.grid.read() else { return };
+        let Ok(mut reg) = bridge.registry.write() else { return };
 
         let agent_data: Vec<(AgentId, AgentState, Position)> = reg
             .agents()

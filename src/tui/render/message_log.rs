@@ -6,8 +6,8 @@ use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Paragraph};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
-    let log = app.message_log.read().unwrap();
-    let registry = app.registry.read().unwrap();
+    let Ok(log) = app.message_log.read() else { return };
+    let Ok(registry) = app.registry.read() else { return };
 
     let lines: Vec<Line> = log
         .recent(50)

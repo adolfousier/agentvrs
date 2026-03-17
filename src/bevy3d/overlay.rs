@@ -331,7 +331,7 @@ pub fn update_sidebar(
     mut info_q: Query<(&mut Text, &mut TextColor), (With<DetailInfo>, Without<DetailTitle>)>,
     entry_q: Query<Entity, With<AgentListEntry>>,
 ) {
-    let registry = bridge.registry.read().unwrap();
+    let Ok(registry) = bridge.registry.read() else { return };
 
     // ── Rebuild agent list ──────────────────────────────────────────────
     // Remove old entries
@@ -495,7 +495,9 @@ pub fn update_status_bar(
         ),
     >,
 ) {
-    let count = bridge.registry.read().unwrap().count();
+    let Ok(reg_guard) = bridge.registry.read() else { return };
+    let count = reg_guard.count();
+    drop(reg_guard);
     let text_color = if theme.is_dark {
         Color::srgb(0.7, 0.7, 0.7)
     } else {
@@ -507,7 +509,7 @@ pub fn update_status_bar(
         color.0 = text_color;
     }
     for (mut text, mut color) in agents_q.iter_mut() {
-        let (w, h) = bridge.grid.read().unwrap().bounds();
+        let Some((w, h)) = bridge.grid.read().ok().map(|g| g.bounds()) else { continue };
         **text = format!("world: {}x{}", w, h);
         color.0 = text_color;
     }
@@ -548,7 +550,7 @@ pub fn update_agent_labels(
         return;
     };
 
-    let registry = bridge.registry.read().unwrap();
+    let Ok(registry) = bridge.registry.read() else { return };
 
     for (agent_gt, marker) in agent_q.iter() {
         let agent_pos = agent_gt.translation() + Vec3::Y * 0.65;
@@ -725,7 +727,7 @@ pub fn handle_message_input(
     // Enter — send message (set speech bubble + push to inbox)
     if keys.just_pressed(KeyCode::Enter) && input_state.active && !input_state.text.is_empty() {
         if let Some(agent_id) = selected.agent_id {
-            let mut registry = bridge.registry.write().unwrap();
+            let Ok(mut registry) = bridge.registry.write() else { return };
             if let Some(agent) = registry.get_mut(&agent_id) {
                 // Show as speech bubble in the 3D world
                 agent.say(&input_state.text);

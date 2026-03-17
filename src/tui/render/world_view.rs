@@ -8,8 +8,8 @@ use ratatui::layout::Rect;
 use ratatui::style::Color;
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
-    let grid = app.grid.read().unwrap();
-    let registry = app.registry.read().unwrap();
+    let Ok(grid) = app.grid.read() else { return };
+    let Ok(registry) = app.registry.read() else { return };
     let buf = frame.buffer_mut();
 
     // Fill entire area with dark bg

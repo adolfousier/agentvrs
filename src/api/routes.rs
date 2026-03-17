@@ -30,19 +30,19 @@ pub struct ApiState {
 
 // --- Health (no auth) ---
 
-pub async fn health(State(state): State<ApiState>) -> Json<HealthResponse> {
-    let reg = state.registry.read().unwrap();
-    Json(HealthResponse {
+pub async fn health(State(state): State<ApiState>) -> Result<Json<HealthResponse>, ApiError> {
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
+    Ok(Json(HealthResponse {
         status: "ok".to_string(),
         version: crate::VERSION.to_string(),
         agents: reg.count(),
-    })
+    }))
 }
 
 // --- Agent CRUD ---
 
-pub async fn list_agents(State(state): State<ApiState>) -> Json<Vec<ApiAgent>> {
-    let reg = state.registry.read().unwrap();
+pub async fn list_agents(State(state): State<ApiState>) -> Result<Json<Vec<ApiAgent>>, ApiError> {
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agents: Vec<ApiAgent> = reg
         .agents()
         .map(|a| ApiAgent {
@@ -54,7 +54,7 @@ pub async fn list_agents(State(state): State<ApiState>) -> Json<Vec<ApiAgent>> {
             speech: a.speech.clone(),
         })
         .collect();
-    Json(agents)
+    Ok(Json(agents))
 }
 
 pub async fn connect_agent(
@@ -62,7 +62,7 @@ pub async fn connect_agent(
     Json(req): Json<ConnectRequest>,
 ) -> Result<Json<ConnectResponse>, ApiError> {
     let position = {
-        let grid = state.grid.read().unwrap();
+        let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
         grid.find_empty_floor().ok_or(ApiError::ServiceUnavailable(
             "no empty floor available".into(),
         ))?
@@ -77,12 +77,12 @@ pub async fn connect_agent(
     let agent_id = agent.id;
 
     {
-        let mut grid = state.grid.write().unwrap();
+        let mut grid = state.grid.write().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
         grid.place_agent(position, agent_id);
     }
 
     {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         reg.register(agent);
     }
 
@@ -104,7 +104,7 @@ pub async fn connect_agent(
 
     // Persist to database
     {
-        let reg = state.registry.read().unwrap();
+        let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         if let Some(agent) = reg.get(&agent_id)
             && let Ok(db) = state.db.lock()
         {
@@ -125,18 +125,18 @@ pub async fn delete_agent(
     Path(agent_id_str): Path<String>,
 ) -> Result<Json<DeleteResponse>, ApiError> {
     let (target_id, position) = {
-        let reg = state.registry.read().unwrap();
+        let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id(&reg, &agent_id_str)?;
         (agent.id, agent.position)
     };
 
     {
-        let mut grid = state.grid.write().unwrap();
+        let mut grid = state.grid.write().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
         grid.remove_agent(position);
     }
 
     {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         reg.remove(&target_id);
     }
 
@@ -155,7 +155,7 @@ pub async fn delete_agent(
         "Agent disconnected",
     );
     {
-        let mut obs = state.observer.write().unwrap();
+        let mut obs = state.observer.write().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
         obs.remove_agent(&target_id);
     }
 
@@ -180,7 +180,7 @@ pub async fn send_agent_message(
     Json(msg): Json<ApiMessage>,
 ) -> Result<Json<MessageResponse>, ApiError> {
     let (sender_id, target_info, webhook_url) = {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
 
         let sender = find_agent_by_id(&reg, &agent_id_str)?;
         let sender_id = sender.id;
@@ -311,7 +311,7 @@ pub async fn move_agent(
 
     // Validate target is within bounds and walkable
     {
-        let grid = state.grid.read().unwrap();
+        let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
         let cell = grid
             .get(target)
             .ok_or(ApiError::BadRequest("position out of bounds".into()))?;
@@ -323,10 +323,10 @@ pub async fn move_agent(
     }
 
     let agent_id = {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
 
-        let grid = state.grid.read().unwrap();
+        let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
         let path = find_path(&grid, agent.position, target)
             .ok_or(ApiError::BadRequest("no path to target position".into()))?;
 
@@ -369,11 +369,11 @@ pub async fn set_agent_goal(
         "couch" => Tile::Couch,
         "wander" => {
             // Wander to random floor
-            let grid = state.grid.read().unwrap();
+            let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
             let target = grid
                 .find_empty_floor()
                 .ok_or(ApiError::ServiceUnavailable("no empty floor".into()))?;
-            let mut reg = state.registry.write().unwrap();
+            let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
             let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
             let agent_id = agent.id;
             if let Some(path) = find_path(&grid, agent.position, target) {
@@ -415,7 +415,7 @@ pub async fn set_agent_goal(
         _ => unreachable!(),
     };
 
-    let grid = state.grid.read().unwrap();
+    let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
     let targets = grid.find_tiles(&tile_type);
     if targets.is_empty() {
         return Err(ApiError::NotFound(format!(
@@ -435,7 +435,7 @@ pub async fn set_agent_goal(
         ))?;
 
     let agent_id = {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
 
         let path = find_path(&grid, agent.position, adj)
@@ -471,7 +471,7 @@ pub async fn set_agent_state(
     let new_state = parse_agent_state(&req.state)?;
 
     let agent_id = {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
         agent.set_state(new_state.clone());
         agent.anim.activity_ticks = 0;
@@ -509,7 +509,7 @@ pub async fn rename_agent(
     }
 
     let agent_id = {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
         agent.name = name.clone();
         agent.id
@@ -517,7 +517,7 @@ pub async fn rename_agent(
 
     // Persist name change to DB
     if let Ok(db) = state.db.lock() {
-        let reg = state.registry.read().unwrap();
+        let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         if let Some(agent) = reg.get(&agent_id) {
             if let Err(e) = db.save_agent(agent) {
                 tracing::error!("Failed to save agent to DB: {}", e);
@@ -560,7 +560,7 @@ pub async fn report_task(
     }
 
     let agent_id = {
-        let mut reg = state.registry.write().unwrap();
+        let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         let agent = find_agent_by_id_mut(&mut reg, &agent_id_str)?;
         if req.state == "completed" || req.state == "submitted" {
             agent.task_count += 1;
@@ -570,7 +570,7 @@ pub async fn report_task(
 
     // Record in observer
     {
-        let mut obs = state.observer.write().unwrap();
+        let mut obs = state.observer.write().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
         obs.record_task(agent_id, &task_id, &req.state, req.summary.clone());
     }
 
@@ -603,7 +603,7 @@ pub async fn report_task(
 
     // Persist updated agent (task_count)
     if let Ok(db) = state.db.lock() {
-        let reg = state.registry.read().unwrap();
+        let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
         if let Some(agent) = reg.get(&agent_id) {
             if let Err(e) = db.save_agent(agent) {
                 tracing::error!("Failed to save agent to DB: {}", e);
@@ -620,9 +620,9 @@ pub async fn report_task(
 
 // --- World ---
 
-pub async fn world_snapshot(State(state): State<ApiState>) -> Json<WorldSnapshot> {
-    let reg = state.registry.read().unwrap();
-    let grid = state.grid.read().unwrap();
+pub async fn world_snapshot(State(state): State<ApiState>) -> Result<Json<WorldSnapshot>, ApiError> {
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
+    let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
     let tick = state.tick_count.load(std::sync::atomic::Ordering::Relaxed);
 
     let agents: Vec<ApiAgent> = reg
@@ -637,22 +637,22 @@ pub async fn world_snapshot(State(state): State<ApiState>) -> Json<WorldSnapshot
         })
         .collect();
 
-    Json(WorldSnapshot {
+    Ok(Json(WorldSnapshot {
         width: grid.width,
         height: grid.height,
         agents,
         tick,
-    })
+    }))
 }
 
-pub async fn world_tiles(State(state): State<ApiState>) -> Json<TileMapResponse> {
-    let grid = state.grid.read().unwrap();
+pub async fn world_tiles(State(state): State<ApiState>) -> Result<Json<TileMapResponse>, ApiError> {
+    let grid = state.grid.read().map_err(|_| ApiError::ServiceUnavailable("grid lock poisoned".into()))?;
     let mut tiles = Vec::with_capacity(grid.height as usize);
     for y in 0..grid.height {
         let mut row = Vec::with_capacity(grid.width as usize);
         for x in 0..grid.width {
             let pos = Position::new(x, y);
-            let cell = grid.get(pos).unwrap();
+            let cell = grid.get(pos).ok_or(ApiError::BadRequest(format!("position ({},{}) out of bounds", x, y)))?;
             row.push(ApiCell {
                 tile: format!("{:?}", cell.tile),
                 occupant: cell.occupant.map(|id| id.to_string()),
@@ -660,11 +660,11 @@ pub async fn world_tiles(State(state): State<ApiState>) -> Json<TileMapResponse>
         }
         tiles.push(row);
     }
-    Json(TileMapResponse {
+    Ok(Json(TileMapResponse {
         width: grid.width,
         height: grid.height,
         tiles,
-    })
+    }))
 }
 
 // --- Agent Inbox ---
@@ -674,7 +674,7 @@ pub async fn get_agent_messages(
     Path(agent_id_str): Path<String>,
     Query(params): Query<LimitQuery>,
 ) -> Result<Json<InboxResponse>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
 
@@ -709,7 +709,7 @@ pub async fn ack_agent_messages(
     State(state): State<ApiState>,
     Path(agent_id_str): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let mut reg = state.registry.write().unwrap();
+    let mut reg = state.registry.write().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
 
@@ -756,11 +756,11 @@ pub async fn get_agent(
     State(state): State<ApiState>,
     Path(agent_id_str): Path<String>,
 ) -> Result<Json<ApiAgentDetail>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
 
-    let obs = state.observer.read().unwrap();
+    let obs = state.observer.read().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
     let last_activity_secs_ago = obs
         .get_activity(&agent_id, 1)
         .first()
@@ -788,13 +788,13 @@ pub async fn get_agent_activity(
     Path(agent_id_str): Path<String>,
     Query(query): Query<LimitQuery>,
 ) -> Result<Json<ActivityResponse>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
     drop(reg);
 
     let limit = query.limit.unwrap_or(50);
-    let obs = state.observer.read().unwrap();
+    let obs = state.observer.read().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
     let entries: Vec<_> = obs
         .get_activity(&agent_id, limit)
         .into_iter()
@@ -813,12 +813,12 @@ pub async fn post_agent_heartbeat(
     Path(agent_id_str): Path<String>,
     Json(req): Json<HeartbeatRequest>,
 ) -> Result<Json<HeartbeatResponse>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
     drop(reg);
 
-    let mut obs = state.observer.write().unwrap();
+    let mut obs = state.observer.write().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
     obs.update_heartbeat(agent_id, &req.status, req.metadata);
     obs.record_activity(
         agent_id,
@@ -826,7 +826,7 @@ pub async fn post_agent_heartbeat(
         format!("Heartbeat: {}", req.status),
     );
 
-    let hb = obs.get_heartbeat(&agent_id).unwrap();
+    let hb = obs.get_heartbeat(&agent_id).ok_or(ApiError::NotFound("heartbeat not found after update".into()))?;
     let hb_clone = hb.clone();
     drop(obs);
 
@@ -847,14 +847,14 @@ pub async fn get_agent_status(
     State(state): State<ApiState>,
     Path(agent_id_str): Path<String>,
 ) -> Result<Json<AgentStatusResponse>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
     let name = agent.name.clone();
     let agent_state = agent.state.label().to_string();
     drop(reg);
 
-    let obs = state.observer.read().unwrap();
+    let obs = state.observer.read().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
     let connection_health = obs.connection_health(&agent_id).to_string();
     let heartbeat = obs.get_heartbeat(&agent_id).cloned();
 
@@ -872,13 +872,13 @@ pub async fn get_agent_tasks(
     Path(agent_id_str): Path<String>,
     Query(query): Query<LimitQuery>,
 ) -> Result<Json<TaskHistoryResponse>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
     drop(reg);
 
     let limit = query.limit.unwrap_or(50);
-    let obs = state.observer.read().unwrap();
+    let obs = state.observer.read().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
     let tasks: Vec<_> = obs
         .get_tasks(&agent_id, limit)
         .into_iter()
@@ -896,7 +896,7 @@ pub async fn get_agent_dashboard(
     State(state): State<ApiState>,
     Path(agent_id_str): Path<String>,
 ) -> Result<Json<DashboardResponse>, ApiError> {
-    let reg = state.registry.read().unwrap();
+    let reg = state.registry.read().map_err(|_| ApiError::ServiceUnavailable("registry lock poisoned".into()))?;
     let agent = find_agent_by_id(&reg, &agent_id_str)?;
     let agent_id = agent.id;
     let goal = agent.goal.as_ref().map(|g| format!("{:?}", g));
@@ -914,7 +914,7 @@ pub async fn get_agent_dashboard(
     };
     drop(reg);
 
-    let obs = state.observer.read().unwrap();
+    let obs = state.observer.read().map_err(|_| ApiError::ServiceUnavailable("observer lock poisoned".into()))?;
     let recent_activity: Vec<_> = obs
         .get_activity(&agent_id, 20)
         .into_iter()
@@ -997,14 +997,16 @@ fn persist_activity(
     kind: ActivityKind,
     detail: &str,
 ) {
-    let entry = {
-        let mut obs = observer.write().unwrap();
+    let entry = if let Ok(mut obs) = observer.write() {
         obs.record_activity(agent_id, kind.clone(), detail);
         crate::api::observability::ActivityEntry {
             timestamp: Utc::now(),
             kind,
             detail: detail.to_string(),
         }
+    } else {
+        tracing::error!("Failed to acquire observer write lock");
+        return;
     };
     if let Ok(db) = db.lock() {
         if let Err(e) = db.save_activity(agent_id, &entry) {

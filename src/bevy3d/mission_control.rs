@@ -317,7 +317,7 @@ pub fn update_mission_control(
         commands.entity(entity).despawn();
     }
 
-    let registry = bridge.registry.read().unwrap();
+    let Ok(registry) = bridge.registry.read() else { return };
 
     // ── Agent cards (GitHub-style repo cards) ─────────────────────
     if let Ok(card_parent) = card_q.single() {

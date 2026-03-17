@@ -60,7 +60,7 @@ pub fn click_select_agent(
         let dist = (closest_point - agent_center).length();
 
         // Selection radius
-        if dist < 0.35 && (closest.is_none() || t < closest.unwrap().1) {
+        if dist < 0.35 && closest.map_or(true, |(_, prev_t)| t < prev_t) {
             closest = Some((marker.agent_id, t));
         }
     }

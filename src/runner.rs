@@ -49,8 +49,10 @@ async fn setup_inner(
     let db = Database::open()?;
     tracing::debug!("Database opened successfully");
     {
-        let mut g = grid.write().unwrap();
-        let mut r = registry.write().unwrap();
+        // These locks cannot be poisoned at startup since no other thread has accessed them yet.
+        // If they somehow fail, the application cannot proceed, so expect is appropriate here.
+        let mut g = grid.write().expect("grid lock poisoned on startup");
+        let mut r = registry.write().expect("registry lock poisoned on startup");
         let restored = match db.load_agents() {
             Ok(agents) if !agents.is_empty() => {
                 tracing::info!("Restoring {} agents from database", agents.len());
