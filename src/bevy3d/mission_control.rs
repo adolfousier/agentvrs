@@ -56,13 +56,26 @@ pub struct McTaskRowButton {
 pub struct McTaskPopup;
 
 /// Resource: mission control panel open/closed state.
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct MissionControlState {
     pub open: bool,
     /// Currently selected agent in Mission Control (filters right panel).
     pub selected_agent: Option<crate::agent::AgentId>,
     /// Whether a task detail popup is currently shown.
     pub popup_open: bool,
+    /// UI zoom scale (1.0 = default, 0.5–3.0 range).
+    pub zoom: f32,
+}
+
+impl Default for MissionControlState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            selected_agent: None,
+            popup_open: false,
+            zoom: 1.0,
+        }
+    }
 }
 
 /// Marker component on clickable agent cards, stores the agent ID.
@@ -155,6 +168,43 @@ pub fn toggle_mission_control(
                 Visibility::Hidden
             };
         }
+    }
+}
+
+// ── Zoom with +/- keys or scroll wheel ───────────────────────────────────────
+
+pub fn handle_mc_zoom(
+    mut mc_state: ResMut<MissionControlState>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut scroll_evr: MessageReader<bevy::input::mouse::MouseWheel>,
+) {
+    if !mc_state.open || mc_state.popup_open {
+        // Drain scroll events so they don't queue
+        for _ in scroll_evr.read() {}
+        return;
+    }
+
+    let mut delta = 0.0_f32;
+
+    // +/= key zooms in, -/_ key zooms out
+    if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) {
+        delta += 0.1;
+    }
+    if keys.just_pressed(KeyCode::Minus) || keys.just_pressed(KeyCode::NumpadSubtract) {
+        delta -= 0.1;
+    }
+
+    // Scroll wheel zooms too
+    for ev in scroll_evr.read() {
+        let scroll_delta = match ev.unit {
+            bevy::input::mouse::MouseScrollUnit::Line => ev.y * 0.1,
+            bevy::input::mouse::MouseScrollUnit::Pixel => ev.y * 0.005,
+        };
+        delta += scroll_delta;
+    }
+
+    if delta != 0.0 {
+        mc_state.zoom = (mc_state.zoom + delta).clamp(0.5, 3.0);
     }
 }
 
@@ -333,7 +383,7 @@ pub fn update_mission_control(
     task_q: Query<Entity, With<McTaskList>>,
     child_q: Query<Entity, With<McChild>>,
     mut title_q: Query<&mut TextColor, With<McTitle>>,
-    mut hint_q: Query<&mut TextColor, (With<McHint>, Without<McTitle>)>,
+    mut hint_q: Query<(Entity, &mut TextColor), (With<McHint>, Without<McTitle>)>,
     mut heading_q: Query<&mut TextColor, (With<McHeading>, Without<McTitle>, Without<McHint>)>,
 ) {
     if !mc_state.open {
@@ -341,6 +391,8 @@ pub fn update_mission_control(
     }
 
     let t = mc_theme(theme.is_dark);
+    let z = mc_state.zoom;
+    let font = |size: f32| TextFont { font_size: size * z, ..default() };
 
     // Update root background for theme
     for mut bg in root_q.iter_mut() {
@@ -351,8 +403,12 @@ pub fn update_mission_control(
     for mut tc in title_q.iter_mut() {
         tc.0 = t.title;
     }
-    for mut tc in hint_q.iter_mut() {
+    for (entity, mut tc) in hint_q.iter_mut() {
         tc.0 = t.text_muted;
+        let zoom_pct = (z * 100.0) as u32;
+        commands.entity(entity).insert(Text::new(format!(
+            "M:close  +/-:zoom ({zoom_pct}%)  click:select"
+        )));
     }
     for mut tc in heading_q.iter_mut() {
         tc.0 = t.heading;
@@ -371,10 +427,7 @@ pub fn update_mission_control(
             let empty = commands
                 .spawn((
                     Text::new("No agents connected"),
-                    TextFont {
-                        font_size: 12.0,
-                        ..default()
-                    },
+                    font(12.0),
                     TextColor(t.text_muted),
                     McChild,
                 ))
@@ -456,7 +509,7 @@ pub fn update_mission_control(
                             ));
                             name_row.spawn((
                                 Text::new(&agent.name),
-                                TextFont { font_size: 14.0, ..default() },
+                                font(14.0),
                                 TextColor(t.text_primary),
                             ));
                         });
@@ -474,7 +527,7 @@ pub fn update_mission_control(
                         .with_children(|badge| {
                             badge.spawn((
                                 Text::new(kind_label),
-                                TextFont { font_size: 10.0, ..default() },
+                                font(10.0),
                                 TextColor(t.text_secondary),
                             ));
                         });
@@ -490,12 +543,12 @@ pub fn update_mission_control(
                     .with_children(|row| {
                         row.spawn((
                             Text::new(agent.state.label()),
-                            TextFont { font_size: 12.0, ..default() },
+                            font(12.0),
                             TextColor(t.text_secondary),
                         ));
                         row.spawn((
                             Text::new(format!("({},{})", agent.position.x, agent.position.y)),
-                            TextFont { font_size: 10.0, ..default() },
+                            font(10.0),
                             TextColor(t.text_muted),
                         ));
                         if !agent.inbox.is_empty() {
@@ -510,7 +563,7 @@ pub fn update_mission_control(
                             .with_children(|badge| {
                                 badge.spawn((
                                     Text::new(format!("{} msg", agent.inbox.len())),
-                                    TextFont { font_size: 10.0, ..default() },
+                                    font(10.0),
                                     TextColor(t.badge_text),
                                 ));
                             });
@@ -527,7 +580,7 @@ pub fn update_mission_control(
                             ));
                             card.spawn((
                                 Text::new("Tasks"),
-                                TextFont { font_size: 10.0, ..default() },
+                                font(10.0),
                                 TextColor(t.heading),
                             ));
                             for task in tasks.iter().rev().take(3) {
@@ -567,7 +620,7 @@ pub fn update_mission_control(
                                     .with_children(|b| {
                                         b.spawn((
                                             Text::new(&task.state),
-                                            TextFont { font_size: 9.0, ..default() },
+                                            font(9.0),
                                             TextColor(task_dot),
                                         ));
                                     });
@@ -576,7 +629,7 @@ pub fn update_mission_control(
                                         .unwrap_or(&task.task_id);
                                     row.spawn((
                                         Text::new(summary),
-                                        TextFont { font_size: 10.0, ..default() },
+                                        font(10.0),
                                         TextColor(t.text_secondary),
                                         Node {
                                             flex_shrink: 1.0,
@@ -597,7 +650,7 @@ pub fn update_mission_control(
                             ));
                             card.spawn((
                                 Text::new("Activity"),
-                                TextFont { font_size: 10.0, ..default() },
+                                font(10.0),
                                 TextColor(t.heading),
                             ));
                             for entry in entries.iter().rev().take(3) {
@@ -618,13 +671,13 @@ pub fn update_mission_control(
                                 .with_children(|row| {
                                     row.spawn((
                                         Text::new(&ago),
-                                        TextFont { font_size: 9.0, ..default() },
+                                        font(9.0),
                                         TextColor(t.text_muted),
                                         Node { min_width: Val::Px(28.0), ..default() },
                                     ));
                                     row.spawn((
                                         Text::new(&entry.detail),
-                                        TextFont { font_size: 10.0, ..default() },
+                                        font(10.0),
                                         TextColor(t.text_secondary),
                                         Node { flex_shrink: 1.0, ..default() },
                                     ));
@@ -678,10 +731,7 @@ pub fn update_mission_control(
                 .with_children(|row| {
                     row.spawn((
                         Text::new("No activity recorded yet"),
-                        TextFont {
-                            font_size: 12.0,
-                            ..default()
-                        },
+                        font(12.0),
                         TextColor(t.text_muted),
                     ));
                 })
@@ -725,10 +775,7 @@ pub fn update_mission_control(
                 .with_children(|row| {
                     row.spawn((
                         Text::new(&time_str),
-                        TextFont {
-                            font_size: 11.0,
-                            ..default()
-                        },
+                        font(11.0),
                         TextColor(t.text_muted),
                         Node {
                             min_width: Val::Px(55.0),
@@ -737,10 +784,7 @@ pub fn update_mission_control(
                     ));
                     row.spawn((
                         Text::new(agent_name),
-                        TextFont {
-                            font_size: 11.0,
-                            ..default()
-                        },
+                        font(11.0),
                         TextColor(t.link),
                         Node {
                             min_width: Val::Px(90.0),
@@ -750,10 +794,7 @@ pub fn update_mission_control(
                     let detail = entry.detail.clone();
                     row.spawn((
                         Text::new(detail),
-                        TextFont {
-                            font_size: 11.0,
-                            ..default()
-                        },
+                        font(11.0),
                         TextColor(t.text_secondary),
                     ));
                 })
@@ -801,10 +842,7 @@ pub fn update_mission_control(
                 .with_children(|row| {
                     row.spawn((
                         Text::new("No tasks submitted yet"),
-                        TextFont {
-                            font_size: 12.0,
-                            ..default()
-                        },
+                        font(12.0),
                         TextColor(t.text_muted),
                     ));
                 })
@@ -865,10 +903,7 @@ pub fn update_mission_control(
                     ));
                     row.spawn((
                         Text::new(agent_name),
-                        TextFont {
-                            font_size: 11.0,
-                            ..default()
-                        },
+                        font(11.0),
                         TextColor(t.link),
                         Node {
                             min_width: Val::Px(90.0),
@@ -894,20 +929,14 @@ pub fn update_mission_control(
                     .with_children(|badge| {
                         badge.spawn((
                             Text::new(&task.state),
-                            TextFont {
-                                font_size: 10.0,
-                                ..default()
-                            },
+                            font(10.0),
                             TextColor(task_state_color),
                         ));
                     });
                     let summary = task.response_summary.as_deref().unwrap_or(&task.task_id).to_string();
                     row.spawn((
                         Text::new(summary),
-                        TextFont {
-                            font_size: 11.0,
-                            ..default()
-                        },
+                        font(11.0),
                         TextColor(t.text_secondary),
                     ));
                 })
@@ -991,7 +1020,7 @@ pub fn handle_task_popup(
             for entity in popup_q.iter() {
                 commands.entity(entity).despawn();
             }
-            spawn_task_popup(&mut commands, &btn, theme.is_dark);
+            spawn_task_popup(&mut commands, &btn, theme.is_dark, mc_state.zoom);
         }
         return;
     }
@@ -999,7 +1028,7 @@ pub fn handle_task_popup(
     for (interaction, btn) in task_row_q.iter() {
         if *interaction == Interaction::Pressed {
             mc_state.popup_open = true;
-            spawn_task_popup(&mut commands, &btn, theme.is_dark);
+            spawn_task_popup(&mut commands, &btn, theme.is_dark, mc_state.zoom);
             return;
         }
     }
@@ -1007,7 +1036,7 @@ pub fn handle_task_popup(
 
 /// Spawn a label + value field pair inside a dialog.
 macro_rules! field_node {
-    ($parent:expr, $theme:expr, $label:expr, $value:expr) => {
+    ($parent:expr, $theme:expr, $label:expr, $value:expr, $zoom:expr) => {
         $parent
             .spawn(Node {
                 flex_direction: FlexDirection::Column,
@@ -1017,20 +1046,21 @@ macro_rules! field_node {
             .with_children(|field| {
                 field.spawn((
                     Text::new($label),
-                    TextFont { font_size: 11.0, ..default() },
+                    TextFont { font_size: 11.0 * $zoom, ..default() },
                     TextColor($theme.text_muted),
                 ));
                 field.spawn((
                     Text::new($value),
-                    TextFont { font_size: 13.0, ..default() },
+                    TextFont { font_size: 13.0 * $zoom, ..default() },
                     TextColor($theme.text_primary),
                 ));
             });
     };
 }
 
-fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: bool) {
+fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: bool, zoom: f32) {
     let t = mc_theme(is_dark);
+    let font = |size: f32| TextFont { font_size: size * zoom, ..default() };
     let task_color = match btn.state.as_str() {
         "completed" => Color::srgb(0.2, 0.8, 0.2),
         "failed" => Color::srgb(1.0, 0.3, 0.3),
@@ -1085,18 +1115,12 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                         .with_children(|header| {
                             header.spawn((
                                 Text::new("Task Detail"),
-                                TextFont {
-                                    font_size: 18.0,
-                                    ..default()
-                                },
+                                font(18.0),
                                 TextColor(t.title),
                             ));
                             header.spawn((
                                 Text::new("press Esc to close"),
-                                TextFont {
-                                    font_size: 11.0,
-                                    ..default()
-                                },
+                                font(11.0),
                                 TextColor(t.text_muted),
                             ));
                         });
@@ -1111,10 +1135,10 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                     ));
 
                     // Task ID
-                    field_node!(dialog, &t, "Task ID", &btn.task_id);
+                    field_node!(dialog, &t, "Task ID", &btn.task_id, zoom);
 
                     // Agent
-                    field_node!(dialog, &t, "Agent", &btn.agent_name);
+                    field_node!(dialog, &t, "Agent", &btn.agent_name, zoom);
 
                     // State with colored badge
                     dialog
@@ -1126,10 +1150,7 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                         .with_children(|field| {
                             field.spawn((
                                 Text::new("State"),
-                                TextFont {
-                                    font_size: 11.0,
-                                    ..default()
-                                },
+                                font(11.0),
                                 TextColor(t.text_muted),
                             ));
                             field
@@ -1167,10 +1188,7 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
                                     .with_children(|badge| {
                                         badge.spawn((
                                             Text::new(&btn.state),
-                                            TextFont {
-                                                font_size: 12.0,
-                                                ..default()
-                                            },
+                                            font(12.0),
                                             TextColor(task_color),
                                         ));
                                     });
@@ -1179,12 +1197,12 @@ fn spawn_task_popup(commands: &mut Commands, btn: &McTaskRowButton, is_dark: boo
 
                     // Summary
                     if !btn.summary.is_empty() {
-                        field_node!(dialog, &t, "Summary", &btn.summary);
+                        field_node!(dialog, &t, "Summary", &btn.summary, zoom);
                     }
 
                     // Timestamps
-                    field_node!(dialog, &t, "Submitted", &btn.submitted_at);
-                    field_node!(dialog, &t, "Last Updated", &btn.last_updated);
+                    field_node!(dialog, &t, "Submitted", &btn.submitted_at, zoom);
+                    field_node!(dialog, &t, "Last Updated", &btn.last_updated, zoom);
                 });
         });
 }
