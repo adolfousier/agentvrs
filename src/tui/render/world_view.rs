@@ -1,5 +1,6 @@
 use crate::avatar::agents::agent_sprite;
 use crate::avatar::floors::tile_sprite;
+use crate::avatar::palette::agent_color;
 use crate::avatar::sprite::{BigSpriteFrame, SpriteFrame, TILE_H, TILE_W};
 use crate::tui::app::App;
 use crate::world::Position;
@@ -67,7 +68,28 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Pass 3: speech bubbles
+    // Pass 3: agent name labels (below sprite)
+    for agent in registry.agents() {
+        let gx = agent.position.x;
+        let gy = agent.position.y;
+        if gx < tiles_x && gy < tiles_y {
+            let sx = ox + gx * TILE_W;
+            let sy = oy + gy * TILE_H;
+            let label_y = sy + TILE_H + 1; // one row below the sprite bottom
+            let name = if agent.name.len() > 10 {
+                &agent.name[..10]
+            } else {
+                &agent.name
+            };
+            let name_len = name.len() as u16;
+            // Center the label on the tile
+            let label_x = sx + TILE_W / 2 - name_len / 2;
+            let color = agent_color(agent.color_index);
+            render_label(buf, label_x, label_y, name, color, area);
+        }
+    }
+
+    // Pass 4: speech bubbles
     for agent in registry.agents() {
         if let Some(ref speech) = agent.speech {
             let gx = agent.position.x;
@@ -132,6 +154,26 @@ fn render_big_sprite(
                         buf_cell.set_fg(cell.fg);
                     }
                 }
+            }
+        }
+    }
+}
+
+fn render_label(
+    buf: &mut ratatui::buffer::Buffer,
+    x: u16,
+    y: u16,
+    text: &str,
+    color: Color,
+    clip: Rect,
+) {
+    for (i, ch) in text.chars().enumerate() {
+        let bx = x + i as u16;
+        if bx >= clip.x && bx < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height {
+            let pos = ratatui::layout::Position::new(bx, y);
+            if let Some(buf_cell) = buf.cell_mut(pos) {
+                buf_cell.set_char(ch);
+                buf_cell.set_fg(color);
             }
         }
     }
