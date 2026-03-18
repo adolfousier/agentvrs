@@ -604,14 +604,12 @@ pub fn update_mission_control(
                         max_height: Val::Percent(90.0),
                         border: UiRect::all(px(if is_selected { 2.0 } else { 1.0 })),
                         border_radius: BorderRadius::all(px(8.0)),
-                        overflow: Overflow::scroll_y(),
+                        overflow: Overflow::clip(),
                         ..default()
                     },
-                    ScrollPosition::default(),
                     BackgroundColor(t.card_bg),
                     BorderColor::all(card_border_color),
                     Interaction::default(),
-                    McScrollable,
                     McCardButton(agent.id),
                     McChild,
                 ))
