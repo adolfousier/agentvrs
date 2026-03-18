@@ -21,7 +21,6 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Layout: left = agent cards, right = activity + tasks (stacked)
     let cols = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -138,22 +137,28 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
-    let Ok(observer) = app.observer.read() else {
-        return;
-    };
     let Ok(registry) = app.registry.read() else {
         return;
     };
 
-    // Collect all activities across all agents, sorted by time (most recent first)
-    let agent_ids: Vec<AgentId> = registry.agents().map(|a| a.id).collect();
-    let mut all_entries: Vec<(AgentId, &ActivityEntry)> = Vec::new();
-    for id in &agent_ids {
-        for entry in observer.get_activity(id, 20) {
-            all_entries.push((*id, entry));
+    // Load activity from DB (persisted across sessions)
+    let agent_ids: Vec<(AgentId, String, u8)> = registry
+        .agents()
+        .map(|a| (a.id, a.name.clone(), a.color_index))
+        .collect();
+    drop(registry);
+
+    let mut all_entries: Vec<(String, u8, ActivityEntry)> = Vec::new();
+    if let Ok(db) = app.db.lock() {
+        for (id, name, color_idx) in &agent_ids {
+            if let Ok(entries) = db.load_activity(id, 20) {
+                for entry in entries {
+                    all_entries.push((name.clone(), *color_idx, entry));
+                }
+            }
         }
     }
-    all_entries.sort_by(|a, b| b.1.timestamp.cmp(&a.1.timestamp));
+    all_entries.sort_by(|a, b| b.2.timestamp.cmp(&a.2.timestamp));
     all_entries.truncate(30);
 
     let lines: Vec<Line> = if all_entries.is_empty() {
@@ -167,16 +172,8 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
     } else {
         all_entries
             .iter()
-            .map(|(agent_id, entry)| {
-                let agent_name = registry
-                    .get(agent_id)
-                    .map(|a| a.name.clone())
-                    .unwrap_or_else(|| format!("{:.8}", agent_id));
-
-                let a_color = registry
-                    .get(agent_id)
-                    .map(|a| agent_color(a.color_index))
-                    .unwrap_or(Color::Gray);
+            .map(|(name, color_idx, entry)| {
+                let a_color = agent_color(*color_idx);
 
                 Line::from(vec![
                     Span::styled(
@@ -184,7 +181,7 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
                         Style::default().fg(Color::Rgb(80, 80, 100)),
                     ),
                     Span::styled(
-                        agent_name,
+                        name.as_str(),
                         Style::default()
                             .fg(a_color)
                             .add_modifier(Modifier::BOLD),
@@ -217,19 +214,25 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
-    let Ok(observer) = app.observer.read() else {
-        return;
-    };
     let Ok(registry) = app.registry.read() else {
         return;
     };
 
-    // Collect all tasks across all agents
-    let agent_ids: Vec<AgentId> = registry.agents().map(|a| a.id).collect();
-    let mut all_tasks: Vec<(AgentId, &TaskRecord)> = Vec::new();
-    for id in &agent_ids {
-        for task in observer.get_tasks(id, 50) {
-            all_tasks.push((*id, task));
+    // Load tasks from DB (persisted across sessions)
+    let agent_ids: Vec<(AgentId, String)> = registry
+        .agents()
+        .map(|a| (a.id, a.name.clone()))
+        .collect();
+    drop(registry);
+
+    let mut all_tasks: Vec<(String, TaskRecord)> = Vec::new();
+    if let Ok(db) = app.db.lock() {
+        for (id, name) in &agent_ids {
+            if let Ok(tasks) = db.load_tasks(id, 50) {
+                for task in tasks {
+                    all_tasks.push((name.clone(), task));
+                }
+            }
         }
     }
     all_tasks.sort_by(|a, b| b.1.last_updated.cmp(&a.1.last_updated));
@@ -245,7 +248,7 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
     } else {
         all_tasks
             .iter()
-            .map(|(agent_id, task)| {
+            .map(|(agent_name, task)| {
                 let state_bg = match task.state.as_str() {
                     "submitted" => Color::Yellow,
                     "running" => Color::Rgb(80, 180, 220),
@@ -253,11 +256,6 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     "failed" => Color::Red,
                     _ => Color::Gray,
                 };
-
-                let agent_name = registry
-                    .get(agent_id)
-                    .map(|a| a.name.clone())
-                    .unwrap_or_else(|| format!("{:.8}", agent_id));
 
                 Line::from(vec![
                     Span::styled("  ", Style::default()),
@@ -270,7 +268,7 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     ),
                     Span::raw(" "),
                     Span::styled(
-                        agent_name,
+                        agent_name.as_str(),
                         Style::default().fg(Color::Cyan),
                     ),
                     Span::styled("  ", Style::default()),
