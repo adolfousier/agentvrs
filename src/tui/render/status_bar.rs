@@ -59,7 +59,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     ];
 
     if let Some(name) = selected_name {
-        spans.push(Span::styled("│", Style::default().fg(Color::Rgb(60, 60, 80))));
+        spans.push(Span::styled(
+            "│",
+            Style::default().fg(Color::Rgb(60, 60, 80)),
+        ));
         spans.push(Span::styled(
             format!(" {} ", name),
             Style::default()
@@ -68,7 +71,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         ));
     }
 
-    spans.push(Span::styled("│", Style::default().fg(Color::Rgb(60, 60, 80))));
+    spans.push(Span::styled(
+        "│",
+        Style::default().fg(Color::Rgb(60, 60, 80)),
+    ));
 
     if app.mode == AppMode::CommandInput {
         spans.push(Span::styled(
@@ -82,7 +88,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         ));
     } else {
         spans.push(Span::styled(
-            " q:quit  j/k:select  ↵:detail  ⇥:log  m:MC  ::cmd",
+            " q:quit  j/k:select  ↵:detail  ⇥:log  h:sidebar  m:MC  ::cmd",
             Style::default().fg(Color::Rgb(80, 80, 100)),
         ));
     }

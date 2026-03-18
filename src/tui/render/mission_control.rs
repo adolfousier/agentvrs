@@ -23,18 +23,12 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
 
     let cols = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(40),
-            Constraint::Percentage(60),
-        ])
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(area);
 
     let right_rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(cols[1]);
 
     draw_agent_cards(frame, app, cols[0]);
@@ -182,9 +176,7 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
                     ),
                     Span::styled(
                         name.as_str(),
-                        Style::default()
-                            .fg(a_color)
-                            .add_modifier(Modifier::BOLD),
+                        Style::default().fg(a_color).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled("  ", Style::default()),
                     Span::styled(
@@ -219,10 +211,8 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     // Load tasks from DB (persisted across sessions)
-    let agent_ids: Vec<(AgentId, String)> = registry
-        .agents()
-        .map(|a| (a.id, a.name.clone()))
-        .collect();
+    let agent_ids: Vec<(AgentId, String)> =
+        registry.agents().map(|a| (a.id, a.name.clone())).collect();
     drop(registry);
 
     let mut all_tasks: Vec<(String, TaskRecord)> = Vec::new();
@@ -267,13 +257,13 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                             .add_modifier(Modifier::BOLD),
                     ),
                     Span::raw(" "),
-                    Span::styled(
-                        agent_name.as_str(),
-                        Style::default().fg(Color::Cyan),
-                    ),
+                    Span::styled(agent_name.as_str(), Style::default().fg(Color::Cyan)),
                     Span::styled("  ", Style::default()),
                     Span::styled(
-                        task.response_summary.as_deref().unwrap_or("—"),
+                        task.response_summary
+                            .as_deref()
+                            .or(task.scope.as_deref())
+                            .unwrap_or(&task.task_id[..task.task_id.len().min(8)]),
                         Style::default().fg(Color::Rgb(180, 180, 200)),
                     ),
                 ])

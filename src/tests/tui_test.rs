@@ -252,3 +252,35 @@ fn test_mc_from_message_log() {
     assert_eq!(app.mode, AppMode::MissionControl);
     assert_eq!(app.previous_mode, Some(AppMode::MessageLog));
 }
+
+// ── Sidebar toggle tests ────────────────────────────────────────────
+
+#[test]
+fn test_sidebar_visible_by_default() {
+    let app = test_app();
+    assert!(app.sidebar_visible);
+}
+
+#[test]
+fn test_h_key_toggles_sidebar() {
+    let mut app = test_app();
+    assert!(app.sidebar_visible);
+    handle_key(&mut app, key(KeyCode::Char('h')));
+    assert!(!app.sidebar_visible);
+    handle_key(&mut app, key(KeyCode::Char('h')));
+    assert!(app.sidebar_visible);
+}
+
+#[test]
+fn test_h_key_uppercase_toggles_sidebar() {
+    let mut app = test_app();
+    handle_key(&mut app, key(KeyCode::Char('H')));
+    assert!(!app.sidebar_visible);
+}
+
+#[test]
+fn test_sidebar_toggle_stays_in_world_view() {
+    let mut app = test_app();
+    handle_key(&mut app, key(KeyCode::Char('h')));
+    assert_eq!(app.mode, AppMode::WorldView);
+}

@@ -30,6 +30,8 @@ pub struct App {
     pub status_message: Option<String>,
     /// Previous mode before entering MC (to restore on exit)
     pub previous_mode: Option<AppMode>,
+    /// Whether the sidebar is visible (toggle with H, matches Bevy behavior)
+    pub sidebar_visible: bool,
 }
 
 impl App {
@@ -56,6 +58,7 @@ impl App {
             command_input: String::new(),
             status_message: None,
             previous_mode: None,
+            sidebar_visible: true,
         }
     }
 

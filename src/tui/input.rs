@@ -22,6 +22,9 @@ fn world_view(app: &mut App, key: KeyEvent) {
             app.mode = AppMode::CommandInput;
             app.command_input.clear();
         }
+        KeyCode::Char('h') | KeyCode::Char('H') => {
+            app.sidebar_visible = !app.sidebar_visible;
+        }
         KeyCode::Char('m') | KeyCode::Char('M') => {
             app.previous_mode = Some(app.mode);
             app.mode = AppMode::MissionControl;
