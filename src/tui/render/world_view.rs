@@ -26,36 +26,45 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Show the entire world — left-aligned, vertically centered
-    let tiles_x = (area.width / TILE_W).min(grid.width);
-    let tiles_y = (area.height / TILE_H).min(grid.height);
+    // Calculate scale factor to fill the screen as much as possible
+    let world_w = grid.width * TILE_W;
+    let world_h = grid.height * TILE_H;
+    let scale_x = area.width / world_w.max(1);
+    let scale_y = area.height / world_h.max(1);
+    let scale = scale_x.min(scale_y).max(1);
 
-    let grid_pixel_h = tiles_y * TILE_H;
-    let ox = area.x + 1; // small left margin
-    let oy = area.y + (area.height.saturating_sub(grid_pixel_h)) / 2;
+    let scaled_w = world_w * scale;
+    let scaled_h = world_h * scale;
+    let tw = TILE_W * scale; // scaled tile width
+    let th = TILE_H * scale; // scaled tile height
 
-    // Pass 1: tiles
-    for gy in 0..tiles_y {
-        for gx in 0..tiles_x {
+    // Center the world in the available area
+    let ox = area.x + (area.width.saturating_sub(scaled_w)) / 2;
+    let oy = area.y + (area.height.saturating_sub(scaled_h)) / 2;
+
+    // Pass 1: tiles (scaled)
+    for gy in 0..grid.height {
+        for gx in 0..grid.width {
             let pos = Position::new(gx, gy);
             if let Some(cell) = grid.get(pos) {
-                let sx = ox + gx * TILE_W;
-                let sy = oy + gy * TILE_H;
+                let sx = ox + gx * tw;
+                let sy = oy + gy * th;
                 let sprite = tile_sprite(&cell.tile, gx, gy);
-                render_sprite(buf, sx, sy, &sprite, area);
+                render_sprite_scaled(buf, sx, sy, &sprite, scale, area);
             }
         }
     }
 
-    // Pass 2: agents (rendered at 8x6, centered on their grid position)
+    // Pass 2: agents (scaled, centered on their grid position)
     for agent in registry.agents() {
         let gx = agent.position.x;
         let gy = agent.position.y;
-        if gx < tiles_x && gy < tiles_y {
-            let sx = ox + gx * TILE_W;
-            let sy = oy + gy * TILE_H;
-            let ax = sx.saturating_sub(2);
-            let ay = sy.saturating_sub(2);
+        if gx < grid.width && gy < grid.height {
+            let sx = ox + gx * tw;
+            let sy = oy + gy * th;
+            // Center the 8x6 sprite within the scaled tile
+            let ax = sx + (tw / 2).saturating_sub(4);
+            let ay = sy + (th / 2).saturating_sub(3);
             let sprite = agent_sprite(
                 &agent.state,
                 &agent.anim.facing,
@@ -66,61 +75,74 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Pass 3: agent name labels (below sprite)
+    // Pass 3: agent name labels (below sprite, centered in tile)
     for agent in registry.agents() {
         let gx = agent.position.x;
         let gy = agent.position.y;
-        if gx < tiles_x && gy < tiles_y {
-            let sx = ox + gx * TILE_W;
-            let sy = oy + gy * TILE_H;
-            let label_y = sy + TILE_H + 1;
+        if gx < grid.width && gy < grid.height {
+            let sx = ox + gx * tw;
+            let sy = oy + gy * th;
+            let label_y = sy + (th / 2) + 4;
             let name = if agent.name.len() > 10 {
                 &agent.name[..10]
             } else {
                 &agent.name
             };
             let name_len = name.len() as u16;
-            let label_x = (sx + TILE_W / 2).saturating_sub(name_len / 2);
+            let label_x = (sx + tw / 2).saturating_sub(name_len / 2);
             let color = agent_color(agent.color_index);
             render_label(buf, label_x, label_y, name, color, area);
         }
     }
 
-    // Pass 4: speech bubbles
+    // Pass 4: speech bubbles (above agent)
     for agent in registry.agents() {
         if let Some(ref speech) = agent.speech {
             let gx = agent.position.x;
             let gy = agent.position.y;
-            if gx < tiles_x && gy < tiles_y {
-                let sx = ox + gx * TILE_W;
-                let sy = oy + gy * TILE_H;
-                render_speech(buf, sx, sy.saturating_sub(4), speech, area);
+            if gx < grid.width && gy < grid.height {
+                let sx = ox + gx * tw;
+                let sy = oy + gy * th;
+                let bubble_y = (sy + th / 2).saturating_sub(6);
+                render_speech(buf, sx, bubble_y, speech, area);
             }
         }
     }
 }
 
-fn render_sprite(
+fn render_sprite_scaled(
     buf: &mut ratatui::buffer::Buffer,
     x: u16,
     y: u16,
     sprite: &SpriteFrame,
+    scale: u16,
     clip: Rect,
 ) {
     for (row_idx, row) in sprite.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
-            let bx = x + col_idx as u16;
-            let by = y + row_idx as u16;
-            if bx >= clip.x && bx < clip.x + clip.width && by >= clip.y && by < clip.y + clip.height
-            {
-                let pos = ratatui::layout::Position::new(bx, by);
-                if let Some(buf_cell) = buf.cell_mut(pos) {
-                    if let Some(bg) = cell.bg {
-                        buf_cell.set_bg(bg);
-                    }
-                    if cell.ch != ' ' {
-                        buf_cell.set_char(cell.ch);
-                        buf_cell.set_fg(cell.fg);
+            // Repeat each cell scale×scale times
+            for sy in 0..scale {
+                for sx in 0..scale {
+                    let bx = x + col_idx as u16 * scale + sx;
+                    let by = y + row_idx as u16 * scale + sy;
+                    if bx >= clip.x
+                        && bx < clip.x + clip.width
+                        && by >= clip.y
+                        && by < clip.y + clip.height
+                    {
+                        let pos = ratatui::layout::Position::new(bx, by);
+                        if let Some(buf_cell) = buf.cell_mut(pos) {
+                            if let Some(bg) = cell.bg {
+                                buf_cell.set_bg(bg);
+                            }
+                            if cell.ch != ' ' {
+                                buf_cell.set_char(cell.ch);
+                                buf_cell.set_fg(cell.fg);
+                            } else if let Some(bg) = cell.bg {
+                                buf_cell.set_char(' ');
+                                buf_cell.set_bg(bg);
+                            }
+                        }
                     }
                 }
             }
