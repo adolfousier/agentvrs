@@ -33,10 +33,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
             let sidebar_width = 34u16.min(rows[0].width / 3);
             let cols = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Min(20),
-                    Constraint::Length(sidebar_width),
-                ])
+                .constraints([Constraint::Min(20), Constraint::Length(sidebar_width)])
                 .split(rows[0]);
 
             match app.mode {
@@ -66,20 +63,14 @@ pub fn draw(frame: &mut Frame, app: &App) {
         let sidebar_width = 34u16.min(rows[0].width / 3);
         let cols = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Min(20),
-                Constraint::Length(sidebar_width),
-            ])
+            .constraints([Constraint::Min(20), Constraint::Length(sidebar_width)])
             .split(rows[0]);
 
         world_view::draw(frame, app, cols[0]);
 
         let right = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ])
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(cols[1]);
 
         sidebar::draw(frame, app, right[0]);

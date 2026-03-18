@@ -73,17 +73,56 @@ fn message_log(app: &mut App, key: KeyEvent) {
 }
 
 fn mission_control(app: &mut App, key: KeyEvent) {
+    use crate::tui::app::McPanel;
+
+    // If detail popup is open, Esc/Enter closes it
+    if app.mc_detail_open {
+        match key.code {
+            KeyCode::Esc | KeyCode::Enter | KeyCode::Backspace => {
+                app.mc_detail_open = false;
+            }
+            KeyCode::Char('q') => app.should_quit = true,
+            _ => {}
+        }
+        return;
+    }
+
     match key.code {
-        KeyCode::Esc | KeyCode::Char('m') | KeyCode::Char('M') => {
+        KeyCode::Char('m') | KeyCode::Char('M') => {
             app.mc_scroll = 0;
+            app.mc_selected = 0;
+            app.mc_panel = McPanel::Agents;
+            app.mc_detail_open = false;
+            app.mode = app.previous_mode.take().unwrap_or(AppMode::WorldView);
+        }
+        KeyCode::Esc => {
+            app.mc_scroll = 0;
+            app.mc_selected = 0;
+            app.mc_panel = McPanel::Agents;
+            app.mc_detail_open = false;
             app.mode = app.previous_mode.take().unwrap_or(AppMode::WorldView);
         }
         KeyCode::Char('q') => app.should_quit = true,
+        // Tab cycles between panels
+        KeyCode::Tab => {
+            app.mc_selected = 0;
+            app.mc_scroll = 0;
+            app.mc_panel = match app.mc_panel {
+                McPanel::Agents => McPanel::Activity,
+                McPanel::Activity => McPanel::Tasks,
+                McPanel::Tasks => McPanel::Agents,
+            };
+        }
+        // j/k navigates within focused panel
         KeyCode::Char('j') | KeyCode::Down => {
-            app.mc_scroll = app.mc_scroll.saturating_add(3);
+            app.mc_selected = app.mc_selected.saturating_add(1);
         }
         KeyCode::Char('k') | KeyCode::Up => {
-            app.mc_scroll = app.mc_scroll.saturating_sub(3);
+            app.mc_selected = app.mc_selected.saturating_sub(1);
+        }
+        // Enter opens detail for selected item
+        KeyCode::Enter => {
+            app.mc_detail_open = true;
         }
         _ => {}
     }

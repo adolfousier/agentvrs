@@ -14,6 +14,14 @@ pub enum AppMode {
     MissionControl,
 }
 
+/// Which MC panel has focus
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum McPanel {
+    Agents,
+    Activity,
+    Tasks,
+}
+
 pub struct App {
     pub mode: AppMode,
     pub grid: Arc<RwLock<Grid>>,
@@ -32,8 +40,14 @@ pub struct App {
     pub previous_mode: Option<AppMode>,
     /// Whether the sidebar is visible (toggle with H, matches Bevy behavior)
     pub sidebar_visible: bool,
-    /// Scroll offset for MC agent cards panel
+    /// Which MC panel is focused
+    pub mc_panel: McPanel,
+    /// Selected item index within the focused MC panel
+    pub mc_selected: usize,
+    /// Scroll offset for MC panels
     pub mc_scroll: u16,
+    /// Whether showing an agent detail popup in MC
+    pub mc_detail_open: bool,
 }
 
 impl App {
@@ -61,7 +75,10 @@ impl App {
             status_message: None,
             previous_mode: None,
             sidebar_visible: true,
+            mc_panel: McPanel::Agents,
+            mc_selected: 0,
             mc_scroll: 0,
+            mc_detail_open: false,
         }
     }
 

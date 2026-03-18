@@ -294,24 +294,24 @@ fn test_mc_scroll_default_zero() {
 }
 
 #[test]
-fn test_mc_j_scrolls_down() {
+fn test_mc_j_selects_down() {
     let mut app = test_app();
     app.mode = AppMode::MissionControl;
     app.previous_mode = Some(AppMode::WorldView);
     handle_key(&mut app, key(KeyCode::Char('j')));
-    assert_eq!(app.mc_scroll, 3);
+    assert_eq!(app.mc_selected, 1);
     handle_key(&mut app, key(KeyCode::Char('j')));
-    assert_eq!(app.mc_scroll, 6);
+    assert_eq!(app.mc_selected, 2);
 }
 
 #[test]
-fn test_mc_k_scrolls_up() {
+fn test_mc_k_selects_up() {
     let mut app = test_app();
     app.mode = AppMode::MissionControl;
     app.previous_mode = Some(AppMode::WorldView);
-    app.mc_scroll = 6;
+    app.mc_selected = 3;
     handle_key(&mut app, key(KeyCode::Char('k')));
-    assert_eq!(app.mc_scroll, 3);
+    assert_eq!(app.mc_selected, 2);
 }
 
 #[test]
@@ -332,4 +332,66 @@ fn test_mc_exit_resets_scroll() {
     handle_key(&mut app, key(KeyCode::Esc));
     assert_eq!(app.mc_scroll, 0);
     assert_eq!(app.mode, AppMode::WorldView);
+}
+
+#[test]
+fn test_mc_tab_cycles_panels() {
+    use crate::tui::app::McPanel;
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    assert_eq!(app.mc_panel, McPanel::Agents);
+    handle_key(&mut app, key(KeyCode::Tab));
+    assert_eq!(app.mc_panel, McPanel::Activity);
+    handle_key(&mut app, key(KeyCode::Tab));
+    assert_eq!(app.mc_panel, McPanel::Tasks);
+    handle_key(&mut app, key(KeyCode::Tab));
+    assert_eq!(app.mc_panel, McPanel::Agents);
+}
+
+#[test]
+fn test_mc_tab_resets_selection() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    app.mc_selected = 5;
+    handle_key(&mut app, key(KeyCode::Tab));
+    assert_eq!(app.mc_selected, 0);
+}
+
+#[test]
+fn test_mc_enter_opens_detail() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    assert!(!app.mc_detail_open);
+    handle_key(&mut app, key(KeyCode::Enter));
+    assert!(app.mc_detail_open);
+    assert_eq!(app.mode, AppMode::MissionControl);
+}
+
+#[test]
+fn test_mc_detail_esc_closes() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    app.mc_detail_open = true;
+    handle_key(&mut app, key(KeyCode::Esc));
+    assert!(!app.mc_detail_open);
+    assert_eq!(app.mode, AppMode::MissionControl);
+}
+
+#[test]
+fn test_mc_detail_blocks_navigation() {
+    use crate::tui::app::McPanel;
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    app.mc_detail_open = true;
+    app.mc_selected = 2;
+    // j/k/Tab should not work when detail is open
+    handle_key(&mut app, key(KeyCode::Char('j')));
+    assert_eq!(app.mc_selected, 2);
+    handle_key(&mut app, key(KeyCode::Tab));
+    assert_eq!(app.mc_panel, McPanel::Agents);
 }

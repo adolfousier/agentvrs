@@ -1,12 +1,12 @@
 use crate::agent::AgentId;
 use crate::api::observability::{ActivityEntry, TaskRecord};
 use crate::avatar::{agent_color, palette::state_color};
-use crate::tui::app::App;
+use crate::tui::app::{App, McPanel};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Padding, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Padding, Paragraph, Wrap};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let buf = frame.buffer_mut();
@@ -34,6 +34,11 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     draw_agent_cards(frame, app, cols[0]);
     draw_activity_feed(frame, app, right_rows[0]);
     draw_task_list(frame, app, right_rows[1]);
+
+    // Detail popup overlay
+    if app.mc_detail_open {
+        draw_detail_popup(frame, app, area);
+    }
 }
 
 /// Truncate a string to fit within `max` display characters (char-boundary safe)
@@ -126,8 +131,10 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
 
     let mut all_lines: Vec<Line> = Vec::new();
 
+    let is_focused = app.mc_panel == McPanel::Agents;
+
     for (idx, agent) in agents.iter().enumerate() {
-        let is_selected = idx == app.mc_scroll as usize;
+        let is_selected = is_focused && idx == app.mc_selected;
 
         let border_color = if is_selected {
             Color::Cyan
@@ -285,6 +292,11 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
     }
 
     let title = format!(" Agents ({}) ", agent_count);
+    let panel_border = if is_focused {
+        Color::Cyan
+    } else {
+        Color::Rgb(50, 50, 70)
+    };
     let block = Block::default()
         .title(title)
         .title_style(
@@ -293,7 +305,7 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Rgb(50, 50, 70)))
+        .border_style(Style::default().fg(panel_border))
         .border_set(ratatui::symbols::border::ROUNDED)
         .padding(Padding::new(0, 0, 1, 0));
 
@@ -338,16 +350,23 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
             )]),
         ]
     } else {
+        let is_focused = app.mc_panel == McPanel::Activity;
         all_entries
             .iter()
-            .map(|(name, color_idx, entry)| {
+            .enumerate()
+            .map(|(idx, (name, color_idx, entry))| {
                 let a_color = agent_color(*color_idx);
-                let prefix_len = 10 + name.len() + 2; // " HH:MM:SS  name  "
+                let prefix_len = 10 + name.len() + 2;
                 let max_detail = inner_w.saturating_sub(prefix_len);
+                let is_sel = is_focused && idx == app.mc_selected;
 
-                Line::from(vec![
+                let mut line = Line::from(vec![
                     Span::styled(
-                        format!(" {} ", entry.timestamp.format("%H:%M:%S")),
+                        if is_sel { "▸" } else { " " },
+                        Style::default().fg(Color::Cyan),
+                    ),
+                    Span::styled(
+                        format!("{} ", entry.timestamp.format("%H:%M:%S")),
                         Style::default().fg(Color::Rgb(80, 80, 100)),
                     ),
                     Span::styled(
@@ -359,12 +378,22 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
                         trunc(&entry.detail, max_detail),
                         Style::default().fg(Color::Rgb(180, 180, 200)),
                     ),
-                ])
+                ]);
+                if is_sel {
+                    line = line.style(Style::default().bg(Color::Rgb(30, 30, 45)));
+                }
+                line
             })
             .collect()
     };
 
+    let is_focused = app.mc_panel == McPanel::Activity;
     let title = format!(" Activity ({}) ", all_entries.len());
+    let panel_border = if is_focused {
+        Color::Yellow
+    } else {
+        Color::Rgb(50, 50, 70)
+    };
     let block = Block::default()
         .title(title)
         .title_style(
@@ -373,7 +402,7 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Rgb(50, 50, 70)))
+        .border_style(Style::default().fg(panel_border))
         .border_set(ratatui::symbols::border::ROUNDED)
         .padding(Padding::new(0, 0, 1, 0));
 
@@ -413,9 +442,11 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
             )]),
         ]
     } else {
+        let is_focused = app.mc_panel == McPanel::Tasks;
         all_tasks
             .iter()
-            .map(|(agent_name, task)| {
+            .enumerate()
+            .map(|(idx, (agent_name, task))| {
                 let state_bg = match task.state.as_str() {
                     "submitted" => Color::Yellow,
                     "running" => Color::Rgb(80, 180, 220),
@@ -423,8 +454,9 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     "failed" => Color::Red,
                     _ => Color::Gray,
                 };
+                let is_sel = is_focused && idx == app.mc_selected;
 
-                let prefix_len = 2 + 11 + 1 + agent_name.len() + 2; // "  STATE  name  "
+                let prefix_len = 3 + 11 + 1 + agent_name.len() + 2;
                 let max_summary = inner_w.saturating_sub(prefix_len);
                 let summary = task
                     .response_summary
@@ -432,8 +464,11 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     .or(task.scope.as_deref())
                     .unwrap_or(&task.task_id[..task.task_id.len().min(20)]);
 
-                Line::from(vec![
-                    Span::styled("  ", Style::default()),
+                let mut line = Line::from(vec![
+                    Span::styled(
+                        if is_sel { " ▸" } else { "  " },
+                        Style::default().fg(Color::Cyan),
+                    ),
                     Span::styled(
                         format!(" {:>9} ", task.state),
                         Style::default()
@@ -448,12 +483,22 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                         trunc(summary, max_summary),
                         Style::default().fg(Color::Rgb(180, 180, 200)),
                     ),
-                ])
+                ]);
+                if is_sel {
+                    line = line.style(Style::default().bg(Color::Rgb(30, 30, 45)));
+                }
+                line
             })
             .collect()
     };
 
+    let is_focused = app.mc_panel == McPanel::Tasks;
     let title = format!(" Tasks ({}) ", all_tasks.len());
+    let panel_border = if is_focused {
+        Color::Green
+    } else {
+        Color::Rgb(50, 50, 70)
+    };
     let block = Block::default()
         .title(title)
         .title_style(
@@ -462,10 +507,283 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Rgb(50, 50, 70)))
+        .border_style(Style::default().fg(panel_border))
         .border_set(ratatui::symbols::border::ROUNDED)
         .padding(Padding::new(0, 0, 1, 0));
 
     let paragraph = Paragraph::new(lines).block(block);
     frame.render_widget(paragraph, area);
+}
+
+fn draw_detail_popup(frame: &mut Frame, app: &App, area: Rect) {
+    let pw = (area.width * 60 / 100).max(30);
+    let ph = (area.height * 70 / 100).max(10);
+    let px = area.x + (area.width.saturating_sub(pw)) / 2;
+    let py = area.y + (area.height.saturating_sub(ph)) / 2;
+    let popup = Rect::new(px, py, pw, ph);
+
+    frame.render_widget(Clear, popup);
+
+    let inner_w = pw.saturating_sub(4) as usize;
+    let mut lines: Vec<Line> = Vec::new();
+
+    match app.mc_panel {
+        McPanel::Agents => {
+            let Ok(registry) = app.registry.read() else {
+                return;
+            };
+            let agents: Vec<_> = registry.agents().collect();
+            if app.mc_selected >= agents.len() {
+                lines.push(Line::from(Span::styled(
+                    "  No agent selected",
+                    Style::default().fg(Color::Rgb(100, 100, 120)),
+                )));
+            } else {
+                let agent = agents[app.mc_selected];
+                let color = agent_color(agent.color_index);
+                let s_color = state_color(&agent.state);
+
+                let agent_name = agent.name.clone();
+                let agent_id_str = format!("{:.8}", agent.id);
+                let pos_str = format!("({}, {})", agent.position.x, agent.position.y);
+                let state_str = format!(" {} ", agent.state.label());
+                let task_count_str = agent.task_count.to_string();
+                let task_count = agent.task_count;
+                let inbox_empty = agent.inbox.is_empty();
+                let inbox_len = agent.inbox.len();
+                let inbox_lines: Vec<(String, String)> = agent
+                    .inbox
+                    .iter()
+                    .rev()
+                    .take(10)
+                    .map(|msg| {
+                        let sender = registry
+                            .get(&msg.from)
+                            .map(|a| a.name.clone())
+                            .unwrap_or_else(|| format!("{:.8}", msg.from));
+                        (sender, msg.text.clone())
+                    })
+                    .collect();
+                drop(agents);
+                drop(registry);
+
+                lines.push(Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled(
+                        agent_name,
+                        Style::default().fg(color).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw("  "),
+                    Span::styled(
+                        state_str,
+                        Style::default()
+                            .fg(Color::Rgb(20, 20, 30))
+                            .bg(s_color)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+                lines.push(Line::from(Span::styled(
+                    "  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
+                    Style::default().fg(Color::Rgb(60, 60, 80)),
+                )));
+                lines.push(Line::raw(""));
+                lines.push(Line::from(vec![
+                    Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                    Span::styled("ID      ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                    Span::styled(agent_id_str, Style::default().fg(Color::Rgb(180, 180, 190))),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                    Span::styled("Pos     ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                    Span::styled(pos_str, Style::default().fg(Color::Rgb(180, 180, 190))),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                    Span::styled("Tasks   ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                    Span::styled(
+                        task_count_str,
+                        Style::default().fg(if task_count > 0 {
+                            Color::Cyan
+                        } else {
+                            Color::Rgb(180, 180, 190)
+                        }),
+                    ),
+                ]));
+                lines.push(Line::raw(""));
+
+                if inbox_empty {
+                    lines.push(Line::from(vec![
+                        Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                        Span::styled("Inbox   ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                        Span::styled("empty", Style::default().fg(Color::Rgb(80, 80, 100))),
+                    ]));
+                } else {
+                    lines.push(Line::from(Span::styled(
+                        format!("  Inbox ({})", inbox_len),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    )));
+                    lines.push(Line::from(Span::styled(
+                        "  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
+                        Style::default().fg(Color::Rgb(60, 60, 80)),
+                    )));
+                    for (sender_name, msg_text) in &inbox_lines {
+                        let max_text = inner_w.saturating_sub(sender_name.len() + 8);
+                        lines.push(Line::from(vec![
+                            Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                            Span::styled(
+                                format!("{} ", sender_name),
+                                Style::default()
+                                    .fg(Color::Green)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                trunc(msg_text, max_text),
+                                Style::default().fg(Color::Rgb(200, 200, 210)),
+                            ),
+                        ]));
+                    }
+                }
+            }
+        }
+        McPanel::Tasks => {
+            let Ok(registry) = app.registry.read() else {
+                return;
+            };
+            let agent_ids: Vec<(AgentId, String)> =
+                registry.agents().map(|a| (a.id, a.name.clone())).collect();
+            drop(registry);
+
+            let mut all_tasks: Vec<(String, TaskRecord)> = Vec::new();
+            if let Ok(db) = app.db.lock() {
+                for (id, name) in &agent_ids {
+                    if let Ok(tasks) = db.load_tasks(id, 50) {
+                        for task in tasks {
+                            all_tasks.push((name.clone(), task));
+                        }
+                    }
+                }
+            }
+            all_tasks.sort_by(|a, b| b.1.last_updated.cmp(&a.1.last_updated));
+
+            if app.mc_selected >= all_tasks.len() {
+                lines.push(Line::from(Span::styled(
+                    "  No task selected",
+                    Style::default().fg(Color::Rgb(100, 100, 120)),
+                )));
+            } else {
+                let agent_name = all_tasks[app.mc_selected].0.clone();
+                let task_id = all_tasks[app.mc_selected].1.task_id.clone();
+                let task_state = all_tasks[app.mc_selected].1.state.clone();
+                let task_scope = all_tasks[app.mc_selected].1.scope.clone();
+                let task_summary = all_tasks[app.mc_selected].1.response_summary.clone();
+                let task_updated = all_tasks[app.mc_selected]
+                    .1
+                    .last_updated
+                    .format("%Y-%m-%d %H:%M:%S")
+                    .to_string();
+                let st_color = match task_state.as_str() {
+                    "completed" => Color::Green,
+                    "failed" => Color::Red,
+                    "running" => Color::Rgb(80, 180, 220),
+                    _ => Color::Yellow,
+                };
+
+                lines.push(Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled(
+                        task_id,
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+                lines.push(Line::from(Span::styled(
+                    "  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
+                    Style::default().fg(Color::Rgb(60, 60, 80)),
+                )));
+                lines.push(Line::raw(""));
+                lines.push(Line::from(vec![
+                    Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                    Span::styled("Agent   ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                    Span::styled(agent_name, Style::default().fg(Color::Cyan)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                    Span::styled("State   ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                    Span::styled(
+                        format!(" {} ", task_state),
+                        Style::default()
+                            .fg(Color::Rgb(20, 20, 30))
+                            .bg(st_color)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+                if let Some(ref scope) = task_scope {
+                    lines.push(Line::from(vec![
+                        Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                        Span::styled("Scope   ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                        Span::styled(
+                            trunc(scope, inner_w.saturating_sub(14)),
+                            Style::default().fg(Color::Rgb(180, 180, 190)),
+                        ),
+                    ]));
+                }
+                if let Some(ref summary) = task_summary {
+                    lines.push(Line::raw(""));
+                    lines.push(Line::from(Span::styled(
+                        "  Summary",
+                        Style::default()
+                            .fg(Color::Rgb(120, 120, 150))
+                            .add_modifier(Modifier::BOLD),
+                    )));
+                    let max_line = inner_w.saturating_sub(4).max(1);
+                    let chars: Vec<char> = summary.chars().collect();
+                    for chunk in chars.chunks(max_line) {
+                        let text: String = chunk.iter().collect();
+                        lines.push(Line::from(vec![
+                            Span::raw("  "),
+                            Span::styled(text, Style::default().fg(Color::Rgb(180, 180, 200))),
+                        ]));
+                    }
+                }
+                lines.push(Line::raw(""));
+                lines.push(Line::from(vec![
+                    Span::styled("  ┃ ", Style::default().fg(Color::Rgb(60, 60, 80))),
+                    Span::styled("Updated ", Style::default().fg(Color::Rgb(100, 100, 120))),
+                    Span::styled(task_updated, Style::default().fg(Color::Rgb(140, 140, 160))),
+                ]));
+            }
+        }
+        McPanel::Activity => {
+            lines.push(Line::from(Span::styled(
+                "  Activity detail — press Esc to close",
+                Style::default().fg(Color::Rgb(120, 120, 150)),
+            )));
+        }
+    }
+
+    let title = match app.mc_panel {
+        McPanel::Agents => " Agent Detail ",
+        McPanel::Tasks => " Task Detail ",
+        McPanel::Activity => " Activity ",
+    };
+
+    let block = Block::default()
+        .title(title)
+        .title_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .border_set(ratatui::symbols::border::ROUNDED)
+        .padding(Padding::new(1, 1, 1, 1));
+
+    let paragraph = Paragraph::new(lines)
+        .block(block)
+        .wrap(Wrap { trim: false });
+    frame.render_widget(paragraph, popup);
 }
