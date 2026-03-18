@@ -52,7 +52,7 @@
 - **Bevy 3D** — isometric 3D world with orthographic camera, voxel agents, detailed furniture, floating labels, resizable sidebar, speech bubbles, and live dark/light mode
 - **Office world** — desks, break room with vending machines and coffee, lounge with couches, gym with treadmills, server room, arcade with pinball machines
 - **Animated agents** — walking animations, state-driven behavior, BFS pathfinding, and speech bubbles
-- **TUI mode** — terminal UI available as alternative renderer (`--tui` flag)
+- **TUI mode** — full terminal UI with ASCII world, agent name labels, styled sidebar, Mission Control dashboard — works on headless servers and VPS (`--tui` flag)
 - **Privacy-first** — runs entirely locally on `127.0.0.1`, no telemetry, no cloud
 - **Production-ready API** — REST endpoints with JSON error responses, API key auth, rate limiting, SSE event streaming
 - **Observability & control plane** — activity logs, heartbeat monitoring, task history, connection health, full agent dashboard — control all agents from one place across multiple machines
@@ -62,6 +62,20 @@
 - **Mission Control** — press `M` for full-screen overlay with clickable agent cards, scrollable activity feed and task list, task detail popups, See All toggles, `Ctrl+/-` zoom — follows system light/dark mode
 - **SQLite persistence** — agents, messages, activity, tasks, and heartbeats survive restarts (`~/.config/agentverse/agentverse.db`)
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
+
+---
+
+## System Requirements
+
+| | 3D Mode (default) | TUI Mode (`--tui`) |
+|---|---|---|
+| **GPU** | Required (Vulkan 1.1+, Metal, or DX12) | Not required |
+| **Display** | Windowed (X11/Wayland/macOS/Windows) | Terminal only |
+| **OS** | Linux, macOS, Windows | Linux, macOS, Windows |
+| **Binary size** | ~3 MB | ~3 MB (same binary) |
+| **Mission Control** | Press `M` | Press `M` |
+
+**VPS / Headless servers**: Use `--tui` mode. No GPU needed — the full API, SQLite persistence, and Mission Control dashboard work in the terminal. The 3D world view is replaced with an ASCII renderer.
 
 ---
 
@@ -170,14 +184,14 @@ discovery_interval_secs = 30
 
 | Key | Action |
 |-----|--------|
-| `h/j/k/l` or arrows | Pan camera |
-| `n` / `p` | Next / previous agent |
-| `c` | Center camera on selected agent |
-| `f` | Fit world in view |
+| `j/k` or `↑/↓` | Select next / previous agent |
+| `n` / `p` | Next / previous agent (alias) |
 | `Enter` | Agent detail view |
 | `Tab` | Message log |
+| `M` | Toggle Mission Control |
 | `:` | Command input |
-| `q` / `Esc` | Quit |
+| `Esc` | Back / close |
+| `q` | Quit |
 
 ---
 
