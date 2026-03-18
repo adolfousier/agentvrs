@@ -59,11 +59,7 @@ fn furniture_sprites_correct_dimensions() {
         let sprite = furniture_sprite(tile);
         assert_eq!(sprite.len(), 3, "{tile:?} sprite should have 3 rows");
         for (i, row) in sprite.iter().enumerate() {
-            assert_eq!(
-                row.len(),
-                4,
-                "{tile:?} row {i} should have 4 columns"
-            );
+            assert_eq!(row.len(), 4, "{tile:?} row {i} should have 4 columns");
         }
     }
 }
@@ -73,8 +69,8 @@ fn furniture_sprites_correct_dimensions() {
 fn server_rack_has_leds() {
     let sprite = furniture_sprite(&Tile::ServerRack);
     // Row 1 (middle) should have green LED cells
-    let has_green = sprite[1].iter().any(|cell| {
-        matches!(cell.fg, ratatui::style::Color::Rgb(0, 255, 100))
-    });
+    let has_green = sprite[1]
+        .iter()
+        .any(|cell| matches!(cell.fg, ratatui::style::Color::Rgb(0, 255, 100)));
     assert!(has_green, "Server rack should have green LED indicators");
 }

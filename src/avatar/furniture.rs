@@ -250,12 +250,7 @@ fn armchair() -> SpriteFrame {
             cb('▓', fabric, dark),
             c('▌', fabric),
         ],
-        [
-            c('▐', dark),
-            c('█', fabric),
-            c('█', fabric),
-            c('▌', dark),
-        ],
+        [c('▐', dark), c('█', fabric), c('█', fabric), c('▌', dark)],
     ]
 }
 
@@ -289,24 +284,9 @@ fn file_cabinet() -> SpriteFrame {
     let body = Color::Rgb(140, 140, 150);
     let handle = Color::Rgb(200, 200, 210);
     [
-        [
-            c('┌', body),
-            c('─', body),
-            c('─', body),
-            c('┐', body),
-        ],
-        [
-            c('│', body),
-            c('▬', handle),
-            c('▬', handle),
-            c('│', body),
-        ],
-        [
-            c('│', body),
-            c('▬', handle),
-            c('▬', handle),
-            c('│', body),
-        ],
+        [c('┌', body), c('─', body), c('─', body), c('┐', body)],
+        [c('│', body), c('▬', handle), c('▬', handle), c('│', body)],
+        [c('│', body), c('▬', handle), c('▬', handle), c('│', body)],
     ]
 }
 

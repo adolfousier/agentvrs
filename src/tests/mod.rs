@@ -1,7 +1,7 @@
 mod a2a_test;
-mod avatar_test;
 mod agent_test;
 mod api_test;
+mod avatar_test;
 mod config_test;
 mod db_test;
 mod mission_control_test;

@@ -26,7 +26,14 @@ pub async fn run(config: AppConfig) -> Result<()> {
     execute!(stdout, EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
-    let mut app = App::new(rt.grid, rt.registry, rt.message_log, rt.observer, rt.db, rt.event_rx);
+    let mut app = App::new(
+        rt.grid,
+        rt.registry,
+        rt.message_log,
+        rt.observer,
+        rt.db,
+        rt.event_rx,
+    );
     let events = EventHandler::new(config.world.tick_ms);
 
     loop {

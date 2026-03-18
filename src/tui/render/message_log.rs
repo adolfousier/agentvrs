@@ -31,12 +31,8 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
                 let from_agent = registry.get(&msg.from);
                 let to_agent = registry.get(&msg.to);
 
-                let from_name = from_agent
-                    .map(|a| a.name.as_str())
-                    .unwrap_or("?");
-                let to_name = to_agent
-                    .map(|a| a.name.as_str())
-                    .unwrap_or("?");
+                let from_name = from_agent.map(|a| a.name.as_str()).unwrap_or("?");
+                let to_name = to_agent.map(|a| a.name.as_str()).unwrap_or("?");
 
                 let from_color = from_agent
                     .map(|a| agent_color(a.color_index))
@@ -52,20 +48,12 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
                     ),
                     Span::styled(
                         from_name,
-                        Style::default()
-                            .fg(from_color)
-                            .add_modifier(Modifier::BOLD),
+                        Style::default().fg(from_color).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(" → ", Style::default().fg(Color::Rgb(100, 100, 120))),
-                    Span::styled(
-                        to_name,
-                        Style::default().fg(to_color),
-                    ),
+                    Span::styled(to_name, Style::default().fg(to_color)),
                     Span::styled("  ", Style::default()),
-                    Span::styled(
-                        &msg.text,
-                        Style::default().fg(Color::Rgb(200, 200, 210)),
-                    ),
+                    Span::styled(&msg.text, Style::default().fg(Color::Rgb(200, 200, 210))),
                 ])
             })
             .collect()

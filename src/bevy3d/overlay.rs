@@ -335,7 +335,14 @@ pub fn update_sidebar(
     mut title_q: Query<(&mut Text, &mut TextColor), (With<DetailTitle>, Without<DetailInfo>)>,
     mut info_q: Query<(&mut Text, &mut TextColor), (With<DetailInfo>, Without<DetailTitle>)>,
     entry_q: Query<Entity, With<AgentListEntry>>,
-    mut heading_q: Query<&mut TextColor, (With<SidebarHeading>, Without<DetailTitle>, Without<DetailInfo>)>,
+    mut heading_q: Query<
+        &mut TextColor,
+        (
+            With<SidebarHeading>,
+            Without<DetailTitle>,
+            Without<DetailInfo>,
+        ),
+    >,
 ) {
     // ── Update heading color for theme ───────────────────────────────
     for mut color in heading_q.iter_mut() {

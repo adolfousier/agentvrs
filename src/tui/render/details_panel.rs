@@ -55,9 +55,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
                         .add_modifier(Modifier::BOLD),
                 ),
             ]),
-            Line::from(vec![
-                Span::styled("  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌", Style::default().fg(Color::Rgb(60, 60, 80))),
-            ]),
+            Line::from(vec![Span::styled(
+                "  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
+                Style::default().fg(Color::Rgb(60, 60, 80)),
+            )]),
             Line::raw(""),
             // Info section
             Line::from(vec![
@@ -118,17 +119,16 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled("empty", Style::default().fg(Color::Rgb(80, 80, 100))),
             ]));
         } else {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("  Inbox ({})", agent.inbox.len()),
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]));
-            lines.push(Line::from(vec![
-                Span::styled("  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌", Style::default().fg(Color::Rgb(60, 60, 80))),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                format!("  Inbox ({})", agent.inbox.len()),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
+            lines.push(Line::from(vec![Span::styled(
+                "  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
+                Style::default().fg(Color::Rgb(60, 60, 80)),
+            )]));
             for msg in agent.inbox.iter().rev().take(10) {
                 let sender_name = registry
                     .get(&msg.from)

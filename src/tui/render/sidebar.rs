@@ -60,7 +60,11 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let title = format!(" Agents ({}) ", agents.len());
     let block = Block::default()
         .title(title)
-        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Rgb(60, 60, 80)))
         .border_set(ratatui::symbols::border::ROUNDED)
