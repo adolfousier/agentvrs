@@ -284,3 +284,52 @@ fn test_sidebar_toggle_stays_in_world_view() {
     handle_key(&mut app, key(KeyCode::Char('h')));
     assert_eq!(app.mode, AppMode::WorldView);
 }
+
+// ── MC scroll tests ────────────────────────────────────────────
+
+#[test]
+fn test_mc_scroll_default_zero() {
+    let app = test_app();
+    assert_eq!(app.mc_scroll, 0);
+}
+
+#[test]
+fn test_mc_j_scrolls_down() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    handle_key(&mut app, key(KeyCode::Char('j')));
+    assert_eq!(app.mc_scroll, 3);
+    handle_key(&mut app, key(KeyCode::Char('j')));
+    assert_eq!(app.mc_scroll, 6);
+}
+
+#[test]
+fn test_mc_k_scrolls_up() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    app.mc_scroll = 6;
+    handle_key(&mut app, key(KeyCode::Char('k')));
+    assert_eq!(app.mc_scroll, 3);
+}
+
+#[test]
+fn test_mc_k_at_zero_stays_zero() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    handle_key(&mut app, key(KeyCode::Char('k')));
+    assert_eq!(app.mc_scroll, 0);
+}
+
+#[test]
+fn test_mc_exit_resets_scroll() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    app.mc_scroll = 10;
+    handle_key(&mut app, key(KeyCode::Esc));
+    assert_eq!(app.mc_scroll, 0);
+    assert_eq!(app.mode, AppMode::WorldView);
+}

@@ -75,9 +75,16 @@ fn message_log(app: &mut App, key: KeyEvent) {
 fn mission_control(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc | KeyCode::Char('m') | KeyCode::Char('M') => {
+            app.mc_scroll = 0;
             app.mode = app.previous_mode.take().unwrap_or(AppMode::WorldView);
         }
         KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('j') | KeyCode::Down => {
+            app.mc_scroll = app.mc_scroll.saturating_add(3);
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            app.mc_scroll = app.mc_scroll.saturating_sub(3);
+        }
         _ => {}
     }
 }

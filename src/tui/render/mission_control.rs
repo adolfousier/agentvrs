@@ -6,7 +6,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Padding, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Padding, Paragraph};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let buf = frame.buffer_mut();
@@ -36,18 +36,28 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     draw_task_list(frame, app, right_rows[1]);
 }
 
+/// Truncate a string to fit within `max` characters
+fn trunc(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else if max > 3 {
+        format!("{}...", &s[..max - 3])
+    } else {
+        s[..max].to_string()
+    }
+}
+
 fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
     let Ok(registry) = app.registry.read() else {
         return;
     };
 
-    // Collect agent info while registry is locked
     struct AgentInfo {
         id: AgentId,
         name: String,
         state_label: String,
-        state_color: Color,
-        agent_color: Color,
+        s_color: Color,
+        a_color: Color,
         kind_label: &'static str,
         kind_color: Color,
         position: (u16, u16),
@@ -71,8 +81,8 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
                 id: agent.id,
                 name: agent.name.clone(),
                 state_label: agent.state.label().to_string(),
-                state_color: state_color(&agent.state),
-                agent_color: agent_color(agent.color_index),
+                s_color: state_color(&agent.state),
+                a_color: agent_color(agent.color_index),
                 kind_label,
                 kind_color,
                 position: (agent.position.x, agent.position.y),
@@ -104,53 +114,67 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Build card lines for each agent
+    // Inner width = area.width - 2 (block borders) - 2 (padding)
+    let inner_w = area.width.saturating_sub(4) as usize;
+    // Card content width (inside card borders)
+    let card_w = inner_w.saturating_sub(4); // "  │ " prefix = 4 chars
+    let border_w = inner_w.saturating_sub(2); // "  ╭...╮" = 2 chars overhead
+
+    let sep = Style::default().fg(Color::Rgb(40, 40, 55));
+
     let mut all_lines: Vec<Line> = Vec::new();
 
-    for agent in &agents {
-        // ── Card top border ──
-        all_lines.push(Line::from(vec![Span::styled(
-            "  ╭──────────────────────────────────────╮",
-            Style::default().fg(Color::Rgb(50, 50, 70)),
-        )]));
+    for (idx, agent) in agents.iter().enumerate() {
+        let is_selected = idx == app.mc_scroll as usize;
 
-        // Row 1: ● name   [kind]
+        let border_color = if is_selected {
+            Color::Cyan
+        } else {
+            Color::Rgb(50, 50, 70)
+        };
+        let bd = Style::default().fg(border_color);
+
+        // Top border
+        let border_fill: String = "─".repeat(border_w.saturating_sub(2));
         all_lines.push(Line::from(vec![
-            Span::styled("  │ ", Style::default().fg(Color::Rgb(50, 50, 70))),
-            Span::styled("● ", Style::default().fg(agent.state_color)),
+            Span::raw("  "),
+            Span::styled(format!("╭{}╮", border_fill), bd),
+        ]));
+
+        // Row 1: ● name  state  kind  [Nmsg]
+        let mut row1 = vec![
+            Span::styled("  │ ", bd),
+            Span::styled("● ", Style::default().fg(agent.s_color)),
             Span::styled(
-                &agent.name,
+                trunc(&agent.name, card_w / 3),
                 Style::default()
-                    .fg(agent.agent_color)
+                    .fg(agent.a_color)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("  "),
+            Span::raw(" "),
             Span::styled(
                 format!(" {} ", agent.state_label),
                 Style::default()
                     .fg(Color::Rgb(20, 20, 30))
-                    .bg(agent.state_color)
+                    .bg(agent.s_color)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("  "),
+            Span::raw(" "),
             Span::styled(agent.kind_label, Style::default().fg(agent.kind_color)),
-            {
-                if agent.inbox_count > 0 {
-                    Span::styled(
-                        format!("  {}msg", agent.inbox_count),
-                        Style::default()
-                            .fg(Color::Rgb(255, 100, 100))
-                            .add_modifier(Modifier::BOLD),
-                    )
-                } else {
-                    Span::raw("")
-                }
-            },
-        ]));
+        ];
+        if agent.inbox_count > 0 {
+            row1.push(Span::styled(
+                format!(" {}msg", agent.inbox_count),
+                Style::default()
+                    .fg(Color::Rgb(255, 100, 100))
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+        all_lines.push(Line::from(row1));
 
         // Row 2: ID + position
         all_lines.push(Line::from(vec![
-            Span::styled("  │ ", Style::default().fg(Color::Rgb(50, 50, 70))),
+            Span::styled("  │ ", bd),
             Span::styled(
                 format!("{:.8}", agent.id),
                 Style::default().fg(Color::Rgb(70, 70, 90)),
@@ -161,17 +185,15 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
             ),
         ]));
 
-        // ── Tasks section (if any) ──
+        // Tasks section
         if let Some(tasks) = agent_tasks.get(&agent.id) {
+            let sep_fill: String = "╌".repeat(border_w.saturating_sub(2));
             all_lines.push(Line::from(vec![
-                Span::styled("  │ ", Style::default().fg(Color::Rgb(50, 50, 70))),
-                Span::styled(
-                    "╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
-                    Style::default().fg(Color::Rgb(40, 40, 55)),
-                ),
+                Span::styled("  │ ", bd),
+                Span::styled(sep_fill.clone(), sep),
             ]));
             all_lines.push(Line::from(vec![
-                Span::styled("  │ ", Style::default().fg(Color::Rgb(50, 50, 70))),
+                Span::styled("  │ ", bd),
                 Span::styled(
                     "Tasks",
                     Style::default()
@@ -191,30 +213,31 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
                     .as_deref()
                     .or(task.scope.as_deref())
                     .unwrap_or(&task.task_id[..task.task_id.len().min(20)]);
+                let max_summary = card_w.saturating_sub(15);
                 all_lines.push(Line::from(vec![
-                    Span::styled("  │  ", Style::default().fg(Color::Rgb(50, 50, 70))),
+                    Span::styled("  │  ", bd),
                     Span::styled("● ", Style::default().fg(dot_color)),
                     Span::styled(
-                        format!("{:>9}", task.state),
+                        format!("{:>9} ", task.state),
                         Style::default().fg(dot_color),
                     ),
-                    Span::styled("  ", Style::default()),
-                    Span::styled(summary, Style::default().fg(Color::Rgb(160, 160, 180))),
+                    Span::styled(
+                        trunc(summary, max_summary),
+                        Style::default().fg(Color::Rgb(160, 160, 180)),
+                    ),
                 ]));
             }
         }
 
-        // ── Activity section (if any) ──
+        // Activity section
         if let Some(entries) = agent_activity.get(&agent.id) {
+            let sep_fill: String = "╌".repeat(border_w.saturating_sub(2));
             all_lines.push(Line::from(vec![
-                Span::styled("  │ ", Style::default().fg(Color::Rgb(50, 50, 70))),
-                Span::styled(
-                    "╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌",
-                    Style::default().fg(Color::Rgb(40, 40, 55)),
-                ),
+                Span::styled("  │ ", bd),
+                Span::styled(sep_fill.clone(), sep),
             ]));
             all_lines.push(Line::from(vec![
-                Span::styled("  │ ", Style::default().fg(Color::Rgb(50, 50, 70))),
+                Span::styled("  │ ", bd),
                 Span::styled(
                     "Activity",
                     Style::default()
@@ -231,29 +254,32 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
                 } else {
                     format!("{}h", secs / 3600)
                 };
-                // Truncate detail to fit card
-                let detail = if entry.detail.len() > 30 {
-                    format!("{}...", &entry.detail[..27])
-                } else {
-                    entry.detail.clone()
-                };
+                let max_detail = card_w.saturating_sub(8);
                 all_lines.push(Line::from(vec![
-                    Span::styled("  │  ", Style::default().fg(Color::Rgb(50, 50, 70))),
+                    Span::styled("  │  ", bd),
                     Span::styled(
                         format!("{:>4} ", ago),
                         Style::default().fg(Color::Rgb(80, 80, 100)),
                     ),
-                    Span::styled(detail, Style::default().fg(Color::Rgb(140, 140, 160))),
+                    Span::styled(
+                        trunc(&entry.detail, max_detail),
+                        Style::default().fg(Color::Rgb(140, 140, 160)),
+                    ),
                 ]));
             }
         }
 
-        // ── Card bottom border ──
-        all_lines.push(Line::from(vec![Span::styled(
-            "  ╰──────────────────────────────────────╯",
-            Style::default().fg(Color::Rgb(50, 50, 70)),
-        )]));
-        all_lines.push(Line::raw(""));
+        // Bottom border
+        let border_fill: String = "─".repeat(border_w.saturating_sub(2));
+        all_lines.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled(format!("╰{}╯", border_fill), bd),
+        ]));
+
+        // Spacer between cards
+        if idx + 1 < agents.len() {
+            all_lines.push(Line::raw(""));
+        }
     }
 
     let title = format!(" Agents ({}) ", agent_count);
@@ -267,11 +293,11 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Rgb(50, 50, 70)))
         .border_set(ratatui::symbols::border::ROUNDED)
-        .padding(Padding::vertical(1));
+        .padding(Padding::new(0, 0, 1, 0));
 
     let paragraph = Paragraph::new(all_lines)
         .block(block)
-        .wrap(Wrap { trim: false });
+        .scroll((app.mc_scroll, 0));
     frame.render_widget(paragraph, area);
 }
 
@@ -280,7 +306,6 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
-    // Load activity from DB (persisted across sessions)
     let agent_ids: Vec<(AgentId, String, u8)> = registry
         .agents()
         .map(|a| (a.id, a.name.clone(), a.color_index))
@@ -300,6 +325,8 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
     all_entries.sort_by(|a, b| b.2.timestamp.cmp(&a.2.timestamp));
     all_entries.truncate(30);
 
+    let inner_w = area.width.saturating_sub(4) as usize;
+
     let lines: Vec<Line> = if all_entries.is_empty() {
         vec![
             Line::raw(""),
@@ -313,6 +340,8 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .map(|(name, color_idx, entry)| {
                 let a_color = agent_color(*color_idx);
+                let prefix_len = 10 + name.len() + 2; // " HH:MM:SS  name  "
+                let max_detail = inner_w.saturating_sub(prefix_len);
 
                 Line::from(vec![
                     Span::styled(
@@ -325,7 +354,7 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
                     ),
                     Span::styled("  ", Style::default()),
                     Span::styled(
-                        &entry.detail,
+                        trunc(&entry.detail, max_detail),
                         Style::default().fg(Color::Rgb(180, 180, 200)),
                     ),
                 ])
@@ -344,9 +373,9 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Rgb(50, 50, 70)))
         .border_set(ratatui::symbols::border::ROUNDED)
-        .padding(Padding::vertical(1));
+        .padding(Padding::new(0, 0, 1, 0));
 
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+    let paragraph = Paragraph::new(lines).block(block);
     frame.render_widget(paragraph, area);
 }
 
@@ -355,7 +384,6 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
-    // Load tasks from DB (persisted across sessions)
     let agent_ids: Vec<(AgentId, String)> =
         registry.agents().map(|a| (a.id, a.name.clone())).collect();
     drop(registry);
@@ -371,6 +399,8 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
     all_tasks.sort_by(|a, b| b.1.last_updated.cmp(&a.1.last_updated));
+
+    let inner_w = area.width.saturating_sub(4) as usize;
 
     let lines: Vec<Line> = if all_tasks.is_empty() {
         vec![
@@ -392,6 +422,14 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     _ => Color::Gray,
                 };
 
+                let prefix_len = 2 + 11 + 1 + agent_name.len() + 2; // "  STATE  name  "
+                let max_summary = inner_w.saturating_sub(prefix_len);
+                let summary = task
+                    .response_summary
+                    .as_deref()
+                    .or(task.scope.as_deref())
+                    .unwrap_or(&task.task_id[..task.task_id.len().min(20)]);
+
                 Line::from(vec![
                     Span::styled("  ", Style::default()),
                     Span::styled(
@@ -405,10 +443,7 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     Span::styled(agent_name.as_str(), Style::default().fg(Color::Cyan)),
                     Span::styled("  ", Style::default()),
                     Span::styled(
-                        task.response_summary
-                            .as_deref()
-                            .or(task.scope.as_deref())
-                            .unwrap_or(&task.task_id[..task.task_id.len().min(20)]),
+                        trunc(summary, max_summary),
                         Style::default().fg(Color::Rgb(180, 180, 200)),
                     ),
                 ])
@@ -427,8 +462,8 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Rgb(50, 50, 70)))
         .border_set(ratatui::symbols::border::ROUNDED)
-        .padding(Padding::vertical(1));
+        .padding(Padding::new(0, 0, 1, 0));
 
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+    let paragraph = Paragraph::new(lines).block(block);
     frame.render_widget(paragraph, area);
 }

@@ -32,6 +32,8 @@ pub struct App {
     pub previous_mode: Option<AppMode>,
     /// Whether the sidebar is visible (toggle with H, matches Bevy behavior)
     pub sidebar_visible: bool,
+    /// Scroll offset for MC agent cards panel
+    pub mc_scroll: u16,
 }
 
 impl App {
@@ -59,6 +61,7 @@ impl App {
             status_message: None,
             previous_mode: None,
             sidebar_visible: true,
+            mc_scroll: 0,
         }
     }
 
