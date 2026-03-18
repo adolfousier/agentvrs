@@ -127,6 +127,8 @@ pub struct MissionControlState {
     pub show_all_activity: bool,
     /// Show all task entries (not just the recent subset).
     pub show_all_tasks: bool,
+    /// Keyboard navigation index for agent cards.
+    pub nav_index: usize,
 }
 
 impl Default for MissionControlState {
@@ -139,6 +141,7 @@ impl Default for MissionControlState {
             zoom: 1.0,
             show_all_activity: false,
             show_all_tasks: false,
+            nav_index: 0,
         }
     }
 }
@@ -315,6 +318,83 @@ pub fn handle_mc_zoom(mut mc_state: ResMut<MissionControlState>, keys: Res<Butto
 
     if delta != 0.0 {
         mc_state.zoom = (mc_state.zoom + delta).clamp(0.5, 3.0);
+    }
+}
+
+// ── Keyboard navigation for agent cards ─────────────────────────────────────
+
+pub fn handle_mc_keyboard_nav(
+    mut mc_state: ResMut<MissionControlState>,
+    keys: Res<ButtonInput<KeyCode>>,
+    bridge: Res<WorldBridge>,
+    mut activity_heading_q: Query<&mut Text, (With<McActivityHeading>, Without<McTaskHeading>)>,
+    mut task_heading_q: Query<&mut Text, (With<McTaskHeading>, Without<McActivityHeading>)>,
+) {
+    if !mc_state.open || mc_state.popup_open || mc_state.message_popup_open {
+        return;
+    }
+
+    let Ok(registry) = bridge.registry.read() else {
+        return;
+    };
+    let agent_ids: Vec<crate::agent::AgentId> = registry.agents().map(|a| a.id).collect();
+    let count = agent_ids.len();
+    if count == 0 {
+        return;
+    }
+
+    // j/Down = next, k/Up = previous
+    let mut moved = false;
+    if keys.just_pressed(KeyCode::KeyJ) || keys.just_pressed(KeyCode::ArrowDown) {
+        mc_state.nav_index = (mc_state.nav_index + 1).min(count - 1);
+        moved = true;
+    }
+    if keys.just_pressed(KeyCode::KeyK) || keys.just_pressed(KeyCode::ArrowUp) {
+        mc_state.nav_index = mc_state.nav_index.saturating_sub(1);
+        moved = true;
+    }
+
+    // Enter toggles selection on current nav agent
+    if keys.just_pressed(KeyCode::Enter) {
+        let nav_id = agent_ids[mc_state.nav_index.min(count - 1)];
+        if mc_state.selected_agent == Some(nav_id) {
+            mc_state.selected_agent = None;
+        } else {
+            mc_state.selected_agent = Some(nav_id);
+        }
+        moved = true;
+    }
+
+    // Esc deselects (if agent selected, don't close MC)
+    if keys.just_pressed(KeyCode::Escape) && mc_state.selected_agent.is_some() {
+        mc_state.selected_agent = None;
+        moved = true;
+    }
+
+    if !moved {
+        return;
+    }
+
+    // Update heading texts to reflect selection
+    drop(registry);
+    let agent_name = mc_state.selected_agent.and_then(|id| {
+        bridge
+            .registry
+            .read()
+            .ok()
+            .and_then(|reg| reg.get(&id).map(|a| a.name.clone()))
+    });
+    for mut text in activity_heading_q.iter_mut() {
+        **text = match &agent_name {
+            Some(name) => format!("Recent Activity — {}", name),
+            None => "Recent Activity".to_string(),
+        };
+    }
+    for mut text in task_heading_q.iter_mut() {
+        **text = match &agent_name {
+            Some(name) => format!("Tasks — {}", name),
+            None => "Tasks".to_string(),
+        };
     }
 }
 
@@ -531,7 +611,7 @@ pub fn update_mission_control(
         tc.0 = t.text_muted;
         let zoom_pct = (z * 100.0) as u32;
         commands.entity(entity).insert(Text::new(format!(
-            "M:close  Ctrl+/-:zoom ({zoom_pct}%)  scroll:navigate  click:select"
+            "M:close  j/k:navigate  Enter:select  Ctrl+/-:zoom ({zoom_pct}%)  scroll:pan"
         )));
     }
     for mut tc in heading_q.iter_mut() {
@@ -581,7 +661,7 @@ pub fn update_mission_control(
             }
         }
 
-        for agent in registry.agents() {
+        for (agent_idx, agent) in registry.agents().enumerate() {
             let dot_color = state_color(&agent.state);
             let kind_label = match &agent.kind {
                 crate::agent::AgentKind::Local => "local",
@@ -592,7 +672,19 @@ pub fn update_mission_control(
             let tasks = agent_tasks.get(&agent.id);
             let activity = agent_activity.get(&agent.id);
             let is_selected = mc_state.selected_agent == Some(agent.id);
-            let card_border_color = if is_selected { t.link } else { t.card_border };
+            let is_nav_focused = agent_idx == mc_state.nav_index;
+            let card_border_color = if is_selected {
+                t.link
+            } else if is_nav_focused {
+                Color::srgb(0.4, 0.7, 0.9)
+            } else {
+                t.card_border
+            };
+            let border_width = if is_selected || is_nav_focused {
+                2.0
+            } else {
+                1.0
+            };
 
             let card = commands
                 .spawn((
@@ -602,7 +694,7 @@ pub fn update_mission_control(
                         row_gap: px(6.0),
                         width: px(280.0),
                         max_height: Val::Percent(90.0),
-                        border: UiRect::all(px(if is_selected { 2.0 } else { 1.0 })),
+                        border: UiRect::all(px(border_width)),
                         border_radius: BorderRadius::all(px(8.0)),
                         overflow: Overflow::clip(),
                         ..default()

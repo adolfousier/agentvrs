@@ -154,6 +154,7 @@ mod bevy_tests {
             show_all_activity: false,
             show_all_tasks: false,
             message_popup_open: false,
+            nav_index: 0,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -194,6 +195,7 @@ mod bevy_tests {
             show_all_activity: false,
             show_all_tasks: false,
             message_popup_open: false,
+            nav_index: 0,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -246,6 +248,7 @@ mod bevy_tests {
             show_all_activity: false,
             show_all_tasks: false,
             message_popup_open: false,
+            nav_index: 0,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -301,6 +304,7 @@ mod bevy_tests {
             show_all_activity: false,
             show_all_tasks: false,
             message_popup_open: false,
+            nav_index: 0,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -341,6 +345,7 @@ mod bevy_tests {
             show_all_activity: false,
             show_all_tasks: false,
             message_popup_open: false,
+            nav_index: 0,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);
@@ -371,6 +376,7 @@ mod bevy_tests {
             show_all_activity: false,
             show_all_tasks: false,
             message_popup_open: false,
+            nav_index: 0,
         });
         app.insert_resource(test_theme());
         app.add_systems(Startup, setup_mission_control);

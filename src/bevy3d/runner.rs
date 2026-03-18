@@ -130,6 +130,7 @@ pub async fn run(config: AppConfig) -> Result<()> {
         (
             super::mission_control::toggle_mission_control,
             super::mission_control::handle_mc_zoom,
+            super::mission_control::handle_mc_keyboard_nav,
             super::mission_control::handle_card_clicks,
             super::mission_control::handle_see_all_clicks,
             super::mission_control::handle_task_popup,
