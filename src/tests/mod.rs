@@ -1,4 +1,5 @@
 mod a2a_test;
+mod avatar_test;
 mod agent_test;
 mod api_test;
 mod config_test;

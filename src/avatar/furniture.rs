@@ -12,6 +12,14 @@ pub fn furniture_sprite(tile: &Tile) -> SpriteFrame {
         Tile::PinballMachine => pinball(),
         Tile::GymTreadmill => treadmill(),
         Tile::Whiteboard => whiteboard(),
+        Tile::WeightBench => weight_bench(),
+        Tile::YogaMat => yoga_mat(),
+        Tile::FloorLamp => floor_lamp(),
+        Tile::MeetingTable => meeting_table(),
+        Tile::SmallArmchair => armchair(),
+        Tile::ServerRack => server_rack(),
+        Tile::FileCabinet => file_cabinet(),
+        Tile::KitchenCounter => kitchen_counter(),
         _ => super::sprite::empty_frame(),
     }
 }
@@ -150,6 +158,180 @@ fn whiteboard() -> SpriteFrame {
             c('─', frame_c),
             c('─', frame_c),
             c('┘', frame_c),
+        ],
+    ]
+}
+
+fn weight_bench() -> SpriteFrame {
+    let metal = Color::Rgb(160, 160, 170);
+    let pad = Color::Rgb(40, 40, 40);
+    let weight = Color::Rgb(80, 80, 90);
+    [
+        [c('◄', weight), c('━', metal), c('━', metal), c('►', weight)],
+        [
+            e(),
+            cb('▓', pad, Color::Rgb(30, 30, 30)),
+            cb('▓', pad, Color::Rgb(30, 30, 30)),
+            e(),
+        ],
+        [e(), c('╨', metal), c('╨', metal), e()],
+    ]
+}
+
+fn yoga_mat() -> SpriteFrame {
+    let mat = Color::Rgb(120, 80, 200);
+    let bg = Color::Rgb(100, 65, 170);
+    [
+        [
+            cb('╭', mat, bg),
+            cb('─', mat, bg),
+            cb('─', mat, bg),
+            cb('╮', mat, bg),
+        ],
+        [
+            cb('│', mat, bg),
+            cb('░', mat, bg),
+            cb('░', mat, bg),
+            cb('│', mat, bg),
+        ],
+        [
+            cb('╰', mat, bg),
+            cb('─', mat, bg),
+            cb('─', mat, bg),
+            cb('╯', mat, bg),
+        ],
+    ]
+}
+
+fn floor_lamp() -> SpriteFrame {
+    let pole = Color::Rgb(180, 150, 50);
+    let light = Color::Rgb(255, 240, 180);
+    let glow = Color::Rgb(255, 255, 200);
+    [
+        [e(), c('╔', pole), c('╗', pole), c('*', glow)],
+        [e(), c('║', pole), c('║', pole), e()],
+        [e(), cb('▀', light, pole), cb('▀', light, pole), e()],
+    ]
+}
+
+fn meeting_table() -> SpriteFrame {
+    let wood = Color::Rgb(120, 80, 40);
+    let top = Color::Rgb(160, 110, 60);
+    [
+        [
+            cb('╭', wood, top),
+            cb('─', wood, top),
+            cb('─', wood, top),
+            cb('╮', wood, top),
+        ],
+        [
+            cb('│', wood, top),
+            cb('▒', top, Color::Rgb(140, 95, 50)),
+            cb('▒', top, Color::Rgb(140, 95, 50)),
+            cb('│', wood, top),
+        ],
+        [
+            cb('╰', wood, top),
+            cb('─', wood, top),
+            cb('─', wood, top),
+            cb('╯', wood, top),
+        ],
+    ]
+}
+
+fn armchair() -> SpriteFrame {
+    let fabric = Color::Rgb(70, 100, 160);
+    let dark = Color::Rgb(50, 75, 130);
+    [
+        [e(), e(), e(), e()],
+        [
+            c('▐', fabric),
+            cb('▓', fabric, dark),
+            cb('▓', fabric, dark),
+            c('▌', fabric),
+        ],
+        [
+            c('▐', dark),
+            c('█', fabric),
+            c('█', fabric),
+            c('▌', dark),
+        ],
+    ]
+}
+
+fn server_rack() -> SpriteFrame {
+    let body = Color::Rgb(50, 50, 60);
+    let led = Color::Rgb(0, 255, 100);
+    let panel = Color::Rgb(70, 70, 80);
+    [
+        [
+            cb('┌', panel, body),
+            cb('━', panel, body),
+            cb('━', panel, body),
+            cb('┐', panel, body),
+        ],
+        [
+            cb('│', panel, body),
+            cb('▪', led, body),
+            cb('▪', led, body),
+            cb('│', panel, body),
+        ],
+        [
+            cb('│', panel, body),
+            cb('═', panel, body),
+            cb('═', panel, body),
+            cb('│', panel, body),
+        ],
+    ]
+}
+
+fn file_cabinet() -> SpriteFrame {
+    let body = Color::Rgb(140, 140, 150);
+    let handle = Color::Rgb(200, 200, 210);
+    [
+        [
+            c('┌', body),
+            c('─', body),
+            c('─', body),
+            c('┐', body),
+        ],
+        [
+            c('│', body),
+            c('▬', handle),
+            c('▬', handle),
+            c('│', body),
+        ],
+        [
+            c('│', body),
+            c('▬', handle),
+            c('▬', handle),
+            c('│', body),
+        ],
+    ]
+}
+
+fn kitchen_counter() -> SpriteFrame {
+    let counter = Color::Rgb(180, 180, 190);
+    let cabinet = Color::Rgb(139, 90, 43);
+    let top = Color::Rgb(220, 220, 230);
+    [
+        [
+            cb('▄', top, counter),
+            cb('▄', top, counter),
+            cb('▄', top, counter),
+            cb('▄', top, counter),
+        ],
+        [
+            c('│', cabinet),
+            cb('▒', counter, cabinet),
+            cb('▒', counter, cabinet),
+            c('│', cabinet),
+        ],
+        [
+            c('│', cabinet),
+            c('▬', counter),
+            c('▬', counter),
+            c('│', cabinet),
         ],
     ]
 }
