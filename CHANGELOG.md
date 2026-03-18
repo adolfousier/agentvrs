@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.1.7] - 2026-03-18
+
+### Added
+- **TUI overhaul** — complete terminal UI redesign: centered/scaled world view filling available space, styled sidebar with solid dark background, enhanced detail panel with state badges, speech bubbles with rounded borders, colored message log with Unicode arrows, status bar with mode badge
+- **TUI Mission Control** — full MC dashboard in terminal with agent cards (per-agent tasks/activity from SQLite), activity feed, and task list — matching Bevy 3D layout
+- **TUI MC navigation** — Tab cycles panels (Agents→Activity→Tasks), j/k or arrows select items, Enter opens detail popup (agent info+inbox or task detail), Esc closes popup, M exits MC
+- **TUI auto-scroll** — all MC panels auto-scroll to keep selected item visible when navigating beyond view
+- **TUI sidebar toggle** — `H` key toggles sidebar across all modes (World, Detail, MessageLog); sidebar resizes world via Layout split
+- **Bevy MC keyboard navigation** — j/k or arrow keys navigate agent cards with border highlight, Enter selects/deselects agent (filters activity+tasks), Esc deselects
+- **TUI furniture sprites** — all tile types (desks, vending machines, coffee, couches, treadmills, arcade, etc.) rendered with ASCII art
+- **TUI agent labels** — agent names displayed below sprites in world view
+- 23 new TUI tests, 254 tests across 11 modules
+
+### Fixed
+- TUI crash on multi-byte UTF-8 chars (em dash `—`) in `trunc()` and string slicing — now uses `chars().take()` instead of byte indexing
+- Bevy MC agent cards not scrollable — individual cards had `McScrollable`+`Interaction` stealing hover from parent container
+- TUI sidebar overlapping world view — now resizes via Layout split instead of overlay
+- TUI sidebar transparent background — solid dark fill applied
+- TUI MC cards breaking box-drawing borders on narrow panels — width-aware rendering with text truncation
+- TUI MC showing empty data — reads tasks/activity from SQLite DB
+- Agents sidebar heading unreadable in light mode
+
 ## [0.1.6] - 2026-03-17
 
 ### Added

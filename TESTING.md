@@ -47,12 +47,13 @@ src/tests/
 ├── simulation_test.rs      # Simulation tick loop, agent behavior, state transitions
 ├── observability_test.rs   # Observability endpoints (detail, activity, heartbeat, status, tasks, dashboard)
 ├── db_test.rs              # SQLite persistence (agents, messages, activity, tasks, heartbeats, purge)
+├── avatar_test.rs          # Avatar color and sprite utilities
 └── mission_control_test.rs # Mission Control panel (bevy3d feature, ECS systems, UI hierarchy)
 ```
 
 ## Test Coverage by Module
 
-### api_test.rs (33 tests)
+### api_test.rs (51 tests)
 
 **Health & CRUD:**
 - Health endpoint response
@@ -90,7 +91,7 @@ src/tests/
 - Agent ID prefix matching (short ID lookup)
 - SSE event stream endpoint exists (content-type check)
 
-### world_test.rs (44 tests)
+### world_test.rs (60 tests)
 
 **Position:**
 - Creation, movement in all 4 directions
@@ -160,7 +161,7 @@ src/tests/
 - Activity state tracks tick count past minimum
 - Multiple agents handled without conflicts
 
-### agent_test.rs (18 tests)
+### agent_test.rs (21 tests)
 
 - AgentId generation and uniqueness
 - AgentId display (8-char prefix)
@@ -199,7 +200,7 @@ src/tests/
 - API key not serialized when None
 - API key serialized when set
 
-### tui_test.rs (16 tests)
+### tui_test.rs (39 tests)
 
 - App initial state
 - Quit keybindings (q, Esc, Ctrl+C)
@@ -207,6 +208,16 @@ src/tests/
 - Command input typing and clearing
 - Agent list navigation (j/k, Up/Down)
 - Boundary behavior (navigate up at index 0)
+- Sidebar toggle (H key in WorldView, AgentDetail, MessageLog; visible by default)
+- MC scroll default zero
+- MC j/k selects up/down
+- MC k at zero stays zero
+- MC exit resets scroll
+- MC Tab cycles panels (Agents→Activity→Tasks→Agents)
+- MC Tab resets selection
+- MC Enter opens detail popup
+- MC detail Esc closes (stays in MC)
+- MC detail blocks navigation (j/k/Tab ignored when popup open)
 
 ### observability_test.rs (11 tests)
 
@@ -233,7 +244,7 @@ src/tests/
 **Dashboard:**
 - Full dashboard aggregation (detail + activity + health)
 
-### db_test.rs (18 tests)
+### db_test.rs (21 tests)
 
 **Agents:**
 - Save and load agent
@@ -266,6 +277,12 @@ src/tests/
 
 **Agent Restore:**
 - Agent::restore() reconstructs with original UUID
+
+### avatar_test.rs (3 tests)
+
+- Agent color mapping from color index
+- State color mapping for agent states
+- Sprite generation utilities
 
 ### mission_control_test.rs (15 tests) — requires `bevy3d` feature
 

@@ -14,6 +14,10 @@
 
 ![Mission Control](src/assets/mc.png)
 
+![TUI Mode](src/assets/tui.png)
+
+![TUI Mission Control](src/assets/tui-mc.png)
+
 **Author:** [Adolfo Usier](https://github.com/adolfousier) | **Website:** [agentvrs.com](https://agentvrs.com)
 
 ---
@@ -52,14 +56,14 @@
 - **Bevy 3D** — isometric 3D world with orthographic camera, voxel agents, detailed furniture, floating labels, resizable sidebar, speech bubbles, and live dark/light mode
 - **Office world** — desks, break room with vending machines and coffee, lounge with couches, gym with treadmills, server room, arcade with pinball machines
 - **Animated agents** — walking animations, state-driven behavior, BFS pathfinding, and speech bubbles
-- **TUI mode** — full terminal UI with ASCII world, agent name labels, styled sidebar, Mission Control dashboard — works on headless servers and VPS (`--tui` flag)
+- **TUI mode** — full terminal UI with centered/scaled ASCII world, agent labels, styled sidebar (`H` toggle), Mission Control dashboard with keyboard navigation (Tab/j/k/Enter), auto-scroll, detail popups — works on headless servers and VPS (`--tui` flag)
 - **Privacy-first** — runs entirely locally on `127.0.0.1`, no telemetry, no cloud
 - **Production-ready API** — REST endpoints with JSON error responses, API key auth, rate limiting, SSE event streaming
 - **Observability & control plane** — activity logs, heartbeat monitoring, task history, connection health, full agent dashboard — control all agents from one place across multiple machines
 - **A2A protocol** — wire-compatible A2A client for connecting OpenCrabs agents
 - **Agent control** — move agents, set goals, change states, send messages between agents via API
 - **Agent inbox** — messages between agents are stored in-world; agents poll their inbox or receive push via webhook
-- **Mission Control** — press `M` for full-screen overlay with clickable agent cards, scrollable activity feed and task list, task detail popups, See All toggles, `Ctrl+/-` zoom — follows system light/dark mode
+- **Mission Control** — press `M` for full-screen overlay with clickable agent cards, scrollable activity feed and task list, task detail popups, See All toggles, `Ctrl+/-` zoom, keyboard navigation (`j/k` + Enter) — follows system light/dark mode
 - **SQLite persistence** — agents, messages, activity, tasks, and heartbeats survive restarts (`~/.config/agentverse/agentverse.db`)
 - **Persistent config** — window size, sidebar state, and settings saved across restarts
 
@@ -188,10 +192,21 @@ discovery_interval_secs = 30
 | `n` / `p` | Next / previous agent (alias) |
 | `Enter` | Agent detail view |
 | `Tab` | Message log |
+| `H` | Toggle sidebar |
 | `M` | Toggle Mission Control |
 | `:` | Command input |
 | `Esc` | Back / close |
 | `q` | Quit |
+
+**Mission Control (TUI):**
+
+| Key | Action |
+|-----|--------|
+| `Tab` | Cycle panels: Agents → Activity → Tasks |
+| `j/k` or `↑/↓` | Select item in focused panel |
+| `Enter` | Open detail popup (agent info or task detail) |
+| `Esc` | Close popup / exit MC |
+| `M` | Exit Mission Control |
 
 ---
 
