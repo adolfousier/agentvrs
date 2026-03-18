@@ -26,6 +26,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         AppMode::AgentDetail => "DETAIL",
         AppMode::MessageLog => "LOG",
         AppMode::CommandInput => "CMD",
+        AppMode::MissionControl => "MC",
     };
 
     let mode_bg = match app.mode {
@@ -33,6 +34,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         AppMode::AgentDetail => Color::Rgb(80, 180, 80),
         AppMode::MessageLog => Color::Rgb(200, 160, 40),
         AppMode::CommandInput => Color::Rgb(200, 80, 80),
+        AppMode::MissionControl => Color::Rgb(180, 80, 200),
     };
 
     let mut spans = vec![

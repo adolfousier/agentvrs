@@ -1,5 +1,6 @@
 mod details_panel;
 mod message_log;
+pub mod mission_control;
 mod sidebar;
 mod status_bar;
 mod world_view;
@@ -9,6 +10,21 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
 
 pub fn draw(frame: &mut Frame, app: &App) {
+    // Mission Control is a full-screen overlay
+    if app.mode == AppMode::MissionControl {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(8),    // MC panel
+                Constraint::Length(3), // status bar
+            ])
+            .split(frame.area());
+
+        mission_control::draw(frame, app, chunks[0]);
+        status_bar::draw(frame, app, chunks[1]);
+        return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([

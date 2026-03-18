@@ -19,6 +19,7 @@ pub struct WorldRuntime {
     pub broadcast_tx: broadcast::Sender<WorldEvent>,
     pub shared_tick: Arc<std::sync::atomic::AtomicU64>,
     pub db: Arc<Mutex<Database>>,
+    pub observer: Arc<RwLock<AgentObserver>>,
 }
 
 pub async fn setup(config: &AppConfig, world_w: u16, world_h: u16) -> Result<WorldRuntime> {
@@ -183,5 +184,6 @@ async fn setup_inner(
         broadcast_tx,
         shared_tick,
         db,
+        observer,
     })
 }

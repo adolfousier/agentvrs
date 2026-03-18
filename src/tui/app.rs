@@ -1,6 +1,8 @@
 use crate::agent::{AgentId, AgentRegistry, MessageLog};
+use crate::api::observability::AgentObserver;
+use crate::db::Database;
 use crate::world::{Grid, WorldEvent};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,6 +11,7 @@ pub enum AppMode {
     AgentDetail,
     MessageLog,
     CommandInput,
+    MissionControl,
 }
 
 pub struct App {
@@ -16,6 +19,8 @@ pub struct App {
     pub grid: Arc<RwLock<Grid>>,
     pub registry: Arc<RwLock<AgentRegistry>>,
     pub message_log: Arc<RwLock<MessageLog>>,
+    pub observer: Arc<RwLock<AgentObserver>>,
+    pub db: Arc<Mutex<Database>>,
     pub event_rx: mpsc::Receiver<WorldEvent>,
     pub selected_agent: Option<AgentId>,
     pub selected_index: usize,
@@ -23,6 +28,8 @@ pub struct App {
     pub should_quit: bool,
     pub command_input: String,
     pub status_message: Option<String>,
+    /// Previous mode before entering MC (to restore on exit)
+    pub previous_mode: Option<AppMode>,
 }
 
 impl App {
@@ -30,6 +37,8 @@ impl App {
         grid: Arc<RwLock<Grid>>,
         registry: Arc<RwLock<AgentRegistry>>,
         message_log: Arc<RwLock<MessageLog>>,
+        observer: Arc<RwLock<AgentObserver>>,
+        db: Arc<Mutex<Database>>,
         event_rx: mpsc::Receiver<WorldEvent>,
     ) -> Self {
         Self {
@@ -37,6 +46,8 @@ impl App {
             grid,
             registry,
             message_log,
+            observer,
+            db,
             event_rx,
             selected_agent: None,
             selected_index: 0,
@@ -44,6 +55,7 @@ impl App {
             should_quit: false,
             command_input: String::new(),
             status_message: None,
+            previous_mode: None,
         }
     }
 

@@ -7,6 +7,7 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         AppMode::AgentDetail => agent_detail(app, key),
         AppMode::MessageLog => message_log(app, key),
         AppMode::CommandInput => command_input(app, key),
+        AppMode::MissionControl => mission_control(app, key),
     }
 }
 
@@ -20,6 +21,10 @@ fn world_view(app: &mut App, key: KeyEvent) {
         KeyCode::Char(':') => {
             app.mode = AppMode::CommandInput;
             app.command_input.clear();
+        }
+        KeyCode::Char('m') | KeyCode::Char('M') => {
+            app.previous_mode = Some(app.mode);
+            app.mode = AppMode::MissionControl;
         }
         // Agent selection
         KeyCode::Char('n') | KeyCode::Down | KeyCode::Char('j') => app.selected_index += 1,
@@ -38,6 +43,10 @@ fn agent_detail(app: &mut App, key: KeyEvent) {
             app.selected_agent = None;
         }
         KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('m') | KeyCode::Char('M') => {
+            app.previous_mode = Some(app.mode);
+            app.mode = AppMode::MissionControl;
+        }
         _ => {}
     }
 }
@@ -45,6 +54,20 @@ fn agent_detail(app: &mut App, key: KeyEvent) {
 fn message_log(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc | KeyCode::Tab => app.mode = AppMode::WorldView,
+        KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('m') | KeyCode::Char('M') => {
+            app.previous_mode = Some(app.mode);
+            app.mode = AppMode::MissionControl;
+        }
+        _ => {}
+    }
+}
+
+fn mission_control(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('m') | KeyCode::Char('M') => {
+            app.mode = app.previous_mode.take().unwrap_or(AppMode::WorldView);
+        }
         KeyCode::Char('q') => app.should_quit = true,
         _ => {}
     }

@@ -1,17 +1,21 @@
 use crate::agent::{AgentRegistry, MessageLog};
+use crate::api::observability::AgentObserver;
+use crate::db::Database;
 use crate::tui::app::{App, AppMode};
 use crate::tui::input::handle_key;
 use crate::world::{Grid, WorldEvent};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::mpsc;
 
 fn test_app() -> App {
     let grid = Arc::new(RwLock::new(Grid::new(16, 12)));
     let registry = Arc::new(RwLock::new(AgentRegistry::new()));
     let message_log = Arc::new(RwLock::new(MessageLog::new()));
+    let observer = Arc::new(RwLock::new(AgentObserver::new(100, 50)));
+    let db = Arc::new(Mutex::new(Database::open_in_memory().expect("test db")));
     let (_tx, rx) = mpsc::channel::<WorldEvent>(64);
-    App::new(grid, registry, message_log, rx)
+    App::new(grid, registry, message_log, observer, db, rx)
 }
 
 fn key(code: KeyCode) -> KeyEvent {
@@ -191,4 +195,60 @@ fn test_message_log_tab_returns() {
     app.mode = AppMode::MessageLog;
     handle_key(&mut app, key(KeyCode::Tab));
     assert_eq!(app.mode, AppMode::WorldView);
+}
+
+// ── Mission Control tests ────────────────────────────────────────────
+
+#[test]
+fn test_m_key_opens_mission_control() {
+    let mut app = test_app();
+    handle_key(&mut app, key(KeyCode::Char('m')));
+    assert_eq!(app.mode, AppMode::MissionControl);
+    assert_eq!(app.previous_mode, Some(AppMode::WorldView));
+}
+
+#[test]
+fn test_m_key_closes_mission_control() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::WorldView);
+    handle_key(&mut app, key(KeyCode::Char('m')));
+    assert_eq!(app.mode, AppMode::WorldView);
+}
+
+#[test]
+fn test_esc_closes_mission_control() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    app.previous_mode = Some(AppMode::AgentDetail);
+    handle_key(&mut app, key(KeyCode::Esc));
+    assert_eq!(app.mode, AppMode::AgentDetail);
+}
+
+#[test]
+fn test_mc_from_detail_restores_detail() {
+    let mut app = test_app();
+    app.mode = AppMode::AgentDetail;
+    handle_key(&mut app, key(KeyCode::Char('m')));
+    assert_eq!(app.mode, AppMode::MissionControl);
+    assert_eq!(app.previous_mode, Some(AppMode::AgentDetail));
+    handle_key(&mut app, key(KeyCode::Esc));
+    assert_eq!(app.mode, AppMode::AgentDetail);
+}
+
+#[test]
+fn test_mc_quit_works() {
+    let mut app = test_app();
+    app.mode = AppMode::MissionControl;
+    handle_key(&mut app, key(KeyCode::Char('q')));
+    assert!(app.should_quit);
+}
+
+#[test]
+fn test_mc_from_message_log() {
+    let mut app = test_app();
+    app.mode = AppMode::MessageLog;
+    handle_key(&mut app, key(KeyCode::Char('M')));
+    assert_eq!(app.mode, AppMode::MissionControl);
+    assert_eq!(app.previous_mode, Some(AppMode::MessageLog));
 }
