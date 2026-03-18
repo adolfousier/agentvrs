@@ -72,8 +72,8 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             let screen_x = ox + gx * tw;
             let screen_y = oy + gy * th;
             // Center the 8*sx wide agent on the tw-wide tile
-            let ax = screen_x + tw / 2 - agent_w / 2;
-            let ay = screen_y + th / 2 - agent_h / 2;
+            let ax = (screen_x + tw / 2).saturating_sub(agent_w / 2);
+            let ay = (screen_y + th / 2).saturating_sub(agent_h / 2);
             let sprite = agent_sprite(
                 &agent.state,
                 &agent.anim.facing,
@@ -98,7 +98,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
                 &agent.name
             };
             let name_len = name.len() as u16;
-            let label_x = screen_x + tw / 2 - name_len / 2;
+            let label_x = (screen_x + tw / 2).saturating_sub(name_len / 2);
             let color = agent_color(agent.color_index);
             render_label(buf, label_x, label_y, name, color, area);
         }
