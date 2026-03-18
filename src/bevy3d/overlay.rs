@@ -50,6 +50,9 @@ pub struct SidebarSeparator;
 pub struct SpeechBubble;
 
 #[derive(Component)]
+pub struct SidebarHeading;
+
+#[derive(Component)]
 pub struct DetailPanel;
 
 #[derive(Component)]
@@ -206,6 +209,7 @@ pub fn setup_ui(mut commands: Commands, sidebar_state: Res<SidebarState>) {
                             ),
                             ..default()
                         },
+                        SidebarHeading,
                     ));
 
                     // ── Agent list (scrollable area) ────────────────────────
@@ -331,7 +335,17 @@ pub fn update_sidebar(
     mut title_q: Query<(&mut Text, &mut TextColor), (With<DetailTitle>, Without<DetailInfo>)>,
     mut info_q: Query<(&mut Text, &mut TextColor), (With<DetailInfo>, Without<DetailTitle>)>,
     entry_q: Query<Entity, With<AgentListEntry>>,
+    mut heading_q: Query<&mut TextColor, (With<SidebarHeading>, Without<DetailTitle>, Without<DetailInfo>)>,
 ) {
+    // ── Update heading color for theme ───────────────────────────────
+    for mut color in heading_q.iter_mut() {
+        *color = if theme.is_dark {
+            TextColor(Color::srgb(0.9, 0.9, 0.9))
+        } else {
+            TextColor(Color::srgb(0.15, 0.15, 0.15))
+        };
+    }
+
     let Ok(registry) = bridge.registry.read() else {
         return;
     };
