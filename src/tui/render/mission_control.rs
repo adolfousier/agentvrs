@@ -132,9 +132,17 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
     let mut all_lines: Vec<Line> = Vec::new();
 
     let is_focused = app.mc_panel == McPanel::Agents;
+    let selected = if agent_count > 0 {
+        app.mc_selected.min(agent_count - 1)
+    } else {
+        0
+    };
+    // Track starting line of each card for scroll calculation
+    let mut card_start_lines: Vec<usize> = Vec::new();
 
     for (idx, agent) in agents.iter().enumerate() {
-        let is_selected = is_focused && idx == app.mc_selected;
+        card_start_lines.push(all_lines.len());
+        let is_selected = is_focused && idx == selected;
 
         let border_color = if is_selected {
             Color::Cyan
@@ -309,9 +317,21 @@ fn draw_agent_cards(frame: &mut Frame, app: &App, area: Rect) {
         .border_set(ratatui::symbols::border::ROUNDED)
         .padding(Padding::new(0, 0, 1, 0));
 
-    let paragraph = Paragraph::new(all_lines)
-        .block(block)
-        .scroll((app.mc_scroll, 0));
+    // Auto-scroll to keep selected card visible
+    let visible_h = area.height.saturating_sub(4) as usize; // borders + top padding
+    let scroll = if is_focused && !card_start_lines.is_empty() && selected < card_start_lines.len()
+    {
+        let card_line = card_start_lines[selected];
+        if card_line >= visible_h {
+            (card_line - visible_h / 3) as u16
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    let paragraph = Paragraph::new(all_lines).block(block).scroll((scroll, 0));
     frame.render_widget(paragraph, area);
 }
 
@@ -351,6 +371,7 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
         ]
     } else {
         let is_focused = app.mc_panel == McPanel::Activity;
+        let selected = app.mc_selected.min(all_entries.len().saturating_sub(1));
         all_entries
             .iter()
             .enumerate()
@@ -358,7 +379,7 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
                 let a_color = agent_color(*color_idx);
                 let prefix_len = 10 + name.len() + 2;
                 let max_detail = inner_w.saturating_sub(prefix_len);
-                let is_sel = is_focused && idx == app.mc_selected;
+                let is_sel = is_focused && idx == selected;
 
                 let mut line = Line::from(vec![
                     Span::styled(
@@ -406,7 +427,21 @@ fn draw_activity_feed(frame: &mut Frame, app: &App, area: Rect) {
         .border_set(ratatui::symbols::border::ROUNDED)
         .padding(Padding::new(0, 0, 1, 0));
 
-    let paragraph = Paragraph::new(lines).block(block);
+    // Auto-scroll to keep selected item visible
+    let visible_h = area.height.saturating_sub(4) as usize; // borders + top padding
+    let entry_count = all_entries.len();
+    let scroll = if is_focused && entry_count > 0 {
+        let sel = app.mc_selected.min(entry_count.saturating_sub(1));
+        if sel >= visible_h {
+            (sel - visible_h + 1) as u16
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    let paragraph = Paragraph::new(lines).block(block).scroll((scroll, 0));
     frame.render_widget(paragraph, area);
 }
 
@@ -443,6 +478,7 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
         ]
     } else {
         let is_focused = app.mc_panel == McPanel::Tasks;
+        let selected = app.mc_selected.min(all_tasks.len().saturating_sub(1));
         all_tasks
             .iter()
             .enumerate()
@@ -454,7 +490,7 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
                     "failed" => Color::Red,
                     _ => Color::Gray,
                 };
-                let is_sel = is_focused && idx == app.mc_selected;
+                let is_sel = is_focused && idx == selected;
 
                 let prefix_len = 3 + 11 + 1 + agent_name.len() + 2;
                 let max_summary = inner_w.saturating_sub(prefix_len);
@@ -511,7 +547,21 @@ fn draw_task_list(frame: &mut Frame, app: &App, area: Rect) {
         .border_set(ratatui::symbols::border::ROUNDED)
         .padding(Padding::new(0, 0, 1, 0));
 
-    let paragraph = Paragraph::new(lines).block(block);
+    // Auto-scroll to keep selected task visible
+    let visible_h = area.height.saturating_sub(4) as usize;
+    let task_count = all_tasks.len();
+    let scroll = if is_focused && task_count > 0 {
+        let sel = app.mc_selected.min(task_count.saturating_sub(1));
+        if sel >= visible_h {
+            (sel - visible_h + 1) as u16
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    let paragraph = Paragraph::new(lines).block(block).scroll((scroll, 0));
     frame.render_widget(paragraph, area);
 }
 
