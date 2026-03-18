@@ -22,25 +22,30 @@ pub fn draw(frame: &mut Frame, app: &App) {
         return;
     }
 
-    // Detail and MessageLog views are full-screen (with sidebar)
+    // Detail and MessageLog views are full-screen with sidebar overlay (H to toggle)
     if matches!(app.mode, AppMode::AgentDetail | AppMode::MessageLog) {
-        let cols = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Min(20), Constraint::Length(30)])
-            .split(frame.area());
-
-        let left = Layout::default()
+        let rows = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(8), Constraint::Length(3)])
-            .split(cols[0]);
+            .split(frame.area());
 
         match app.mode {
-            AppMode::AgentDetail => details_panel::draw(frame, app, left[0]),
-            AppMode::MessageLog => message_log::draw(frame, app, left[0]),
+            AppMode::AgentDetail => details_panel::draw(frame, app, rows[0]),
+            AppMode::MessageLog => message_log::draw(frame, app, rows[0]),
             _ => {}
         }
-        status_bar::draw(frame, app, left[1]);
-        sidebar::draw(frame, app, cols[1]);
+        status_bar::draw(frame, app, rows[1]);
+
+        if app.sidebar_visible {
+            let sidebar_width = 32u16.min(rows[0].width / 3);
+            let sidebar_area = Rect {
+                x: rows[0].x + rows[0].width - sidebar_width,
+                y: rows[0].y,
+                width: sidebar_width,
+                height: rows[0].height,
+            };
+            sidebar::draw(frame, app, sidebar_area);
+        }
         return;
     }
 

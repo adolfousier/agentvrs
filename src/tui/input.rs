@@ -46,6 +46,9 @@ fn agent_detail(app: &mut App, key: KeyEvent) {
             app.selected_agent = None;
         }
         KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('h') | KeyCode::Char('H') => {
+            app.sidebar_visible = !app.sidebar_visible;
+        }
         KeyCode::Char('m') | KeyCode::Char('M') => {
             app.previous_mode = Some(app.mode);
             app.mode = AppMode::MissionControl;
@@ -58,6 +61,9 @@ fn message_log(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc | KeyCode::Tab => app.mode = AppMode::WorldView,
         KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('h') | KeyCode::Char('H') => {
+            app.sidebar_visible = !app.sidebar_visible;
+        }
         KeyCode::Char('m') | KeyCode::Char('M') => {
             app.previous_mode = Some(app.mode);
             app.mode = AppMode::MissionControl;
