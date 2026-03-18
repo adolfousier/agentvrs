@@ -7,6 +7,17 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Padding, Paragraph};
 
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
+    // Solid dark background
+    let buf = frame.buffer_mut();
+    for y in area.y..area.y + area.height {
+        for x in area.x..area.x + area.width {
+            if let Some(cell) = buf.cell_mut(ratatui::layout::Position::new(x, y)) {
+                cell.set_char(' ');
+                cell.set_bg(Color::Rgb(22, 22, 30));
+            }
+        }
+    }
+
     let Ok(registry) = app.registry.read() else {
         return;
     };
