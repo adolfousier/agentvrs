@@ -97,7 +97,7 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             if gx < tiles_x && gy < tiles_y {
                 let sx = ox + gx * TILE_W;
                 let sy = oy + gy * TILE_H;
-                render_speech(buf, sx, sy.saturating_sub(3), speech, area);
+                render_speech(buf, sx, sy.saturating_sub(4), speech, area);
             }
         }
     }
@@ -180,20 +180,72 @@ fn render_label(
 }
 
 fn render_speech(buf: &mut ratatui::buffer::Buffer, x: u16, y: u16, text: &str, clip: Rect) {
-    let display = if text.len() > 16 {
-        format!(" {}... ", &text[..13])
+    let content = if text.len() > 18 {
+        format!("{}...", &text[..15])
     } else {
-        format!(" {} ", text)
+        text.to_string()
     };
+    let inner = format!(" {} ", content);
+    let width = inner.len();
+    let bubble_fg = Color::Rgb(60, 60, 70);
+    let bubble_bg = Color::Rgb(245, 245, 250);
+    let text_fg = Color::Rgb(30, 30, 40);
 
-    for (i, ch) in display.chars().enumerate() {
-        let bx = x + i as u16;
+    // Row 0: top border  ╭───╮
+    let top_y = y.saturating_sub(1);
+    render_text_at(buf, x, top_y, "╭", bubble_fg, None, clip);
+    for i in 0..width {
+        render_text_at(buf, x + 1 + i as u16, top_y, "─", bubble_fg, None, clip);
+    }
+    render_text_at(buf, x + 1 + width as u16, top_y, "╮", bubble_fg, None, clip);
+
+    // Row 1: content  │ text │
+    render_text_at(buf, x, y, "│", bubble_fg, None, clip);
+    for (i, ch) in inner.chars().enumerate() {
+        let bx = x + 1 + i as u16;
         if bx >= clip.x && bx < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height {
             let pos = ratatui::layout::Position::new(bx, y);
             if let Some(buf_cell) = buf.cell_mut(pos) {
                 buf_cell.set_char(ch);
-                buf_cell.set_fg(Color::Black);
-                buf_cell.set_bg(Color::White);
+                buf_cell.set_fg(text_fg);
+                buf_cell.set_bg(bubble_bg);
+            }
+        }
+    }
+    render_text_at(buf, x + 1 + width as u16, y, "│", bubble_fg, None, clip);
+
+    // Row 2: bottom border with tail  ╰─▽─╯
+    let bot_y = y + 1;
+    render_text_at(buf, x, bot_y, "╰", bubble_fg, None, clip);
+    let tail_pos = width / 2;
+    for i in 0..width {
+        if i == tail_pos {
+            render_text_at(buf, x + 1 + i as u16, bot_y, "▽", bubble_fg, None, clip);
+        } else {
+            render_text_at(buf, x + 1 + i as u16, bot_y, "─", bubble_fg, None, clip);
+        }
+    }
+    render_text_at(buf, x + 1 + width as u16, bot_y, "╯", bubble_fg, None, clip);
+}
+
+fn render_text_at(
+    buf: &mut ratatui::buffer::Buffer,
+    x: u16,
+    y: u16,
+    text: &str,
+    fg: Color,
+    bg: Option<Color>,
+    clip: Rect,
+) {
+    if x >= clip.x && x < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height {
+        let pos = ratatui::layout::Position::new(x, y);
+        if let Some(buf_cell) = buf.cell_mut(pos) {
+            for ch in text.chars() {
+                buf_cell.set_char(ch);
+                buf_cell.set_fg(fg);
+                if let Some(bg) = bg {
+                    buf_cell.set_bg(bg);
+                }
             }
         }
     }
