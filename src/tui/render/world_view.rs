@@ -20,20 +20,18 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         for x in area.x..area.x + area.width {
             if let Some(cell) = buf.cell_mut(ratatui::layout::Position::new(x, y)) {
                 cell.set_char(' ');
-                cell.set_bg(Color::Rgb(25, 25, 30));
-                cell.set_fg(Color::Rgb(25, 25, 30));
+                cell.set_bg(Color::Rgb(20, 20, 28));
+                cell.set_fg(Color::Rgb(20, 20, 28));
             }
         }
     }
 
-    // Show the entire world centered in the terminal area
+    // Show the entire world — left-aligned, vertically centered
     let tiles_x = (area.width / TILE_W).min(grid.width);
     let tiles_y = (area.height / TILE_H).min(grid.height);
 
-    // Center the grid in the available area
-    let grid_pixel_w = tiles_x * TILE_W;
     let grid_pixel_h = tiles_y * TILE_H;
-    let ox = area.x + (area.width.saturating_sub(grid_pixel_w)) / 2;
+    let ox = area.x + 1; // small left margin
     let oy = area.y + (area.height.saturating_sub(grid_pixel_h)) / 2;
 
     // Pass 1: tiles
