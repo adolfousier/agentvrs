@@ -83,15 +83,11 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             let sx = ox + gx * tw;
             let sy = oy + gy * th;
             let label_y = sy + (th / 2) + 4;
-            let name = if agent.name.len() > 10 {
-                &agent.name[..10]
-            } else {
-                &agent.name
-            };
+            let name: String = agent.name.chars().take(10).collect();
             let name_len = name.len() as u16;
             let label_x = (sx + tw / 2).saturating_sub(name_len / 2);
             let color = agent_color(agent.color_index);
-            render_label(buf, label_x, label_y, name, color, area);
+            render_label(buf, label_x, label_y, &name, color, area);
         }
     }
 
@@ -199,8 +195,9 @@ fn render_label(
 }
 
 fn render_speech(buf: &mut ratatui::buffer::Buffer, x: u16, y: u16, text: &str, clip: Rect) {
-    let content = if text.len() > 18 {
-        format!("{}...", &text[..15])
+    let content = if text.chars().count() > 18 {
+        let truncated: String = text.chars().take(15).collect();
+        format!("{}...", truncated)
     } else {
         text.to_string()
     };
