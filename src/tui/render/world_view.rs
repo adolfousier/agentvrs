@@ -1,7 +1,7 @@
 use crate::avatar::agents::agent_sprite;
 use crate::avatar::floors::tile_sprite;
 use crate::avatar::palette::agent_color;
-use crate::avatar::sprite::{BigSpriteFrame, SpriteFrame, TILE_H, TILE_W};
+use crate::avatar::sprite::{BigSpriteFrame, SpriteFrame, StyledCell, TILE_H, TILE_W};
 use crate::tui::app::App;
 use crate::world::Position;
 use ratatui::Frame;
@@ -26,45 +26,61 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    // Show the entire world centered in the terminal area
-    let tiles_x = (area.width / TILE_W).min(grid.width);
-    let tiles_y = (area.height / TILE_H).min(grid.height);
+    // Compute scale factors so the world fills the available area
+    // Base tile size is 4x3 chars, scale up to fill
+    let base_w = grid.width * TILE_W;
+    let base_h = grid.height * TILE_H;
 
-    // Center the grid in the available area
-    let grid_pixel_w = tiles_x * TILE_W;
-    let grid_pixel_h = tiles_y * TILE_H;
-    let ox = area.x + (area.width.saturating_sub(grid_pixel_w)) / 2;
-    let oy = area.y + (area.height.saturating_sub(grid_pixel_h)) / 2;
+    // Scale factor: how many times to repeat each cell (minimum 1)
+    let sx = (area.width / base_w).max(1);
+    let sy = (area.height / base_h).max(1);
+
+    // Scaled tile dimensions
+    let tw = TILE_W * sx;
+    let th = TILE_H * sy;
+
+    // Scaled world size
+    let world_w = grid.width * tw;
+    let world_h = grid.height * th;
+
+    // Center in area
+    let ox = area.x + (area.width.saturating_sub(world_w)) / 2;
+    let oy = area.y + (area.height.saturating_sub(world_h)) / 2;
 
     // Pass 1: tiles
-    for gy in 0..tiles_y {
-        for gx in 0..tiles_x {
+    for gy in 0..grid.height {
+        for gx in 0..grid.width {
             let pos = Position::new(gx, gy);
             if let Some(cell) = grid.get(pos) {
-                let sx = ox + gx * TILE_W;
-                let sy = oy + gy * TILE_H;
+                let screen_x = ox + gx * tw;
+                let screen_y = oy + gy * th;
                 let sprite = tile_sprite(&cell.tile, gx, gy);
-                render_sprite(buf, sx, sy, &sprite, area);
+                render_sprite_scaled(buf, screen_x, screen_y, &sprite, sx, sy, area);
             }
         }
     }
 
-    // Pass 2: agents (rendered at 8x6, centered on their grid position)
+    // Agent sprite scale: 8x6 base, scale by same factors
+    let agent_w = 8 * sx;
+    let agent_h = 6 * sy;
+
+    // Pass 2: agents
     for agent in registry.agents() {
         let gx = agent.position.x;
         let gy = agent.position.y;
-        if gx < tiles_x && gy < tiles_y {
-            let sx = ox + gx * TILE_W;
-            let sy = oy + gy * TILE_H;
-            let ax = sx.saturating_sub(2);
-            let ay = sy.saturating_sub(2);
+        if gx < grid.width && gy < grid.height {
+            let screen_x = ox + gx * tw;
+            let screen_y = oy + gy * th;
+            // Center the 8*sx wide agent on the tw-wide tile
+            let ax = screen_x + tw / 2 - agent_w / 2;
+            let ay = screen_y + th / 2 - agent_h / 2;
             let sprite = agent_sprite(
                 &agent.state,
                 &agent.anim.facing,
                 agent.anim.frame,
                 agent.color_index,
             );
-            render_big_sprite(buf, ax, ay, &sprite, area);
+            render_big_sprite_scaled(buf, ax, ay, &sprite, sx, sy, area);
         }
     }
 
@@ -72,18 +88,17 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     for agent in registry.agents() {
         let gx = agent.position.x;
         let gy = agent.position.y;
-        if gx < tiles_x && gy < tiles_y {
-            let sx = ox + gx * TILE_W;
-            let sy = oy + gy * TILE_H;
-            let label_y = sy + TILE_H + 1; // one row below the sprite bottom
-            let name = if agent.name.len() > 10 {
-                &agent.name[..10]
+        if gx < grid.width && gy < grid.height {
+            let screen_x = ox + gx * tw;
+            let screen_y = oy + gy * th;
+            let label_y = screen_y + th + 1;
+            let name = if agent.name.len() > 12 {
+                &agent.name[..12]
             } else {
                 &agent.name
             };
             let name_len = name.len() as u16;
-            // Center the label on the tile
-            let label_x = sx + TILE_W / 2 - name_len / 2;
+            let label_x = screen_x + tw / 2 - name_len / 2;
             let color = agent_color(agent.color_index);
             render_label(buf, label_x, label_y, name, color, area);
         }
@@ -94,64 +109,82 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
         if let Some(ref speech) = agent.speech {
             let gx = agent.position.x;
             let gy = agent.position.y;
-            if gx < tiles_x && gy < tiles_y {
-                let sx = ox + gx * TILE_W;
-                let sy = oy + gy * TILE_H;
-                render_speech(buf, sx, sy.saturating_sub(4), speech, area);
+            if gx < grid.width && gy < grid.height {
+                let screen_x = ox + gx * tw;
+                let screen_y = oy + gy * th;
+                render_speech(buf, screen_x, screen_y.saturating_sub(4), speech, area);
             }
         }
     }
 }
 
-fn render_sprite(
+/// Render a 4x3 tile sprite scaled by (sx, sy) — each cell becomes sx wide, sy tall.
+fn render_sprite_scaled(
     buf: &mut ratatui::buffer::Buffer,
     x: u16,
     y: u16,
     sprite: &SpriteFrame,
+    sx: u16,
+    sy: u16,
     clip: Rect,
 ) {
     for (row_idx, row) in sprite.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
-            let bx = x + col_idx as u16;
-            let by = y + row_idx as u16;
-            if bx >= clip.x && bx < clip.x + clip.width && by >= clip.y && by < clip.y + clip.height
-            {
-                let pos = ratatui::layout::Position::new(bx, by);
-                if let Some(buf_cell) = buf.cell_mut(pos) {
-                    if let Some(bg) = cell.bg {
-                        buf_cell.set_bg(bg);
-                    }
-                    if cell.ch != ' ' {
-                        buf_cell.set_char(cell.ch);
-                        buf_cell.set_fg(cell.fg);
-                    }
-                }
-            }
+            paint_scaled_cell(buf, x + col_idx as u16 * sx, y + row_idx as u16 * sy, cell, sx, sy, clip);
         }
     }
 }
 
-fn render_big_sprite(
+/// Render an 8x6 agent sprite scaled by (sx, sy).
+fn render_big_sprite_scaled(
     buf: &mut ratatui::buffer::Buffer,
     x: u16,
     y: u16,
     sprite: &BigSpriteFrame,
+    sx: u16,
+    sy: u16,
     clip: Rect,
 ) {
     for (row_idx, row) in sprite.iter().enumerate() {
         for (col_idx, cell) in row.iter().enumerate() {
-            let bx = x + col_idx as u16;
-            let by = y + row_idx as u16;
-            if bx >= clip.x && bx < clip.x + clip.width && by >= clip.y && by < clip.y + clip.height
-            {
+            paint_scaled_cell(buf, x + col_idx as u16 * sx, y + row_idx as u16 * sy, cell, sx, sy, clip);
+        }
+    }
+}
+
+/// Paint a single sprite cell scaled to sx*sy terminal cells.
+fn paint_scaled_cell(
+    buf: &mut ratatui::buffer::Buffer,
+    x: u16,
+    y: u16,
+    cell: &StyledCell,
+    sx: u16,
+    sy: u16,
+    clip: Rect,
+) {
+    for dy in 0..sy {
+        for dx in 0..sx {
+            let bx = x + dx;
+            let by = y + dy;
+            if bx >= clip.x && bx < clip.x + clip.width && by >= clip.y && by < clip.y + clip.height {
                 let pos = ratatui::layout::Position::new(bx, by);
                 if let Some(buf_cell) = buf.cell_mut(pos) {
                     if let Some(bg) = cell.bg {
                         buf_cell.set_bg(bg);
                     }
                     if cell.ch != ' ' {
-                        buf_cell.set_char(cell.ch);
-                        buf_cell.set_fg(cell.fg);
+                        // Only draw the character in the first column of the scale group
+                        // to avoid overlapping characters; fill rest with bg
+                        if dx == 0 && dy == 0 {
+                            buf_cell.set_char(cell.ch);
+                            buf_cell.set_fg(cell.fg);
+                        } else if let Some(bg) = cell.bg {
+                            buf_cell.set_char(' ');
+                            buf_cell.set_bg(bg);
+                        } else {
+                            buf_cell.set_char(cell.ch);
+                            buf_cell.set_fg(cell.fg);
+                        }
                     }
                 }
             }
