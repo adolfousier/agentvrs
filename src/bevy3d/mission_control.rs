@@ -693,7 +693,7 @@ pub fn update_mission_control(
                         padding: UiRect::all(px(14.0)),
                         row_gap: px(6.0),
                         width: px(280.0),
-                        max_height: Val::Percent(90.0),
+                        max_height: px(300.0),
                         border: UiRect::all(px(border_width)),
                         border_radius: BorderRadius::all(px(8.0)),
                         overflow: Overflow::clip(),
@@ -856,9 +856,14 @@ pub fn update_mission_control(
                                         TextColor(task_dot),
                                     ));
                                 });
-                                // Summary — full text, wrapping
-                                let summary =
+                                // Summary — truncated to keep card compact
+                                let full_summary =
                                     task.response_summary.as_deref().unwrap_or(&task.task_id);
+                                let summary = if full_summary.len() > 60 {
+                                    format!("{}…", &full_summary[..57])
+                                } else {
+                                    full_summary.to_string()
+                                };
                                 row.spawn((
                                     Text::new(summary),
                                     font(10.0),
@@ -909,8 +914,13 @@ pub fn update_mission_control(
                                         ..default()
                                     },
                                 ));
+                                let detail = if entry.detail.len() > 60 {
+                                    format!("{}…", &entry.detail[..57])
+                                } else {
+                                    entry.detail.clone()
+                                };
                                 row.spawn((
-                                    Text::new(&entry.detail),
+                                    Text::new(detail),
                                     font(10.0),
                                     TextColor(t.text_secondary),
                                     Node {
