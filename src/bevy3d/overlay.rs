@@ -701,8 +701,12 @@ pub fn update_agent_labels(
 
 pub fn toggle_sidebar(
     keys: Res<ButtonInput<KeyCode>>,
+    input_state: Res<MessageInputState>,
     mut sidebar_q: Query<&mut Visibility, With<SidebarRoot>>,
 ) {
+    if input_state.active {
+        return;
+    }
     if keys.just_pressed(KeyCode::KeyH) {
         for mut vis in sidebar_q.iter_mut() {
             *vis = match *vis {

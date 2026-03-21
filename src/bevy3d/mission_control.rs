@@ -221,6 +221,7 @@ fn mc_theme(is_dark: bool) -> McTheme {
 pub fn toggle_mission_control(
     mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
+    input_state: Res<super::overlay::MessageInputState>,
     mut mc_state: ResMut<MissionControlState>,
     mut mc_root_q: Query<
         &mut Visibility,
@@ -249,6 +250,9 @@ pub fn toggle_mission_control(
     popup_q: Query<Entity, With<McTaskPopup>>,
     msg_popup_q: Query<Entity, With<McMessagePopup>>,
 ) {
+    if input_state.active {
+        return;
+    }
     if keys.just_pressed(KeyCode::KeyM) {
         // If popup is open, M closes the popup first (not the whole MC)
         if mc_state.popup_open {
@@ -293,8 +297,12 @@ pub fn toggle_mission_control(
 
 // ── Zoom with Ctrl +/- keys ──────────────────────────────────────────────────
 
-pub fn handle_mc_zoom(mut mc_state: ResMut<MissionControlState>, keys: Res<ButtonInput<KeyCode>>) {
-    if !mc_state.open || mc_state.popup_open {
+pub fn handle_mc_zoom(
+    mut mc_state: ResMut<MissionControlState>,
+    keys: Res<ButtonInput<KeyCode>>,
+    input_state: Res<super::overlay::MessageInputState>,
+) {
+    if !mc_state.open || mc_state.popup_open || input_state.active {
         return;
     }
 
@@ -326,11 +334,12 @@ pub fn handle_mc_zoom(mut mc_state: ResMut<MissionControlState>, keys: Res<Butto
 pub fn handle_mc_keyboard_nav(
     mut mc_state: ResMut<MissionControlState>,
     keys: Res<ButtonInput<KeyCode>>,
+    input_state: Res<super::overlay::MessageInputState>,
     bridge: Res<WorldBridge>,
     mut activity_heading_q: Query<&mut Text, (With<McActivityHeading>, Without<McTaskHeading>)>,
     mut task_heading_q: Query<&mut Text, (With<McTaskHeading>, Without<McActivityHeading>)>,
 ) {
-    if !mc_state.open || mc_state.popup_open || mc_state.message_popup_open {
+    if !mc_state.open || mc_state.popup_open || mc_state.message_popup_open || input_state.active {
         return;
     }
 
