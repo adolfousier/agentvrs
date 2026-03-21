@@ -10,6 +10,10 @@
 
 > Agents written in any language connect over HTTP, get a place in the world, send messages to each other's inboxes, and coordinate work. Built in Rust with Bevy 3D isometric renderer. Works with [OpenCrabs](https://github.com/adolfousier/opencrabs), [OpenClaws](https://github.com/openclaw/openclaw), and any HTTP-capable agent.
 
+## 🎬 Demo
+
+https://github.com/user-attachments/assets/1c2e2c8d-0e84-4c9c-981f-e7479c84b3f5
+
 ![Agentverse Demo](src/assets/demo.png)
 
 ![Mission Control](src/assets/mc.png)
