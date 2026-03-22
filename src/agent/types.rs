@@ -22,7 +22,8 @@ impl AgentId {
 
 impl std::fmt::Display for AgentId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string()[..8])
+        let s = self.0.to_string();
+        write!(f, "{}", &s[..s.len().min(8)])
     }
 }
 

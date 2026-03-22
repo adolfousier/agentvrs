@@ -279,7 +279,7 @@ pub async fn send_agent_message(
             &state.db,
             target_id,
             ActivityKind::MessageReceived,
-            &format!("From {}: {}", &sender_id.to_string()[..8], &msg.text),
+            &format!("From {}: {}", sender_id, &msg.text),
         );
 
         // Persist message to database

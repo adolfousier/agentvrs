@@ -595,8 +595,9 @@ pub fn update_agent_labels(
         };
 
         let is_selected = selected.agent_id == Some(marker.agent_id);
-        let display_name = if agent.name.len() > 14 {
-            format!("{}...", &agent.name[..11])
+        let display_name = if agent.name.chars().count() > 14 {
+            let truncated: String = agent.name.chars().take(11).collect();
+            format!("{truncated}...")
         } else {
             agent.name.clone()
         };
@@ -655,8 +656,9 @@ pub fn update_agent_labels(
 
         // Speech bubble (shown above name label when agent has speech)
         if let Some(speech) = &agent.speech {
-            let bubble_text = if speech.len() > 40 {
-                format!("{}...", &speech[..37])
+            let bubble_text = if speech.chars().count() > 40 {
+                let truncated: String = speech.chars().take(37).collect();
+                format!("{truncated}...")
             } else {
                 speech.clone()
             };

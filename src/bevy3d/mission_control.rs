@@ -868,8 +868,9 @@ pub fn update_mission_control(
                                 // Summary — truncated to keep card compact
                                 let full_summary =
                                     task.response_summary.as_deref().unwrap_or(&task.task_id);
-                                let summary = if full_summary.len() > 60 {
-                                    format!("{}…", &full_summary[..57])
+                                let summary = if full_summary.chars().count() > 60 {
+                                    let truncated: String = full_summary.chars().take(57).collect();
+                                    format!("{truncated}…")
                                 } else {
                                     full_summary.to_string()
                                 };
@@ -923,8 +924,9 @@ pub fn update_mission_control(
                                         ..default()
                                     },
                                 ));
-                                let detail = if entry.detail.len() > 60 {
-                                    format!("{}…", &entry.detail[..57])
+                                let detail = if entry.detail.chars().count() > 60 {
+                                    let truncated: String = entry.detail.chars().take(57).collect();
+                                    format!("{truncated}…")
                                 } else {
                                     entry.detail.clone()
                                 };
