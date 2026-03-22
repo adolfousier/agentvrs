@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.8] - 2026-03-22
+
+### Added
+- Demo video in documentation
+
+### Fixed
+- Bevy MC cards growing too tall with many tasks/activity — capped card max height to 300px and truncated task summary and activity detail text to 60 chars
+- Bevy 3D keyboard shortcuts (M, j/k, zoom) stealing input from message dialog — all MC key handlers now check `input_state.active` before processing
+
 ## [0.1.7] - 2026-03-18
 
 ### Added
